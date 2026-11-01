@@ -390,55 +390,30 @@ void setup() {
     servoSlots[i].active = false;
   }
 
-  // 初始化 Wi-Fi 模組
-  initWiFi();
+  // Webduino Fly 專用 57600 鮑率 (直通 WebSocket 與 Serial)
+  Serial.begin(57600);
+  Serial.setTimeout(50);
 }
 
 void loop() {
-  // 監聽 ESP8266 接收到的網路資料 (+IPD,linkId,len:...)
   if (Serial.available()) {
-    if (Serial.find("+IPD,")) {
-      int linkId = Serial.parseInt();
-      int len = Serial.parseInt();
-      
-      // 等待資料標頭 ':'
-      if (Serial.find(":")) {
-        String req = "";
-        unsigned long timeout = millis() + 600;
-        while (req.length() < 120 && millis() < timeout) {
-          if (Serial.available()) {
-            char c = Serial.read();
-            req += c;
-            if (c == '\n') break;
-          }
-        }
-
-        // 判斷請求路由
-        if (req.indexOf(F("GET /cmd?c=")) != -1) {
-          int start = req.indexOf(F("c=")) + 2;
-          int end = req.indexOf(F(" "), start);
-          if (end == -1) end = req.indexOf(F("&"), start);
-          if (end == -1) end = req.length();
-          String rawCmd = req.substring(start, end);
-          
-          // 簡易 URL 解碼
-          rawCmd.replace(F("%2C"), F(","));
-          rawCmd.replace(F("%20"), F(" "));
-          
-          String res = executeCommand(rawCmd);
-          String json = "{\"ok\":true,\"ip\":\"" + localIP + "\",\"res\":\"" + res + "\"}";
-          sendHTTPResponse(linkId, json, F("application/json"));
-        } 
-        else if (req.indexOf(F("GET /status")) != -1 || req.indexOf(F("GET /ping")) != -1) {
-          String json = "{\"ok\":true,\"ip\":\"" + localIP + "\",\"board\":\"Arduino Uno + Webduino Fly\"}";
-          sendHTTPResponse(linkId, json, F("application/json"));
-        }
-        else {
-          // 回傳內嵌 Web 遙控頁面
-          String html = String((__FlashStringHelper*)INDEX_HTML);
-          sendHTTPResponse(linkId, html, F("text/html; charset=utf-8"));
+    String line = Serial.readStringUntil('\n');
+    line.trim();
+    if (line.length() > 0) {
+      // 若為通用 ESP8266 AT 模式的 +IPD 封裝，解析出原始指令
+      if (line.indexOf("+IPD,") != -1) {
+        int cIdx = line.indexOf("c=");
+        if (cIdx != -1) {
+          int end = line.indexOf(" ", cIdx + 2);
+          if (end == -1) end = line.length();
+          line = line.substring(cIdx + 2, end);
+          line.replace("%2C", ",");
+          line.replace("%20", " ");
         }
       }
+
+      String res = executeCommand(line);
+      Serial.println(res);
     }
   }
 }

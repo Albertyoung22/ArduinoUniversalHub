@@ -49,8 +49,8 @@ WIFI_FIRMWARE_INO = os.path.join(WIFI_FIRMWARE_DIR, "wifi_firmware.ino")
 
 
 class WiFiArduinoClient:
-    """Wi-Fi HTTP 通訊客戶端核心"""
-    def __init__(self, ip: str = "192.168.1.100", port: int = 80):
+    """Wi-Fi 通訊客戶端核心 (支援 Webduino WebSocket 直連與 HTTP REST 雙協議)"""
+    def __init__(self, ip: str = "192.168.1.134", port: int = 80):
         self.ip = ip.strip()
         self.port = port
         self.is_connected = False
@@ -59,6 +59,8 @@ class WiFiArduinoClient:
         self.worker_thread = None
         self.running = False
         self.on_log = None
+        self.ws_sock = None
+        self.is_websocket = False
 
     def log(self, msg: str):
         if self.on_log:
@@ -67,22 +69,72 @@ class WiFiArduinoClient:
             print(f"[WiFiClient] {msg}")
 
     def ping(self) -> bool:
+        start = time.time()
+        # 1. 優先嘗試 Webduino WebSocket 直連握手
         try:
-            start = time.time()
+            if self.ws_sock:
+                try:
+                    self.ws_sock.close()
+                except Exception:
+                    pass
+                self.ws_sock = None
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1.2)
+            sock.connect((self.ip, self.port))
+            handshake = (
+                f"GET / HTTP/1.1\r\n"
+                f"Host: {self.ip}\r\n"
+                f"Upgrade: websocket\r\n"
+                f"Connection: Upgrade\r\n"
+                f"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                f"Sec-WebSocket-Version: 13\r\n\r\n"
+            )
+            sock.sendall(handshake.encode())
+            resp = sock.recv(512)
+            if b"101 Switching" in resp or b"WebSockets" in resp or b"Webduino" in resp:
+                self.is_websocket = True
+                self.ws_sock = sock
+                self.is_connected = True
+                self.latency_ms = int((time.time() - start) * 1000)
+                return True
+            sock.close()
+        except Exception:
+            pass
+
+        # 2. 備用語法: HTTP REST /status
+        try:
             url = f"http://{self.ip}:{self.port}/status"
             req = urllib.request.Request(url, headers={"User-Agent": "WiFiArduinoHub/1.0"})
-            with urllib.request.urlopen(req, timeout=1.2) as resp:
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
                 if resp.status == 200:
+                    self.is_websocket = False
                     self.latency_ms = int((time.time() - start) * 1000)
                     self.is_connected = True
                     return True
         except Exception:
             pass
+
         self.is_connected = False
         return False
 
     def send_cmd_sync(self, cmd: str, timeout: float = 0.8) -> dict:
-        """同步發送指令至 Arduino Wi-Fi 伺服器"""
+        """同步發送指令至 Arduino Wi-Fi 伺服器 (支援 WebSocket 與 HTTP)"""
+        if self.is_websocket and self.ws_sock:
+            try:
+                payload = (cmd.strip() + "\n").encode("utf-8")
+                length = len(payload)
+                if length < 126:
+                    header = bytearray([0x81, 0x80 | length, 0, 0, 0, 0])
+                else:
+                    header = bytearray([0x81, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
+                frame = header + payload
+                self.ws_sock.sendall(frame)
+                return {"ok": True, "res": "sent_via_websocket"}
+            except Exception as e:
+                self.is_connected = False
+                return {"ok": False, "error": str(e)}
+
         try:
             encoded_cmd = urllib.parse.quote(cmd)
             url = f"http://{self.ip}:{self.port}/cmd?c={encoded_cmd}"
@@ -176,7 +228,7 @@ class WiFiControllerApp:
 
         tk.Label(top_frame, text="🌐 設備 IP:", bg=self.BG_TOP, fg=self.TEXT_MUTED, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         self.ip_entry = tk.Entry(top_frame, bg="#11111B", fg=self.TEXT_MAIN, insertbackground=self.TEXT_MAIN, relief=tk.FLAT, font=("Consolas", 10), width=15)
-        self.ip_entry.insert(0, "192.168.1.100")
+        self.ip_entry.insert(0, "192.168.1.134")
         self.ip_entry.pack(side=tk.LEFT, padx=6)
 
         self.btn_connect = tk.Button(top_frame, text="📶 連線 Wi-Fi", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=10, pady=3, cursor="hand2", command=self.toggle_connection)
@@ -416,7 +468,7 @@ class WiFiControllerApp:
     def scan_lan_devices(self):
         """自動多執行緒掃描區域網路內開放 Port 80 的 Arduino Wi-Fi 設備"""
         self.log("🔍 正在快速掃描區域網路內的 Arduino Wi-Fi 設備...")
-        
+
         def worker():
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
@@ -437,7 +489,16 @@ class WiFiControllerApp:
                     res = sock.connect_ex((ip, 80))
                     sock.close()
                     if res == 0:
-                        # 驗證是否為 Arduino
+                        # 驗證是否為 Arduino / Webduino
+                        try:
+                            req = urllib.request.Request(f"http://{ip}/", headers={"User-Agent": "WiFiArduinoHub/1.0"})
+                            with urllib.request.urlopen(req, timeout=0.6) as r:
+                                s_hdr = r.headers.get("Server", "").lower()
+                                if "webduino" in s_hdr or "websocket" in s_hdr or "arduino" in s_hdr:
+                                    found_ips.append(ip)
+                                    return
+                        except Exception:
+                            pass
                         try:
                             url = f"http://{ip}/status"
                             with urllib.request.urlopen(url, timeout=0.6) as r:
@@ -787,7 +848,7 @@ class WiFiControllerApp:
                         def on_fail(msg=err_text):
                             safe_status("❌ 燒錄失敗，擴充板訊號可能干擾序列埠", self.ACCENT_RED)
                             messagebox.showerror(
-                                "燒錄未成功", 
+                                "燒錄未成功",
                                 f"Arduino-CLI 燒錄未成功。\n\n"
                                 f"若為通訊逾時（stk500），這是 Webduino Fly 擴充板的 ESP8266 佔用 Pin 0/1 所致。\n"
                                 f"請嘗試：\n"
@@ -832,4 +893,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
