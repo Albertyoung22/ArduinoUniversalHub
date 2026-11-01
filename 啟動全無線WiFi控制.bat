@@ -8,3 +8,4 @@ echo 📱 無需 USB 傳輸線，透過 Wi-Fi 區域網路無線連線操控！
 echo =======================================================
 python wifi_controller.py
 pause
+

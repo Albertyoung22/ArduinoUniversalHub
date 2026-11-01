@@ -641,8 +641,11 @@ class WiFiControllerApp:
         row0.pack(fill=tk.X, pady=4)
         tk.Label(row0, text="COM 序列埠:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         import serial.tools.list_ports
-        ports = [p.device for p in serial.tools.list_ports.comports()]
-        port_var = tk.StringVar(value=ports[0] if ports else "COM4")
+        all_ports = serial.tools.list_ports.comports()
+        ports = [p.device for p in all_ports]
+        exact_uno = [p.device for p in all_ports if "arduino" in p.description.lower()]
+        sel_port = exact_uno[0] if exact_uno else (ports[0] if ports else "COM5")
+        port_var = tk.StringVar(value=sel_port)
         combo = ttk.Combobox(row0, textvariable=port_var, values=ports, width=12)
         combo.pack(side=tk.LEFT, padx=10)
 
@@ -729,3 +732,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

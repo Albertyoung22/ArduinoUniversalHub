@@ -44,6 +44,28 @@ String localIP = "0.0.0.0";
 bool isConnectedWiFi = false;
 long activeBaudRate = 115200;
 
+void saveWiFiCredentials(String ssid, String pass) {
+  EEPROM.write(0, 0xAA);
+  uint8_t slen = min((uint8_t)ssid.length(), (uint8_t)32);
+  uint8_t plen = min((uint8_t)pass.length(), (uint8_t)32);
+  EEPROM.write(1, slen);
+  for (uint8_t i = 0; i < slen; i++) EEPROM.write(2 + i, ssid[i]);
+  EEPROM.write(35, plen);
+  for (uint8_t i = 0; i < plen; i++) EEPROM.write(36 + i, pass[i]);
+}
+
+bool loadWiFiCredentials(String &ssid, String &pass) {
+  if (EEPROM.read(0) != 0xAA) return false;
+  uint8_t slen = EEPROM.read(1);
+  if (slen == 0 || slen > 32) return false;
+  ssid = "";
+  for (uint8_t i = 0; i < slen; i++) ssid += (char)EEPROM.read(2 + i);
+  uint8_t plen = EEPROM.read(35);
+  pass = "";
+  for (uint8_t i = 0; i < plen && i < 32; i++) pass += (char)EEPROM.read(36 + i);
+  return (ssid.length() > 0);
+}
+
 // MAX7219 驅動輔助函數
 void max7219_write(uint8_t din, uint8_t cs, uint8_t clk, uint8_t reg, uint8_t data) {
   digitalWrite(cs, LOW);
@@ -133,8 +155,17 @@ void initWiFi() {
   // 設置模式為 STA + AP 雙模
   sendAT(F("AT+CWMODE=3"), F("OK"), 1500);
 
+  // 讀取 EEPROM 中的 Wi-Fi 設定，若無則採用預設值
+  String curSSID = String(DEFAULT_SSID);
+  String curPASS = String(DEFAULT_PASS);
+  String epSSID, epPASS;
+  if (loadWiFiCredentials(epSSID, epPASS)) {
+    curSSID = epSSID;
+    curPASS = epPASS;
+  }
+
   // 嘗試連線指定 Wi-Fi
-  String joinCmd = "AT+CWJAP=\"" + String(DEFAULT_SSID) + "\",\"" + String(DEFAULT_PASS) + "\"";
+  String joinCmd = "AT+CWJAP=\"" + curSSID + "\",\"" + curPASS + "\"";
   if (sendAT(joinCmd, F("OK"), 12000)) {
     isConnectedWiFi = true;
   } else {
