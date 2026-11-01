@@ -24,8 +24,8 @@
 // ==========================
 // 預設 Wi-Fi 連線設定 (可在此修改或透過網頁設定)
 // ==========================
-const char DEFAULT_SSID[] = "WIFI_NAME";     // 請替換為您的 Wi-Fi 名稱 (2.4GHz)
-const char DEFAULT_PASS[] = "WIFI_PASSWORD"; // 請替換為您的 Wi-Fi 密碼
+const char DEFAULT_SSID[] = "jupiter";     // 請替換為您的 Wi-Fi 名稱 (2.4GHz)
+const char DEFAULT_PASS[] = "1019b1019b"; // 請替換為您的 Wi-Fi 密碼
 
 #define AP_SSID "Arduino_Universal_WiFi"
 #define AP_PASS "12345678"
