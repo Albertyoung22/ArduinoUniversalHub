@@ -1126,12 +1126,11 @@ def run_standalone(host="0.0.0.0", port=None):
 
     is_cloud = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
 
-    print("=" * 65)
-    print("⚡ Arduino Universal Web Hub 萬能硬體控制中心 (Flask + Waitress)")
-    print(f"🏠 本地存取網址: http://127.0.0.1:{port}")
-    print(f"📱 區網存取網址: http://0.0.0.0:{port}")
+    print("=" * 65, flush=True)
+    print("⚡ Arduino Universal Web Hub 萬能硬體控制中心 (Flask + Waitress)", flush=True)
+    print(f"🏠 監聽位址: http://{host}:{port}", flush=True)
     if not is_cloud:
-        print("🌐 正在背景啟動 Cloudflare Tunnel 內網穿透...")
+        print("🌐 正在背景啟動 Cloudflare Tunnel 內網穿透...", flush=True)
         hub.tunnel_manager.start(local_port=port)
         try:
             import webbrowser
@@ -1139,11 +1138,11 @@ def run_standalone(host="0.0.0.0", port=None):
         except Exception:
             pass
     else:
-        print("☁️ 正在雲端環境 (Render) 運行，健康檢查路由: /healthz")
-    print("=" * 65)
+        print("☁️ 正在雲端環境 (Render) 運行，健康檢查路由: /healthz", flush=True)
+    print("=" * 65, flush=True)
 
     # 以 Waitress 正式生產伺服器運行
-    waitress.serve(app, host=host, port=port, threads=8, _quiet=True)
+    waitress.serve(app, host=host, port=port, threads=8)
 
 
 def start_web_server_thread(gui_app, host="0.0.0.0", port=5000):
