@@ -714,14 +714,19 @@ class WiFiControllerApp:
                         pass
 
                 def update_ui():
-                    btn_scan_ap.configure(state="normal", text="🔄 透過 USB 掃描 Wi-Fi AP")
-                    if found_ssids:
-                        ssid_combo["values"] = found_ssids
-                        ssid_combo.set(found_ssids[0])
-                        lbl_flash_status.configure(text=f"🎉 成功掃描到 {len(found_ssids)} 個 Wi-Fi AP！請在下拉選單中選取您的 Wi-Fi。", fg=self.ACCENT_GREEN)
-                    else:
-                        lbl_flash_status.configure(text="⚠️ 未能從硬體回傳掃描清單，您可直接在上方輸入 Wi-Fi 名稱。", fg=self.ACCENT_YELLOW)
-                        messagebox.showinfo("掃描結果", "未能自動獲取周遭 AP 清單。\n\n提示：您可直接在 Wi-Fi 名稱下拉框中手動輸入家裡的 Wi-Fi 名稱！")
+                    try:
+                        if not dlg.winfo_exists():
+                            return
+                        btn_scan_ap.configure(state="normal", text="🔄 透過 USB 掃描 Wi-Fi AP")
+                        if found_ssids:
+                            ssid_combo["values"] = found_ssids
+                            ssid_combo.set(found_ssids[0])
+                            lbl_flash_status.configure(text=f"🎉 成功掃描到 {len(found_ssids)} 個 Wi-Fi AP！請在下拉選單中選取您的 Wi-Fi。", fg=self.ACCENT_GREEN)
+                        else:
+                            lbl_flash_status.configure(text="⚠️ 未能從硬體回傳掃描清單，您可直接在上方輸入 Wi-Fi 名稱。", fg=self.ACCENT_YELLOW)
+                            messagebox.showinfo("掃描結果", "未能自動獲取周遭 AP 清單。\n\n提示：您可直接在 Wi-Fi 名稱下拉框中手動輸入家裡的 Wi-Fi 名稱！")
+                    except Exception:
+                        pass
 
                 self.root.after(0, update_ui)
 
@@ -737,7 +742,14 @@ class WiFiControllerApp:
                 messagebox.showwarning("提示", "請選擇有效的 COM 埠！")
                 return
 
-            lbl_flash_status.configure(text=f"⚙️ 正在寫入 Wi-Fi 設定並自動編譯燒錄至 {port}...", fg=self.ACCENT)
+            def safe_status(text, fg):
+                try:
+                    if dlg.winfo_exists():
+                        lbl_flash_status.configure(text=text, fg=fg)
+                except Exception:
+                    pass
+
+            safe_status(f"⚙️ 正在寫入 Wi-Fi 設定並自動編譯燒錄至 {port}...", self.ACCENT)
 
             def flash_worker():
                 try:
@@ -764,16 +776,16 @@ class WiFiControllerApp:
                         "-p", port,
                         WIFI_FIRMWARE_INO
                     ]
-                    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=50)
+                    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=35)
                     if p.returncode == 0:
-                        self.root.after(0, lambda: [
-                            lbl_flash_status.configure(text="🎉 燒錄成功！板子正在連線 Wi-Fi，稍後即可拔除 USB 線！", fg=self.ACCENT_GREEN),
+                        def on_success():
+                            safe_status("🎉 燒錄成功！板子正在連線 Wi-Fi，稍後即可拔除 USB 線！", self.ACCENT_GREEN)
                             messagebox.showinfo("燒錄成功", f"Wi-Fi 韌體已成功燒錄至 {port}！\n\nArduino Uno 現在會自動連線到您的 Wi-Fi。\n請留意 Webduino Fly 板上的紅燈熄滅代表連線成功，接著即可點擊「🔍 自動搜尋區網」進行無線操控！")
-                        ])
+                        self.root.after(0, on_success)
                     else:
                         err_text = p.stderr or p.stdout or "未知錯誤"
-                        self.root.after(0, lambda msg=err_text: [
-                            lbl_flash_status.configure(text="❌ 燒錄失敗，擴充板訊號可能干擾序列埠", fg=self.ACCENT_RED),
+                        def on_fail(msg=err_text):
+                            safe_status("❌ 燒錄失敗，擴充板訊號可能干擾序列埠", self.ACCENT_RED)
                             messagebox.showerror(
                                 "燒錄未成功", 
                                 f"Arduino-CLI 燒錄未成功。\n\n"
@@ -783,11 +795,11 @@ class WiFiControllerApp:
                                 f"2. 燒錄成功後再將擴充板插回即可！\n\n"
                                 f"詳細錯誤訊息：\n{msg[-260:]}"
                             )
-                        ])
+                        self.root.after(0, on_fail)
                 except subprocess.TimeoutExpired:
                     subprocess.run(["taskkill", "/F", "/IM", "avrdude.exe"], capture_output=True)
-                    self.root.after(0, lambda: [
-                        lbl_flash_status.configure(text="⚠️ 燒錄超時（擴充板佔用 Pin 0/1 序列埠）", fg=self.ACCENT_RED),
+                    def on_timeout():
+                        safe_status("⚠️ 燒錄超時（擴充板佔用 Pin 0/1 序列埠）", self.ACCENT_RED)
                         messagebox.showwarning(
                             "燒錄超時提示 (Webduino Fly 硬體特性)",
                             "燒錄通訊超時！\n\n"
@@ -798,13 +810,13 @@ class WiFiControllerApp:
                             "2. 再次點擊「⚡ 開始編譯並燒錄」，只要 3 秒鐘即可 100% 燒錄成功！\n"
                             "3. 燒錄成功後，再把 Webduino Fly 擴充板插回 Uno 上，即可正常進行 Wi-Fi 全無線連線！"
                         )
-                    ])
+                    self.root.after(0, on_timeout)
                 except Exception as ex:
                     err_msg = str(ex)
-                    self.root.after(0, lambda msg=err_msg: [
-                        lbl_flash_status.configure(text=f"❌ 錯誤: {msg}", fg=self.ACCENT_RED),
+                    def on_err(msg=err_msg):
+                        safe_status(f"❌ 錯誤: {msg}", self.ACCENT_RED)
                         messagebox.showerror("例外錯誤", msg)
-                    ])
+                    self.root.after(0, on_err)
 
             threading.Thread(target=flash_worker, daemon=True).start()
 
