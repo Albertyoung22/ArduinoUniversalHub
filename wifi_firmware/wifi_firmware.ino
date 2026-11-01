@@ -219,6 +219,30 @@ String executeCommand(String line) {
     return "PONG:WIFI_V1," + localIP;
   }
 
+  // 掃描周遭 Wi-Fi AP (供 USB 程式一鍵獲取清單)
+  if (line == "SCAN_WIFI" || line == "SCAN_AP") {
+    sendAT(F("AT+CWMODE=1"), F("OK"), 800);
+    Serial.println(F("AT+CWLAP"));
+    unsigned long start = millis();
+    while (millis() - start < 5000) {
+      if (Serial.available()) {
+        String l = Serial.readStringUntil('\n');
+        l.trim();
+        if (l.indexOf(F("+CWLAP:")) != -1) {
+          int q1 = l.indexOf('"');
+          int q2 = l.indexOf('"', q1 + 1);
+          if (q1 != -1 && q2 != -1) {
+            String ssid = l.substring(q1 + 1, q2);
+            Serial.print(F("WIFI_AP:"));
+            Serial.println(ssid);
+          }
+        }
+        if (l.indexOf(F("OK")) != -1) break;
+      }
+    }
+    return "OK:SCAN_DONE";
+  }
+
   char buf[128];
   line.toCharArray(buf, sizeof(buf));
   char* parts[16];

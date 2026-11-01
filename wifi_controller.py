@@ -641,36 +641,90 @@ class WiFiControllerApp:
         row0.pack(fill=tk.X, pady=4)
         tk.Label(row0, text="COM 序列埠:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         import serial.tools.list_ports
-        all_ports = serial.tools.list_ports.comports()
-        ports = [p.device for p in all_ports]
-        exact_uno = [p.device for p in all_ports if "arduino" in p.description.lower()]
-        sel_port = exact_uno[0] if exact_uno else (ports[0] if ports else "COM5")
         port_var = tk.StringVar(value=sel_port)
         combo = ttk.Combobox(row0, textvariable=port_var, values=ports, width=12)
         combo.pack(side=tk.LEFT, padx=10)
 
-        # Wi-Fi SSID
+        # Wi-Fi SSID (支援下拉選單與手動輸入)
         row1 = tk.Frame(body, bg=self.BG_CARD)
         row1.pack(fill=tk.X, pady=4)
         tk.Label(row1, text="Wi-Fi 名稱 (SSID):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
-        ssid_entry = tk.Entry(row1, bg="#11111B", fg=self.TEXT_MAIN, relief=tk.FLAT, font=("Segoe UI", 9), width=20)
-        ssid_entry.insert(0, "YOUR_WIFI_NAME")
-        ssid_entry.pack(side=tk.LEFT, padx=10)
+        ssid_var = tk.StringVar(value="")
+        ssid_combo = ttk.Combobox(row1, textvariable=ssid_var, width=18)
+        ssid_combo.pack(side=tk.LEFT, padx=6)
+
+        btn_scan_ap = tk.Button(row1, text="🔄 透過 USB 掃描 Wi-Fi AP", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2")
+        btn_scan_ap.pack(side=tk.LEFT, padx=4)
 
         # Wi-Fi 密碼
         row2 = tk.Frame(body, bg=self.BG_CARD)
         row2.pack(fill=tk.X, pady=4)
         tk.Label(row2, text="Wi-Fi 密碼 (Password):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         pass_entry = tk.Entry(row2, bg="#11111B", fg=self.TEXT_MAIN, relief=tk.FLAT, font=("Segoe UI", 9), width=20, show="*")
-        pass_entry.insert(0, "YOUR_WIFI_PASSWORD")
+        pass_entry.insert(0, "")
         pass_entry.pack(side=tk.LEFT, padx=10)
 
-        lbl_flash_status = tk.Label(body, text="💡 提示：燒錄時請先確認 Webduino Fly 板開關切至 STA 模式", bg=self.BG_CARD, fg=self.ACCENT_YELLOW, font=("Segoe UI", 8))
+        lbl_flash_status = tk.Label(body, text="💡 提示：點擊上方「🔄 掃描 Wi-Fi」即可從硬體讀取周遭無線 AP 清單！", bg=self.BG_CARD, fg=self.ACCENT_YELLOW, font=("Segoe UI", 8), justify="left")
         lbl_flash_status.pack(anchor="w", pady=(8, 0))
+
+        def scan_aps_via_usb():
+            port = port_var.get()
+            if not port:
+                messagebox.showwarning("提示", "請先選擇 COM 序列埠！")
+                return
+            lbl_flash_status.configure(text=f"🔍 正在透過 {port} 指令掃描周遭 Wi-Fi AP，請稍候 3~5 秒...", fg=self.ACCENT)
+            btn_scan_ap.configure(state="disabled", text="掃描中...")
+
+            def scan_worker():
+                found_ssids = []
+                import serial, re
+                for baud in [115200, 57600, 9600]:
+                    try:
+                        s = serial.Serial(port, baud, timeout=1.0)
+                        time.sleep(1.2)
+                        s.reset_input_buffer()
+                        # 發送 SCAN_WIFI 與 AT+CWLAP 嘗試雙重協議
+                        s.write(b"SCAN_WIFI\r\n")
+                        s.write(b"AT+CWMODE=1\r\n")
+                        s.write(b"AT+CWLAP\r\n")
+                        start_t = time.time()
+                        while time.time() - start_t < 4.5:
+                            line = s.readline().decode("utf-8", errors="replace").strip()
+                            if "WIFI_AP:" in line:
+                                ssid = line.split("WIFI_AP:")[1].strip()
+                                if ssid and ssid not in found_ssids:
+                                    found_ssids.append(ssid)
+                            elif "+CWLAP:" in line:
+                                m = re.search(r'\+CWLAP:\s*\(\d+,\s*"([^"]+)"', line)
+                                if m:
+                                    ssid = m.group(1).strip()
+                                    if ssid and ssid not in found_ssids:
+                                        found_ssids.append(ssid)
+                        s.close()
+                        if found_ssids:
+                            break
+                    except Exception:
+                        pass
+
+                def update_ui():
+                    btn_scan_ap.configure(state="normal", text="🔄 透過 USB 掃描 Wi-Fi AP")
+                    if found_ssids:
+                        ssid_combo["values"] = found_ssids
+                        ssid_combo.set(found_ssids[0])
+                        lbl_flash_status.configure(text=f"🎉 成功掃描到 {len(found_ssids)} 個 Wi-Fi AP！請在下拉選單中選取您的 Wi-Fi。", fg=self.ACCENT_GREEN)
+                    else:
+                        lbl_flash_status.configure(text="⚠️ 未能從硬體回傳掃描清單，您可直接在上方輸入 Wi-Fi 名稱。", fg=self.ACCENT_YELLOW)
+                        messagebox.showinfo("掃描結果", "未能自動獲取周遭 AP 清單。\n\n提示：您可直接在 Wi-Fi 名稱下拉框中手動輸入家裡的 Wi-Fi 名稱！")
+
+                self.root.after(0, update_ui)
+
+            threading.Thread(target=scan_worker, daemon=True).start()
+
+        btn_scan_ap.configure(command=scan_aps_via_usb)
 
         def start_flash():
             port = port_var.get()
-            ssid = ssid_entry.get().strip()
+            ssid = ssid_var.get().strip()
             pwd = pass_entry.get().strip()
             if not port:
                 messagebox.showwarning("提示", "請選擇有效的 COM 埠！")
