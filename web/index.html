@@ -1,0 +1,3226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ Arduino Universal Web Hub (萬能硬體控制中心)</title>
+  <style>
+    :root {
+      --bg-main: #1E1E2E;
+      --bg-top: #181825;
+      --bg-card: #2A2A3C;
+      --bg-card-hover: #313244;
+      --accent: #89B4FA;
+      --accent-green: #A6E3A1;
+      --accent-red: #F38BA8;
+      --accent-yellow: #F9E2AF;
+      --accent-purple: #CBA6F7;
+      --text-main: #CDD6F4;
+      --text-muted: #A6ADC8;
+      --border: #45475A;
+      --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-stack);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    /* Top Header */
+    header {
+      background-color: var(--bg-top);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-title {
+      font-size: 1.15rem;
+      font-weight: 750;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 10px;
+    }
+    .status-badge {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #11111B;
+      color: var(--accent-red);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-badge.connected {
+      color: var(--accent-green);
+    }
+    .top-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    select, input, button {
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+    select, input[type="text"], input[type="number"] {
+      background-color: #11111B;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 5px 8px;
+      outline: none;
+    }
+    select:focus, input:focus {
+      border-color: var(--accent);
+    }
+    button {
+      background-color: #313244;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    button:hover {
+      background-color: #45475A;
+      color: #FFF;
+    }
+    button.primary {
+      background-color: #45475A;
+      color: #FFF;
+      font-weight: 600;
+      border-color: var(--accent);
+    }
+    button.primary:hover {
+      background-color: var(--accent);
+      color: #11111B;
+    }
+    button.success {
+      background-color: var(--accent-green);
+      color: #11111B;
+      border: none;
+      font-weight: 700;
+    }
+    button.success:hover { background-color: #B4F4AF; }
+    button.danger {
+      background-color: var(--accent-red);
+      color: #11111B;
+      border: none;
+      font-weight: 700;
+    }
+    button.danger:hover { background-color: #FF99B6; }
+    .header-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 16px;
+      align-content: start;
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      padding-bottom: 8px;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--accent);
+    }
+    .card-pins {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .slider-row label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      width: 20px;
+    }
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+    .slider-val {
+      font-size: 0.8rem;
+      font-weight: 600;
+      width: 45px;
+      text-align: right;
+      color: var(--text-muted);
+    }
+
+    /* Quick button pills */
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .pill-btn {
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      background: #181825;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .pill-btn:hover {
+      background: #45475A;
+      color: #FFF;
+    }
+    .pill-btn.active-fx {
+      background: var(--accent) !important;
+      color: #11111B !important;
+      font-weight: 750 !important;
+      border-color: #FFF !important;
+    }
+
+    /* RGB Card */
+    .rgb-body {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    .color-preview-box {
+      width: 54px;
+      height: 54px;
+      border-radius: 8px;
+      border: 2px solid var(--border);
+      background-color: #000;
+      flex-shrink: 0;
+      transition: background-color 0.1s ease;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    .rgb-sliders {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    /* MAX7219 Dot Matrix */
+    .matrix-body {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .matrix-grid-container {
+      background-color: #11111B;
+      padding: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 3px;
+      width: 160px;
+      height: 160px;
+      flex-shrink: 0;
+    }
+    .matrix-dot {
+      width: 15px;
+      height: 15px;
+      background-color: #313244;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.08s ease;
+    }
+    .matrix-dot.on {
+      background-color: #F38BA8;
+      box-shadow: 0 0 6px #F38BA8;
+    }
+    .matrix-controls {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 140px;
+    }
+    .marquee-panel {
+      background: #181825;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .marquee-panel-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    /* Switch Button */
+    .switch-btn {
+      width: 100%;
+      padding: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 8px;
+      justify-content: center;
+    }
+    .switch-btn.on {
+      background-color: var(--accent-green);
+      color: #11111B;
+      border: none;
+    }
+
+    /* Sensor & Sonar */
+    .sensor-display {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .sensor-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .sensor-canvas {
+      width: 100%;
+      height: 48px;
+      background: #11111B;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    /* Bottom Log Console */
+    footer {
+      background-color: var(--bg-top);
+      border-top: 1px solid var(--border);
+      padding: 6px 16px 10px 16px;
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+    }
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    #logBox {
+      flex: 1;
+      background-color: #11111B;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-family: Consolas, monospace;
+      font-size: 0.78rem;
+      color: #A6ADC8;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    /* Modal dialog */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(2px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 820px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      overflow: hidden;
+    }
+    .modal-header {
+      background: var(--bg-top);
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-body {
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      gap: 16px;
+    }
+    .wf-sidebar {
+      width: 220px;
+      border-right: 1px solid var(--border);
+      padding-right: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .wf-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .wf-item {
+      padding: 6px 10px;
+      background: #181825;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+    }
+    .wf-item:hover { border-color: var(--accent); }
+    .wf-item.active { background: #45475A; color: var(--accent); font-weight: 600; border-color: var(--accent); }
+    .wf-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .step-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.83rem;
+    }
+    .step-table th, .step-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: left;
+    }
+    .step-table th {
+      background: #181825;
+      color: var(--text-muted);
+    }
+    .step-table tr:hover {
+      background: rgba(137, 180, 250, 0.12);
+      cursor: pointer;
+    }
+    .step-table tr.active-step {
+      background: rgba(166, 227, 161, 0.25);
+      border-left: 4px solid var(--accent-green);
+    }
+    .step-table tr.selected-step {
+      background: rgba(137, 180, 250, 0.28);
+      outline: 1px solid var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="header-title">⚡ Arduino Universal Hub <span style="font-size:0.75rem; color:var(--accent-green); font-weight:normal;">[Waitress + Flask]</span></div>
+    
+    <div class="status-badge" id="connStatus">● 未連線</div>
+
+    <!-- Cloudflare Tunnel 穿透狀態 -->
+    <div id="tunnelBadge" style="display:flex; align-items:center; gap:6px; background:#11111B; border:1px solid #45475A; padding:4px 10px; border-radius:20px; font-size:0.8rem;">
+      <span style="color:#F9E2AF;">🌐 外網穿透:</span>
+      <span id="tunnelUrlText" style="color:#89B4FA; font-weight:600;">啟動中...</span>
+      <button id="btnCopyTunnel" style="padding:2px 6px; font-size:0.75rem; display:none;" onclick="copyTunnelUrl()">📋 複製</button>
+      <a id="btnOpenTunnel" href="#" target="_blank" style="color:#A6E3A1; text-decoration:none; font-size:0.75rem; display:none;">🔗 開啟</a>
+    </div>
+
+    <div class="top-controls">
+      <select id="portSelect" style="width: 110px;">
+        <option value="">(搜尋中...)</option>
+      </select>
+      <button onclick="scanPorts()">🔄 重新整理</button>
+      <button class="primary" id="btnConnect" onclick="toggleConnect()">🔌 連線 (Python)</button>
+      <button id="btnWebSerial" onclick="toggleWebSerial()" title="僅當此電腦直接插有 USB 線時使用；遠端控制時主機已連線，無需點擊此鈕" style="background:#A6E3A1; color:#11111B; font-weight:700; border:none; border-radius:6px; padding:6px 12px; cursor:pointer;">⚡ 瀏覽器 USB 直連</button>
+    </div>
+
+    <div class="header-actions">
+      <button style="background:#313244; color:var(--accent); font-weight:700;" onclick="openPinManagerModal()">⚙️ 腳位與配件設定</button>
+      <button class="primary" onclick="openWorkflowModal()">🎭 自訂流程中樞</button>
+      <button onclick="runDiagnostics()">🔍 系統巡檢</button>
+      <button class="danger" onclick="emergencyStop()">🛑 全體急停</button>
+      <button onclick="saveProfile()">💾 儲存</button>
+      <button onclick="loadProfile()">📂 載入</button>
+    </div>
+  </header>
+
+  <!-- 跨電腦連線即時同步提示條 -->
+  <div id="syncBanner" style="margin: 10px 16px 0 16px; background: rgba(166, 227, 161, 0.12); border: 1px solid rgba(166, 227, 161, 0.35); border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; flex-wrap: wrap; gap: 6px;">
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span style="font-size:1.05rem;">📡</span>
+      <span style="color:#A6E3A1; font-weight:700;" id="syncBannerStatus">跨電腦全功能雙向同步中</span>
+      <span style="color:#BAC2DE;" id="syncBannerDetail">（任何電腦/手機開此網頁皆可直接操作，動作會 0 延遲同步至主機與實體 Arduino）</span>
+    </div>
+    <div style="color:#F9E2AF; font-size:0.75rem; background:#181825; padding:2px 8px; border-radius:4px; border:1px solid #45475A;">💡 其他電腦只需開瀏覽器，不需插 USB 或執行 Python</div>
+  </div>
+
+  <!-- 雙燈即時連線特效 (18 款炫彩即時特效) -->
+  <div style="padding: 12px 16px 0 16px;">
+    <div style="background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div style="font-weight: 750; font-size: 0.95rem; color: var(--accent); display:flex; align-items:center; gap: 6px;">
+          ✨ 雙燈即時連線特效 (18 款炫彩即時特效)
+          <span id="activeFxName" style="font-size:0.8rem; color:var(--accent-green); font-weight:normal;"></span>
+        </div>
+        <button class="danger" style="padding:3px 10px; font-size:0.75rem;" onclick="stopDualEffect()">⏹️ 停止特效</button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 6px;" id="fxGrid">
+        <!-- 18 buttons rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Cards Dashboard -->
+  <main id="cardsContainer">
+    <!-- Component Cards rendered dynamically via JS -->
+  </main>
+
+  <!-- Bottom Log Console -->
+  <footer>
+    <div class="footer-bar">
+      <span>📜 通訊與系統紀錄 (Live WebSocket Log)</span>
+      <button style="padding:2px 8px; font-size:0.7rem;" onclick="clearLog()">清空日誌</button>
+    </div>
+    <div id="logBox"></div>
+  </footer>
+
+  <!-- Workflow Sequencer Modal Dialog -->
+  <div class="modal-overlay" id="wfModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 style="color:var(--accent);">🎭 動作序列自動化排程中樞 (自訂多配件聯動)</h3>
+        <button onclick="closeWorkflowModal()">✖ 關閉</button>
+      </div>
+      <div class="modal-body">
+        <!-- Left Column: Workflow List -->
+        <div class="wf-sidebar">
+          <div style="font-weight:700; font-size:0.85rem;">流程清單</div>
+          <ul class="wf-list" id="wfList"></ul>
+          <div style="display:flex; gap:4px;">
+            <button style="flex:1;" onclick="addWorkflowPrompt()">➕ 新增</button>
+            <button style="flex:1;" onclick="deleteWorkflowPrompt()">🗑️ 刪除</button>
+          </div>
+          <div style="background:#181825; border:1px solid var(--border); border-radius:6px; padding:8px; display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:0.8rem; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" id="wfLoopCheck" onchange="toggleWorkflowLoop(this.checked)"> 🔁 循環播放 (Loop)
+            </label>
+            <div style="display:flex; gap:4px;">
+              <button class="success" style="flex:1;" onclick="startCurrentWorkflow()">▶️ 啟動</button>
+              <button class="danger" style="flex:1;" onclick="stopCurrentWorkflow()">⏹️ 停止</button>
+            </div>
+            <button class="primary" style="background:#fab387; color:#11111B; font-weight:700; margin-top:4px;" onclick="flashCurrentWorkflowStandalone()">🔥 脫機燒錄此流程至 Arduino</button>
+            <div id="wfStatusLbl" style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">狀態: 閒置</div>
+          </div>
+        </div>
+        <!-- Right Column: Step Table -->
+        <div class="wf-content">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:700;" id="wfTitleLbl">步驟序列</div>
+            <span style="font-size:0.75rem; color:var(--accent);">💡 點選任一步驟即時觸發執行動作！</span>
+          </div>
+          <div style="flex:1; max-height:350px; overflow-y:auto; border:1px solid var(--border); border-radius:6px;">
+            <table class="step-table">
+              <thead>
+                <tr>
+                  <th style="width:40px; text-align:center;">#</th>
+                  <th style="width:160px;">目標配件</th>
+                  <th>執行動作內容</th>
+                </tr>
+              </thead>
+              <tbody id="stepTableBody"></tbody>
+            </table>
+          </div>
+          <!-- Step Table Action Buttons -->
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button class="primary" style="flex:2;" onclick="openAddStepModal()">➕ 新增步驟</button>
+            <button style="flex:1;" onclick="moveCurrentStep(-1)">⬆️ 上移</button>
+            <button style="flex:1;" onclick="moveCurrentStep(1)">⬇️ 下移</button>
+            <button class="danger" style="flex:1;" onclick="deleteCurrentStep()">❌ 刪除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Step Sub-Modal -->
+  <div class="modal-overlay" id="addStepModal" style="z-index: 1100;">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">
+        <h4 style="color:var(--accent); margin:0;">➕ 新增自訂動作步驟</h4>
+        <button onclick="closeAddStepModal()">✖ 關閉</button>
+      </div>
+      <div class="modal-body" style="flex-direction:column; gap:12px; padding:15px;">
+        <div>
+          <label style="font-size:0.85rem; font-weight:700;">目標類型 / 配件:</label>
+          <select id="stepTargetSelect" onchange="onStepTargetChange()" style="width:100%; margin-top:4px;"></select>
+        </div>
+        <div id="stepParamContainer" style="background:#181825; border:1px solid var(--border); border-radius:6px; padding:12px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+          <button onclick="closeAddStepModal()">取消</button>
+          <button class="primary" onclick="confirmAddStep()">確認新增</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pin & Component Manager Modal -->
+  <div class="modal-overlay" id="pinManagerModal">
+    <div class="modal-card" style="max-width: 720px; width: 92%;">
+      <div class="modal-header">
+        <h3 style="color:var(--accent); margin:0; display:flex; align-items:center; gap:8px;">
+          ⚙️ 硬體腳位與配件管理中心
+        </h3>
+        <button onclick="closePinManagerModal()">✖ 關閉</button>
+      </div>
+      <div class="modal-body" style="flex-direction:row; gap:16px; min-height:380px; padding:16px;">
+        <!-- Left: Component list & Add button -->
+        <div style="width: 230px; display:flex; flex-direction:column; gap:8px; border-right:1px solid var(--border); padding-right:12px;">
+          <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
+            <span>已配置配件清單</span>
+            <span id="pinCompCount" style="font-size:0.75rem; color:var(--accent);"></span>
+          </div>
+          <ul id="pinCompList" style="list-style:none; padding:0; margin:0; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:4px; max-height:300px;"></ul>
+          <button class="primary" style="font-size:0.8rem; padding:7px; font-weight:700;" onclick="promptAddNewComponent()">➕ 新增自訂配件</button>
+        </div>
+
+        <!-- Right: Edit Form for Selected Component -->
+        <div style="flex:1; display:flex; flex-direction:column; gap:12px;" id="pinEditFormContainer">
+          <!-- Filled dynamically by renderPinEditForm() -->
+        </div>
+      </div>
+      <div class="modal-footer" style="background:var(--bg-top); padding:10px 18px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border); border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+        <span style="font-size:0.75rem; color:var(--accent);">💡 變更腳位後自動儲存至 default_profile.json 與瀏覽器本地快取</span>
+        <div style="display:flex; gap:8px;">
+          <button onclick="closePinManagerModal()">關閉</button>
+          <button class="success" style="font-weight:700;" onclick="saveAllComponentPins()">💾 儲存並套用所有腳位</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State management
+    let components = [];
+    let workflows = [];
+    let currentWfIdx = 0;
+    let eventSource = null;
+    let isConnected = false;
+    let activeWfRunning = false;
+    let tunnelUrl = "";
+
+    // Connect SSE (Server-Sent Events) for Waitress + Flask
+    function initEventStream() {
+      if (eventSource) {
+        try { eventSource.close(); } catch (e) {}
+      }
+      eventSource = new EventSource('/events');
+
+      eventSource.onopen = () => {
+        log('🟢 即時事件串流通訊已建立 (SSE + Waitress)');
+        refreshStatus();
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleServerMessage(msg);
+        } catch (e) {
+          console.error(e);
+        }
+      };
+
+      eventSource.onerror = () => {
+        // 瀏覽器會自動依照 SSE 規範定期重連
+      };
+    }
+
+    let syncPollTimer = null;
+    function startAdaptivePolling() {
+      if (syncPollTimer) clearInterval(syncPollTimer);
+      syncPollTimer = setInterval(async () => {
+        if (isWebSerialMode) return;
+        try {
+          const res = await fetch('/api/status', { cache: 'no-store' });
+          if (!res.ok) return;
+          const data = await res.json();
+          updateConnStatus(data.connected, data.port);
+          if (data.tunnel_url && data.tunnel_url !== tunnelUrl) {
+            updateTunnelStatus(data.tunnel_url);
+          }
+          if (Array.isArray(data.components)) {
+            data.components.forEach(serverComp => {
+              const localComp = components.find(c => c.id === serverComp.id);
+              if (localComp && serverComp.state) {
+                syncCompState(serverComp.id, serverComp.state);
+                if (serverComp.type === 'matrix' && serverComp.state.matrix) {
+                  const currM = (localComp.state?.matrix || []).join(',');
+                  const newM = (serverComp.state.matrix || []).join(',');
+                  if (currM !== newM) {
+                    syncMatrixGrid(serverComp.id, serverComp.state.matrix);
+                  }
+                }
+              }
+            });
+          }
+          if (data.active_effect !== undefined) {
+            if (data.active_effect) {
+              const fx = DUAL_FX_LIST.find(x => x[0] === data.active_effect);
+              document.getElementById('activeFxName').innerText = fx ? `[正在執行: ${fx[1]}]` : `[正在執行: ${data.active_effect}]`;
+              document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+              const btn = document.getElementById(`fx_btn_${data.active_effect}`);
+              if (btn) btn.classList.add('active-fx');
+            } else {
+              document.getElementById('activeFxName').innerText = '';
+              document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+            }
+          }
+          if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+            initEventStream();
+          }
+        } catch (e) {}
+      }, 800);
+    }
+
+    function handleServerMessage(msg) {
+      if (msg.type === 'log') {
+        log(msg.data);
+      } else if (msg.type === 'status') {
+        updateConnStatus(msg.connected, msg.port);
+        if (msg.tunnel_url) updateTunnelStatus(msg.tunnel_url);
+      } else if (msg.type === 'tunnel_url') {
+        updateTunnelStatus(msg.url);
+      } else if (msg.type === 'comp_state') {
+        syncCompState(msg.id, msg.state);
+      } else if (msg.type === 'matrix_frame') {
+        syncMatrixGrid(msg.id, msg.matrix);
+      } else if (msg.type === 'workflow_step') {
+        highlightActiveStep(msg.idx);
+      } else if (msg.type === 'workflow_finish') {
+        highlightActiveStep(-1);
+        document.getElementById('wfStatusLbl').innerText = '狀態: 執行完畢';
+        document.getElementById('wfStatusLbl').style.color = 'var(--accent)';
+      } else if (msg.type === 'sensor_data') {
+        updateSensorValue(msg.pin, msg.val);
+      } else if (msg.type === 'sonar_data') {
+        updateSonarValue(msg.trig, msg.dist);
+      } else if (msg.type === 'matrix_text_sync') {
+        const txtInput = document.getElementById(`mq_text_${msg.id}`);
+        if (txtInput && txtInput.value !== msg.text) {
+          txtInput.value = msg.text;
+        }
+      } else if (msg.type === 'matrix_speed_sync') {
+        const range = document.getElementById(`mq_spd_range_${msg.id}`);
+        const lbl = document.getElementById(`mq_spd_lbl_${msg.id}`);
+        if (range && parseInt(range.value) !== parseInt(msg.speed)) {
+          range.value = msg.speed;
+        }
+        if (lbl) lbl.innerText = msg.speed + 'ms';
+        const stLbl = document.getElementById(`mq_status_${msg.id}`);
+        if (stLbl && stLbl.innerText.includes('播放中')) {
+          stLbl.innerText = `[🟢 播放中 (${msg.speed}ms)]`;
+        }
+        const comp = components.find(c => c.id === msg.id);
+        if (comp) {
+          comp.state = comp.state || {};
+          comp.state.marquee_speed = msg.speed;
+        }
+      } else if (msg.type === 'matrix_marquee_status') {
+        const statusLbl = document.getElementById(`mq_status_${msg.id}`);
+        if (statusLbl) {
+          if (msg.running) {
+            statusLbl.innerText = `[🟢 播放中 (${msg.speed || 150}ms)]`;
+            statusLbl.style.color = 'var(--accent-green)';
+            if (msg.text) {
+              const txtInput = document.getElementById(`mq_text_${msg.id}`);
+              if (txtInput && txtInput.value !== msg.text) txtInput.value = msg.text;
+            }
+          } else {
+            statusLbl.innerText = '[● 閒置中]';
+            statusLbl.style.color = 'var(--text-muted)';
+          }
+        }
+      } else if (msg.type === 'dual_rgb_frame') {
+        if (msg.id1) syncRGBDirect(msg.id1, msg.r1, msg.g1, msg.b1);
+        if (msg.id2 && msg.id2 !== msg.id1) syncRGBDirect(msg.id2, msg.r2, msg.g2, msg.b2);
+      } else if (msg.type === 'dual_effect_start') {
+        const fx = DUAL_FX_LIST.find(x => x[0] === msg.effect);
+        if (fx) {
+          document.getElementById('activeFxName').innerText = `[正在執行: ${fx[1]}]`;
+          document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+          const btn = document.getElementById(`fx_btn_${msg.effect}`);
+          if (btn) btn.classList.add('active-fx');
+          runClientDualEffect(msg.effect);
+        }
+      } else if (msg.type === 'dual_effect_stop') {
+        document.getElementById('activeFxName').innerText = '';
+        document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+        stopClientDualEffect(true);
+      } else if (msg.type === 'dual_effect_clear_badge') {
+        document.getElementById('activeFxName').innerText = '';
+        document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+        stopClientDualEffect(false);
+      } else if (msg.type === 'flash_result') {
+        if (msg.ok) {
+          log(`🎉 [燒錄成功] ${msg.message}`);
+          alert(`🎉 脫機流程燒錄成功！\n\n${msg.message}\n現在您可以拔除 USB 線，接上 5V 行動電源獨立運作！`);
+        } else {
+          log(`❌ [燒錄失敗] ${msg.message}`);
+          alert(`❌ 脫機燒錄失敗:\n${msg.message}`);
+        }
+      } else if (msg.type === 'profile_update') {
+        if (msg.components) {
+          components = msg.components;
+          renderCards();
+        }
+        if (msg.workflows) {
+          workflows = msg.workflows;
+          if (document.getElementById('wfModal').classList.contains('open')) {
+            renderWorkflowList();
+            renderStepTable();
+          }
+        }
+      } else if (msg.type === 'emergency_stop') {
+        stopClientDualEffect(true);
+        document.getElementById('activeFxName').innerText = '';
+        document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+        components.forEach(comp => {
+          if (comp.type === 'switch') {
+            syncCompState(comp.id, { on: false });
+          } else if (comp.type === 'pwm') {
+            syncCompState(comp.id, { val: 0 });
+          } else if (comp.type === 'servo') {
+            syncCompState(comp.id, { angle: 90 });
+          } else if (comp.type === 'rgb') {
+            syncCompState(comp.id, { r: 0, g: 0, b: 0 });
+          } else if (comp.type === 'matrix') {
+            syncMatrixGrid(comp.id, [0, 0, 0, 0, 0, 0, 0, 0]);
+            stopClientMatrixMarquee(comp.id);
+          }
+        });
+      }
+    }
+
+    // 18 款雙燈連線特效清單
+    const DUAL_FX_LIST = [
+      ['sync_rainbow', '🌈 同步彩虹'],
+      ['complementary', '☯ 互補流光'],
+      ['police_strobe', '🚨 警車雙閃'],
+      ['warm_breathing', '🕯️ 暖色呼吸'],
+      ['aurora_breathing', '🌌 極光呼吸'],
+      ['disco_party', '🪩 派對跳閃'],
+      ['chase_wave', '🌊 交替流水'],
+      ['fire_flicker', '🔥 壁爐跳火'],
+      ['thunder_storm', '⚡ 暴風雷電'],
+      ['heartbeat', '💓 心跳搏動'],
+      ['cyberpunk_neon', '🛸 賽博霓虹'],
+      ['meteor_shower', '🌠 彗星拖尾'],
+      ['sunrise_glow', '🌅 晨曦日出'],
+      ['emerald_forest', '🌲 翡翠森林'],
+      ['magic_crystal', '🔮 魔法水晶'],
+      ['volcano_magma', '🌋 岩漿熔岩'],
+      ['ambulance_amber', '🚑 救護警戒'],
+      ['candy_pop', '🍭 糖果幻彩']
+    ];
+
+    function renderFxButtons() {
+      const grid = document.getElementById('fxGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      DUAL_FX_LIST.forEach(([key, name]) => {
+        const btn = document.createElement('button');
+        btn.id = `fx_btn_${key}`;
+        btn.className = 'pill-btn';
+        btn.style.cssText = 'padding: 6px 8px; font-size: 0.8rem; justify-content: center;';
+        btn.innerText = name;
+        btn.onclick = () => triggerDualEffect(key, name);
+        grid.appendChild(btn);
+      });
+    }
+
+    function triggerDualEffect(key, name) {
+      document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+      const activeBtn = document.getElementById(`fx_btn_${key}`);
+      if (activeBtn) activeBtn.classList.add('active-fx');
+      document.getElementById('activeFxName').innerText = `[正在執行: ${name}]`;
+      log(`✨ 觸發雙燈特效: ${name}`);
+      runClientDualEffect(key);
+      if (!isWebSerialMode) {
+        sendAction({ action: 'dual_rgb_effect', effect: key });
+      }
+    }
+
+    function stopDualEffect(turnOff = true) {
+      stopClientDualEffect(turnOff);
+      document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+      document.getElementById('activeFxName').innerText = '';
+      log(`⏹️ 停止雙燈特效`);
+      if (!isWebSerialMode) {
+        sendAction({ action: 'stop_dual_rgb_effect' });
+      }
+    }
+
+    function updateTunnelStatus(url) {
+      const txt = document.getElementById("tunnelUrlText");
+      const btnCopy = document.getElementById("btnCopyTunnel");
+      const btnOpen = document.getElementById("btnOpenTunnel");
+      if (url) {
+        tunnelUrl = url;
+        txt.innerText = url.replace('https://', '');
+        txt.title = url;
+        btnCopy.style.display = 'inline-flex';
+        btnOpen.style.display = 'inline-flex';
+        btnOpen.href = url;
+      } else {
+        txt.innerText = '穿透連線中...';
+        btnCopy.style.display = 'none';
+        btnOpen.style.display = 'none';
+      }
+    }
+
+    function copyTunnelUrl() {
+      if (tunnelUrl) {
+        navigator.clipboard.writeText(tunnelUrl).then(() => {
+          alert('已複製 Cloudflare 外網穿透網址:\n' + tunnelUrl);
+        }).catch(() => {
+          prompt('請手動複製外網穿透網址:', tunnelUrl);
+        });
+      }
+    }
+
+    // 預設經典點陣位圖
+    const PRESET_MATRIX = {
+      "❤️ 愛心": [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18],
+      "😊 笑臉": [0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C],
+      "👾 外星人": [0x18, 0x3C, 0x7E, 0xDB, 0xFF, 0x24, 0x5A, 0x81],
+      "ᗧ 吃豆人": [0x3C, 0x7E, 0xFF, 0xE7, 0xC0, 0xE7, 0x7E, 0x3C],
+      "💎 鑽石": [0x18, 0x3C, 0x7E, 0xFF, 0x7E, 0x3C, 0x18, 0x00],
+      "⚡ 閃電": [0x06, 0x0C, 0x18, 0x3F, 0x0C, 0x18, 0x30, 0x00],
+      "💀 骷髏": [0x3C, 0x7E, 0xDB, 0xDB, 0x7E, 0x3C, 0x24, 0x24],
+    };
+
+    // 經典動態圖示動畫影格 (心跳、火箭、海浪、雷達、吃豆人)
+    const PRESET_ANIMATIONS = {
+      "💓 心跳搏動動畫": [
+        [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18],
+        [0x00, 0x00, 0x24, 0x7E, 0x7E, 0x3C, 0x18, 0x00],
+        [0x00, 0x00, 0x00, 0x24, 0x3C, 0x18, 0x00, 0x00],
+        [0x00, 0x00, 0x00, 0x18, 0x18, 0x00, 0x00, 0x00],
+        [0x00, 0x00, 0x00, 0x24, 0x3C, 0x18, 0x00, 0x00],
+        [0x00, 0x00, 0x24, 0x7E, 0x7E, 0x3C, 0x18, 0x00],
+        [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18],
+        [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18]
+      ],
+      "🚀 火箭升空動畫": [
+        [0x18, 0x3C, 0x7E, 0xDB, 0x99, 0x99, 0x3C, 0x18],
+        [0x3C, 0x7E, 0xDB, 0x99, 0x99, 0x3C, 0x18, 0x18],
+        [0x7E, 0xDB, 0x99, 0x99, 0x3C, 0x18, 0x18, 0x24],
+        [0xDB, 0x99, 0x99, 0x3C, 0x18, 0x18, 0x24, 0x42],
+        [0x99, 0x99, 0x3C, 0x18, 0x18, 0x24, 0x42, 0x00],
+        [0x99, 0x3C, 0x18, 0x18, 0x24, 0x42, 0x00, 0x00],
+        [0x3C, 0x18, 0x18, 0x24, 0x42, 0x00, 0x00, 0x00],
+        [0x18, 0x18, 0x24, 0x42, 0x00, 0x00, 0x00, 0x00]
+      ],
+      "🌊 像素海浪動畫": [
+        [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80],
+        [0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0xC0, 0x81],
+        [0x07, 0x0E, 0x1C, 0x38, 0x70, 0xE0, 0xC1, 0x83],
+        [0x0F, 0x1E, 0x3C, 0x78, 0xF0, 0xE1, 0xC3, 0x87],
+        [0x1F, 0x3E, 0x7C, 0xF8, 0xF1, 0xE3, 0xC7, 0x8F],
+        [0x3F, 0x7E, 0xFC, 0xF9, 0xF3, 0xE7, 0xCF, 0x9F],
+        [0x7F, 0xFE, 0xFD, 0xFB, 0xF7, 0xEF, 0xDF, 0xBF],
+        [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+      ],
+      "⏳ 旋轉雷達動畫": [
+        [0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18],
+        [0x03, 0x06, 0x0C, 0x18, 0x18, 0x30, 0x60, 0xC0],
+        [0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00],
+        [0xC0, 0x60, 0x30, 0x18, 0x18, 0x0C, 0x06, 0x03],
+        [0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18],
+        [0x03, 0x06, 0x0C, 0x18, 0x18, 0x30, 0x60, 0xC0],
+        [0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00],
+        [0xC0, 0x60, 0x30, 0x18, 0x18, 0x0C, 0x06, 0x03]
+      ],
+      "ᗧ 吃豆人動態": [
+        [0x3C, 0x7E, 0xFF, 0xE7, 0xC0, 0xE7, 0x7E, 0x3C],
+        [0x3C, 0x7E, 0xFF, 0xEF, 0xE0, 0xEF, 0x7E, 0x3C],
+        [0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C],
+        [0x3C, 0x7E, 0xFF, 0xEF, 0xE0, 0xEF, 0x7E, 0x3C]
+      ]
+    };
+
+    // 5x7 點陣標準字型字典 (英數、符號)
+    const FONT_5X7 = {
+      ' ': [0x00, 0x00, 0x00, 0x00, 0x00],
+      '!': [0x00, 0x00, 0x5F, 0x00, 0x00],
+      '"': [0x00, 0x07, 0x00, 0x07, 0x00],
+      '#': [0x14, 0x7F, 0x14, 0x7F, 0x14],
+      '$': [0x24, 0x2A, 0x7F, 0x2A, 0x12],
+      '%': [0x23, 0x13, 0x08, 0x64, 0x62],
+      '&': [0x36, 0x49, 0x55, 0x22, 0x50],
+      '\'': [0x00, 0x05, 0x03, 0x00, 0x00],
+      '(': [0x00, 0x1C, 0x22, 0x41, 0x00],
+      ')': [0x00, 0x41, 0x22, 0x1C, 0x00],
+      '*': [0x08, 0x2A, 0x1C, 0x2A, 0x08],
+      '+': [0x08, 0x08, 0x3E, 0x08, 0x08],
+      ',': [0x00, 0x50, 0x30, 0x00, 0x00],
+      '-': [0x08, 0x08, 0x08, 0x08, 0x08],
+      '.': [0x00, 0x60, 0x60, 0x00, 0x00],
+      '/': [0x20, 0x10, 0x08, 0x04, 0x02],
+      '0': [0x3E, 0x51, 0x49, 0x45, 0x3E],
+      '1': [0x00, 0x42, 0x7F, 0x40, 0x00],
+      '2': [0x42, 0x61, 0x51, 0x49, 0x46],
+      '3': [0x21, 0x41, 0x45, 0x4B, 0x31],
+      '4': [0x18, 0x14, 0x12, 0x7F, 0x10],
+      '5': [0x27, 0x45, 0x45, 0x45, 0x39],
+      '6': [0x3C, 0x4A, 0x49, 0x49, 0x30],
+      '7': [0x01, 0x71, 0x09, 0x05, 0x03],
+      '8': [0x36, 0x49, 0x49, 0x49, 0x36],
+      '9': [0x06, 0x49, 0x49, 0x29, 0x1E],
+      ':': [0x00, 0x36, 0x36, 0x00, 0x00],
+      ';': [0x00, 0x56, 0x36, 0x00, 0x00],
+      '<': [0x08, 0x14, 0x22, 0x41, 0x00],
+      '=': [0x14, 0x14, 0x14, 0x14, 0x14],
+      '>': [0x00, 0x41, 0x22, 0x14, 0x08],
+      '?': [0x02, 0x01, 0x51, 0x09, 0x06],
+      '@': [0x32, 0x49, 0x79, 0x41, 0x3E],
+      'A': [0x7E, 0x11, 0x11, 0x11, 0x7E],
+      'B': [0x7F, 0x49, 0x49, 0x49, 0x36],
+      'C': [0x3E, 0x41, 0x41, 0x41, 0x22],
+      'D': [0x7F, 0x41, 0x41, 0x22, 0x1C],
+      'E': [0x7F, 0x49, 0x49, 0x49, 0x41],
+      'F': [0x7F, 0x09, 0x09, 0x09, 0x01],
+      'G': [0x3E, 0x41, 0x49, 0x49, 0x7A],
+      'H': [0x7F, 0x08, 0x08, 0x08, 0x7F],
+      'I': [0x00, 0x41, 0x7F, 0x41, 0x00],
+      'J': [0x20, 0x40, 0x41, 0x3F, 0x01],
+      'K': [0x7F, 0x08, 0x14, 0x22, 0x41],
+      'L': [0x7F, 0x40, 0x40, 0x40, 0x40],
+      'M': [0x7F, 0x02, 0x0C, 0x02, 0x7F],
+      'N': [0x7F, 0x04, 0x08, 0x10, 0x7F],
+      'O': [0x3E, 0x41, 0x41, 0x41, 0x3E],
+      'P': [0x7F, 0x09, 0x09, 0x09, 0x06],
+      'Q': [0x3E, 0x41, 0x51, 0x21, 0x5E],
+      'R': [0x7F, 0x09, 0x19, 0x29, 0x46],
+      'S': [0x46, 0x49, 0x49, 0x49, 0x31],
+      'T': [0x01, 0x01, 0x7F, 0x01, 0x01],
+      'U': [0x3F, 0x40, 0x40, 0x40, 0x3F],
+      'V': [0x1F, 0x20, 0x40, 0x20, 0x1F],
+      'W': [0x7F, 0x20, 0x18, 0x20, 0x7F],
+      'X': [0x63, 0x14, 0x08, 0x14, 0x63],
+      'Y': [0x07, 0x08, 0x70, 0x08, 0x07],
+      'Z': [0x61, 0x51, 0x49, 0x45, 0x43]
+    };
+
+    function textToMatrixFrames(text, padding = true) {
+      const cols = [];
+      if (padding) {
+        for (let i = 0; i < 8; i++) cols.push(0);
+      }
+      const str = String(text || '').toUpperCase();
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        const glyph = FONT_5X7[ch] || [0x00, 0x55, 0x2A, 0x55, 0x00];
+        for (let j = 0; j < glyph.length; j++) cols.push(glyph[j]);
+        cols.push(0x00);
+      }
+      if (padding) {
+        for (let i = 0; i < 8; i++) cols.push(0);
+      }
+
+      const frames = [];
+      const totalShifts = Math.max(1, cols.length - 7);
+      for (let shift = 0; shift < totalShifts; shift++) {
+        const windowSlice = cols.slice(shift, shift + 8);
+        while (windowSlice.length < 8) windowSlice.push(0);
+        const frame = [0, 0, 0, 0, 0, 0, 0, 0];
+        for (let r = 0; r < 8; r++) {
+          let rowVal = 0;
+          for (let c = 0; c < 8; c++) {
+            if ((windowSlice[c] >> r) & 1) {
+              rowVal |= (1 << (7 - c));
+            }
+          }
+          frame[r] = rowVal;
+        }
+        frames.push(frame);
+      }
+      return frames;
+    }
+
+    // 預設經典配件清單 (純前端/Render雲端無後端時直接載入)
+    const DEFAULT_COMPONENTS = [
+      {
+        "id": "comp_1",
+        "type": "rgb",
+        "name": "🌈 RGB 燈 1 (M1)",
+        "pins": { "r": 6, "g": 3, "b": 5 },
+        "common_anode": true,
+        "state": { "r": 255, "g": 0, "b": 0 }
+      },
+      {
+        "id": "comp_2",
+        "type": "rgb",
+        "name": "🌈 RGB 燈 2 (M2)",
+        "pins": { "r": 11, "g": 9, "b": 10 },
+        "common_anode": true,
+        "state": { "r": 0, "g": 0, "b": 255 }
+      },
+      {
+        "id": "comp_3",
+        "type": "matrix",
+        "name": "👾 MAX7219 8x8 點陣",
+        "pins": { "din": 12, "cs": 8, "clk": 7 },
+        "state": { "matrix": [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18], "marquee_speed": 150 }
+      },
+      {
+        "id": "comp_4",
+        "type": "servo",
+        "name": "🦾 伺服舵機 (示範)",
+        "pins": { "pin": 3 },
+        "state": { "angle": 90 }
+      },
+      {
+        "id": "comp_5",
+        "type": "sensor",
+        "name": "🌡️ 類比感測 / 光敏 (示範)",
+        "sensor_type": "A",
+        "pins": { "pin": 0 },
+        "state": { "streaming": false }
+      }
+    ];
+
+    // ==========================================
+    // Web Serial 原生硬體直連引擎 (免後端直通 USB)
+    // ==========================================
+    let serialPort = null;
+    let serialReader = null;
+    let isWebSerialMode = false;
+    let serialReadBuffer = '';
+    let clientFxInterval = null;
+
+    async function toggleWebSerial() {
+      if (isWebSerialMode && serialPort) {
+        await disconnectWebSerial();
+        return;
+      }
+      if (!('serial' in navigator)) {
+        alert('您的瀏覽器不支援 Web Serial API！\n請使用 Google Chrome、Microsoft Edge 或 Opera 瀏覽器（需 HTTPS 或 localhost）。');
+        return;
+      }
+      try {
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 115200 });
+        serialPort = port;
+        isWebSerialMode = true;
+
+        const btn = document.getElementById('btnWebSerial');
+        if (btn) {
+          btn.innerText = '❌ 斷開 USB 直連';
+          btn.style.background = '#F38BA8';
+          btn.style.color = '#11111B';
+        }
+        updateConnStatus(true, 'WebSerial USB');
+        log('⚡ [Web Serial] 瀏覽器原生 USB 直連成功！BaudRate: 115200');
+
+        startSerialReadLoop();
+        setTimeout(() => {
+          writeSerialLine('PING');
+        }, 1200);
+      } catch (err) {
+        if (err.name !== 'NotFoundError') {
+          log('❌ Web Serial 直連失敗: ' + err.message);
+          alert('連線失敗: ' + err.message);
+        }
+      }
+    }
+
+    async function disconnectWebSerial() {
+      isWebSerialMode = false;
+      stopClientDualEffect();
+      if (serialReader) {
+        try { await serialReader.cancel(); } catch(e){}
+      }
+      if (serialPort) {
+        try { await serialPort.close(); } catch(e){}
+        serialPort = null;
+      }
+      updateConnStatus(false, '');
+      log('🔌 Web Serial 序列埠已中斷');
+      const btn = document.getElementById('btnWebSerial');
+      if (btn) {
+        btn.innerText = '⚡ 瀏覽器 USB 直連';
+        btn.style.background = '#A6E3A1';
+        btn.style.color = '#11111B';
+      }
+    }
+
+    let serialWriteQueue = Promise.resolve();
+
+    function writeSerialLine(text) {
+      if (!serialPort || !serialPort.writable) return Promise.resolve();
+      const encoder = new TextEncoder();
+      const cleanText = text.endsWith('\n') ? text : text + '\n';
+      const data = encoder.encode(cleanText);
+
+      serialWriteQueue = serialWriteQueue.then(async () => {
+        if (!serialPort || !serialPort.writable) return;
+        try {
+          const writer = serialPort.writable.getWriter();
+          await writer.write(data);
+          writer.releaseLock();
+        } catch (err) {
+          console.warn('Web Serial write error:', err);
+        }
+      });
+      return serialWriteQueue;
+    }
+
+    async function startSerialReadLoop() {
+      while (serialPort && serialPort.readable) {
+        try {
+          const reader = serialPort.readable.getReader();
+          serialReader = reader;
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            if (value) {
+              const text = new TextDecoder().decode(value);
+              serialReadBuffer += text;
+              const lines = serialReadBuffer.split('\n');
+              serialReadBuffer = lines.pop();
+              for (let l of lines) {
+                handleSerialLine(l.trim());
+              }
+            }
+          }
+        } catch (err) {
+          if (err.name !== 'TypeError') {
+            console.error('Web Serial read error:', err);
+          }
+          break;
+        } finally {
+          if (serialReader) {
+            try { serialReader.releaseLock(); } catch(e){}
+            serialReader = null;
+          }
+        }
+      }
+    }
+
+    function handleSerialLine(line) {
+      if (!line) return;
+      log('<< ' + line);
+      if (line.startsWith('PONG') || line.includes('UNIVERSAL_READY')) {
+        log('🎉 驗證成功：Arduino 萬能硬體韌體連線正常！');
+        updateConnStatus(true, 'WebSerial USB');
+      } else if (line.startsWith('STREAM,')) {
+        const parts = line.split(',');
+        if (parts.length >= 4) {
+          updateSensorValue(parts[1], parts[3]);
+        }
+      } else if (line.startsWith('OK:SONAR,') || line.startsWith('SONAR,')) {
+        const parts = line.split(',');
+        if (parts.length >= 3) {
+          updateSonarValue(parts[1], parts[2]);
+        }
+      }
+    }
+
+    function stopClientDualEffect(turnOff = false) {
+      if (clientFxInterval) {
+        clearInterval(clientFxInterval);
+        clientFxInterval = null;
+      }
+      document.getElementById('activeFxName').innerText = '';
+      document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+      if (turnOff) {
+        const rgbs = components.filter(c => c.type === 'rgb');
+        let batchOff = '';
+        rgbs.forEach(comp => {
+          const p = comp.pins || {};
+          const rp = p.r || 6, gp = p.g || 3, bp = p.b || 5;
+          const anode = comp.common_anode ? 1 : 0;
+          batchOff += `RGB,${rp},${gp},${bp},${anode},0,0,0\n`;
+          syncRGBDirect(comp.id, 0, 0, 0);
+        });
+        if (isWebSerialMode && batchOff) {
+          writeSerialLine(batchOff);
+        }
+      }
+    }
+
+    function runClientDualEffect(effectName) {
+      stopClientDualEffect(false);
+      const fx = DUAL_FX_LIST.find(x => x[0] === effectName);
+      if (fx) {
+        document.getElementById('activeFxName').innerText = `[正在執行: ${fx[1]}]`;
+        document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+        const btn = document.getElementById(`fx_btn_${effectName}`);
+        if (btn) btn.classList.add('active-fx');
+      }
+
+      const t0 = performance.now();
+      clientFxInterval = setInterval(() => {
+        const rgbs = components.filter(c => c.type === 'rgb');
+        if (rgbs.length === 0) return;
+        const c1 = rgbs[0];
+        const c2 = rgbs.length > 1 ? rgbs[1] : rgbs[0];
+        const p1 = c1.pins || {r:6, g:3, b:5};
+        const p2 = c2.pins || {r:11, g:9, b:10};
+        const a1 = c1.common_anode ? 1 : 0;
+        const a2 = c2.common_anode ? 1 : 0;
+
+        const dt = (performance.now() - t0) / 1000.0;
+        let r1 = 0, g1 = 0, b1 = 0, r2 = 0, g2 = 0, b2 = 0;
+
+        if (effectName === 'sync_rainbow') {
+          const rgb = hsvToRgb((dt * 60) % 360, 1.0, 1.0);
+          r1 = r2 = rgb.r; g1 = g2 = rgb.g; b1 = b2 = rgb.b;
+        } else if (effectName === 'complementary') {
+          const rgb1 = hsvToRgb((dt * 50) % 360, 1.0, 1.0);
+          const rgb2 = hsvToRgb((dt * 50 + 180) % 360, 1.0, 1.0);
+          r1 = rgb1.r; g1 = rgb1.g; b1 = rgb1.b;
+          r2 = rgb2.r; g2 = rgb2.g; b2 = rgb2.b;
+        } else if (effectName === 'police_strobe') {
+          const phase = Math.floor(dt * 8) % 4;
+          if (phase === 0 || phase === 1) { r1 = 255; r2 = 0; b2 = 0; }
+          else { r1 = 0; r2 = 0; b2 = 255; }
+        } else if (effectName === 'warm_breathing') {
+          const v = (Math.sin(dt * 2.5) + 1.0) / 2.0;
+          r1 = r2 = Math.round(255 * v);
+          g1 = g2 = Math.round(120 * v);
+          b1 = b2 = Math.round(20 * v);
+        } else if (effectName === 'aurora_breathing') {
+          const v1 = (Math.sin(dt * 2.0) + 1.0) / 2.0;
+          const v2 = (Math.cos(dt * 2.0) + 1.0) / 2.0;
+          r1 = 0; g1 = Math.round(255 * v1); b1 = Math.round(200 * v1);
+          r2 = Math.round(180 * v2); g2 = 0; b2 = Math.round(255 * v2);
+        } else if (effectName === 'disco_party') {
+          r1 = Math.random() > 0.5 ? 255 : 0;
+          g1 = Math.random() > 0.5 ? 255 : 0;
+          b1 = Math.random() > 0.5 ? 255 : 0;
+          r2 = Math.random() > 0.5 ? 255 : 0;
+          g2 = Math.random() > 0.5 ? 255 : 0;
+          b2 = Math.random() > 0.5 ? 255 : 0;
+        } else if (effectName === 'chase_wave') {
+          const phase = Math.sin(dt * 4);
+          const v1 = Math.max(0, phase);
+          const v2 = Math.max(0, -phase);
+          r1 = 0; g1 = Math.round(255 * v1); b1 = Math.round(255 * v1);
+          r2 = Math.round(255 * v2); g2 = 0; b2 = Math.round(128 * v2);
+        } else if (effectName === 'fire_flicker') {
+          const flicker = Math.floor(180 + Math.random() * 75);
+          r1 = r2 = flicker;
+          g1 = g2 = Math.max(0, Math.round(flicker * 0.4 + (Math.random() * 40 - 20)));
+          b1 = b2 = 0;
+        } else if (effectName === 'thunder_storm') {
+          if (Math.random() < 0.15) { r1 = r2 = g1 = g2 = b1 = b2 = 255; }
+          else { r1 = r2 = g1 = g2 = 0; b1 = b2 = 20; }
+        } else if (effectName === 'heartbeat') {
+          const tCycle = dt % 1.2;
+          let v = 0.05;
+          if (tCycle < 0.18) v = Math.sin(tCycle / 0.18 * Math.PI);
+          else if (tCycle >= 0.28 && tCycle < 0.46) v = Math.sin((tCycle - 0.28) / 0.18 * Math.PI) * 0.65;
+          r1 = r2 = Math.round(255 * v);
+          g1 = g2 = b1 = b2 = 0;
+        } else if (effectName === 'cyberpunk_neon') {
+          const p = (Math.sin(dt * 3.0) + 1.0) / 2.0;
+          r1 = Math.round(255 * p); g1 = 0; b1 = Math.round(180 * (1 - p));
+          r2 = 0; g2 = Math.round(240 * (1 - p)); b2 = Math.round(255 * p);
+        } else if (effectName === 'meteor_shower') {
+          const cyc = dt % 1.5;
+          const v = Math.max(0.0, 1.0 - cyc / 1.5);
+          r1 = Math.round(200 * v); g1 = Math.round(220 * v); b1 = Math.round(255 * v);
+          const v2 = Math.max(0.0, 1.0 - ((dt + 0.75) % 1.5) / 1.5);
+          r2 = Math.round(200 * v2); g2 = Math.round(220 * v2); b2 = Math.round(255 * v2);
+        } else if (effectName === 'sunrise_glow') {
+          const p = (Math.sin(dt * 1.5) + 1.0) / 2.0;
+          r1 = r2 = Math.round(255 * p);
+          g1 = g2 = Math.round(100 * p * p);
+          b1 = b2 = Math.round(30 * p * p * p);
+        } else if (effectName === 'emerald_forest') {
+          const v1 = (Math.sin(dt * 2.2) + 1.0) / 2.0;
+          const v2 = (Math.cos(dt * 2.2) + 1.0) / 2.0;
+          r1 = 0; g1 = Math.round(255 * (0.4 + 0.6 * v1)); b1 = Math.round(80 * v1);
+          r2 = 0; g2 = Math.round(200 * (0.3 + 0.7 * v2)); b2 = Math.round(140 * v2);
+        } else if (effectName === 'magic_crystal') {
+          const v = (Math.sin(dt * 2.8) + 1.0) / 2.0;
+          r1 = Math.round(160 * v); g1 = 0; b1 = Math.round(255 * (0.5 + 0.5 * v));
+          r2 = Math.round(75 * (1 - v)); g2 = 0; b2 = Math.round(255 * (1 - 0.5 * v));
+        } else if (effectName === 'volcano_magma') {
+          const p = (Math.sin(dt * 3.5) + 1.0) / 2.0;
+          r1 = r2 = 255;
+          g1 = g2 = Math.round(30 + 80 * p);
+          b1 = b2 = 0;
+        } else if (effectName === 'ambulance_amber') {
+          const phase = Math.floor(dt * 6) % 8;
+          if (phase === 0 || phase === 2) { r1 = 255; g1 = 120; b1 = 0; r2 = 0; g2 = 0; b2 = 0; }
+          else if (phase === 4 || phase === 6) { r1 = 0; g1 = 0; b1 = 0; r2 = 255; g2 = 255; b2 = 255; }
+          else { r1 = g1 = b1 = r2 = g2 = b2 = 0; }
+        } else if (effectName === 'candy_pop') {
+          const rgb1 = hsvToRgb((dt * 45) % 360, 0.65, 1.0);
+          const rgb2 = hsvToRgb((dt * 45 + 90) % 360, 0.65, 1.0);
+          r1 = rgb1.r; g1 = rgb1.g; b1 = rgb1.b;
+          r2 = rgb2.r; g2 = rgb2.g; b2 = rgb2.b;
+        }
+
+        try {
+          if (isWebSerialMode) {
+            let batchCmd = `RGB,${p1.r},${p1.g},${p1.b},${a1},${r1},${g1},${b1}\n`;
+            if (c2.id !== c1.id) {
+              batchCmd += `RGB,${p2.r},${p2.g},${p2.b},${a2},${r2},${g2},${b2}\n`;
+            }
+            writeSerialLine(batchCmd);
+          }
+        } catch (e) {
+          console.warn('Web Serial dual effect write error:', e);
+        }
+        syncRGBDirect(c1.id, r1, g1, b1);
+        if (c2.id !== c1.id) {
+          syncRGBDirect(c2.id, r2, g2, b2);
+        }
+      }, 40);
+    }
+
+    function executeWebSerialAction(data) {
+      const action = data.action;
+      const cid = data.id;
+      const comp = components.find(c => c.id === cid);
+
+      if (action === 'rgb_set') {
+        stopClientDualEffect(false);
+        if (comp) {
+          const p = comp.pins || {};
+          const rp = p.r || 6, gp = p.g || 3, bp = p.b || 5;
+          const anode = comp.common_anode ? 1 : 0;
+          writeSerialLine(`RGB,${rp},${gp},${bp},${anode},${data.r},${data.g},${data.b}`);
+        }
+      } else if (action === 'dual_rgb_effect') {
+        runClientDualEffect(data.effect);
+      } else if (action === 'stop_dual_rgb_effect') {
+        stopClientDualEffect(true);
+      } else if (action === 'servo_set') {
+        const pin = comp?.pins?.pin || 3;
+        writeSerialLine(`SERVO,${pin},${data.angle}`);
+      } else if (action === 'pwm_set') {
+        const pin = comp?.pins?.pin || 5;
+        writeSerialLine(`PWM,${pin},${data.val}`);
+      } else if (action === 'switch_set') {
+        const pin = comp?.pins?.pin || 13;
+        writeSerialLine(`DWRITE,${pin},${data.on ? 1 : 0}`);
+      } else if (action === 'matrix_all') {
+        stopClientMatrixMarquee(cid);
+        if (comp) {
+          const p = comp.pins || {};
+          writeSerialLine(`MATRIX_ALL,${p.din},${p.cs},${p.clk},${data.matrix.join(',')}`);
+        }
+      } else if (action === 'matrix_preset') {
+        stopClientMatrixMarquee(cid);
+        if (comp && PRESET_MATRIX[data.preset]) {
+          const bmp = PRESET_MATRIX[data.preset];
+          syncMatrixGrid(cid, bmp);
+          const p = comp.pins || {};
+          writeSerialLine(`MATRIX_ALL,${p.din},${p.cs},${p.clk},${bmp.join(',')}`);
+        }
+      } else if (action === 'matrix_clear') {
+        stopClientMatrixMarquee(cid);
+        if (comp) {
+          syncMatrixGrid(cid, [0,0,0,0,0,0,0,0]);
+          const p = comp.pins || {};
+          writeSerialLine(`MATRIX_CLEAR,${p.din},${p.cs},${p.clk}`);
+        }
+      } else if (action === 'matrix_start_marquee') {
+        startClientMatrixMarquee(cid, data.mode, data.text, data.speed_ms, data.loop);
+      } else if (action === 'matrix_stop_marquee') {
+        stopClientMatrixMarquee(cid);
+      } else if (action === 'matrix_speed_sync') {
+        updateClientMatrixSpeed(cid, data.speed);
+      } else if (action === 'matrix_text_sync') {
+        if (comp) {
+          comp.state = comp.state || {};
+          comp.state.marquee_text = data.text;
+        }
+      } else if (action === 'sonar_measure') {
+        if (comp) {
+          const p = comp.pins || {};
+          writeSerialLine(`SONAR_READ,${p.trig},${p.echo}`);
+        }
+      } else if (action === 'sensor_stream') {
+        if (comp) {
+          const p = comp.pins || {};
+          const type = comp.sensor_type || 'A';
+          if (data.streaming) {
+            writeSerialLine(`STREAM_START,${p.pin},${type},100`);
+          } else {
+            writeSerialLine(`STREAM_STOP,${p.pin}`);
+          }
+        }
+      } else if (action === 'profile_sync') {
+        localStorage.setItem('arduino_universal_profile', JSON.stringify({ components, workflows: data.workflows || workflows }));
+      } else if (action === 'workflow_execute_step') {
+        const wf = workflows[data.workflow_idx];
+        if (wf && wf.steps && wf.steps[data.step_idx]) {
+          executeWebSerialStep(wf.steps[data.step_idx]);
+        }
+      } else if (action === 'workflow_start') {
+        startWebSerialWorkflow(data.workflow_idx);
+      } else if (action === 'workflow_stop') {
+        stopWebSerialWorkflow();
+      }
+    }
+
+    let clientWfRunning = false;
+    async function startWebSerialWorkflow(wIdx) {
+      if (clientWfRunning) return;
+      clientWfRunning = true;
+      const wf = workflows[wIdx];
+      if (!wf) return;
+      const steps = wf.steps || [];
+      const loop = Boolean(wf.loop);
+      log(`🎭 [Web Serial] 啟動流程：『${wf.name}』(共 ${steps.length} 個步驟)`);
+
+      while (clientWfRunning) {
+        for (let i = 0; i < steps.length; i++) {
+          if (!clientWfRunning) break;
+          highlightActiveStep(i);
+          await executeWebSerialStep(steps[i]);
+          await new Promise(r => setTimeout(r, 30));
+        }
+        if (!loop || !clientWfRunning) break;
+      }
+      highlightActiveStep(-1);
+      clientWfRunning = false;
+      log(`🏁 [Web Serial] 流程『${wf.name}』執行完成。`);
+    }
+
+    function stopWebSerialWorkflow() {
+      clientWfRunning = false;
+      highlightActiveStep(-1);
+      log(`⏹️ [Web Serial] 已停止流程執行。`);
+    }
+
+    async function executeWebSerialStep(step) {
+      const act = step.action;
+      const params = step.params || {};
+      const tid = step.target_id;
+      const comp = components.find(c => c.id === tid);
+
+      if (act === 'delay') {
+        await new Promise(r => setTimeout(r, params.ms || 500));
+      } else if (act === 'dual_effect') {
+        runClientDualEffect(params.effect || 'sync_rainbow');
+        await new Promise(r => setTimeout(r, params.duration_ms || 3000));
+        stopClientDualEffect(true);
+      } else if (act === 'rgb') {
+        if (comp) {
+          const p = comp.pins || {};
+          const rp = p.r || 6, gp = p.g || 3, bp = p.b || 5;
+          const anode = comp.common_anode ? 1 : 0;
+          writeSerialLine(`RGB,${rp},${gp},${bp},${anode},${params.r},${params.g},${params.b}`);
+          syncRGBDirect(tid, params.r, params.g, params.b);
+        }
+      } else if (act === 'matrix') {
+        if (comp) {
+          const p = comp.pins || {};
+          let bmp = PRESET_MATRIX[params.pattern] || [0,0,0,0,0,0,0,0];
+          syncMatrixGrid(tid, bmp);
+          writeSerialLine(`MATRIX_ALL,${p.din},${p.cs},${p.clk},${bmp.join(',')}`);
+        }
+      } else if (act === 'matrix_marquee') {
+        if (comp) {
+          const p = comp.pins || {};
+          const din = p.din !== undefined ? p.din : 12;
+          const cs = p.cs !== undefined ? p.cs : 8;
+          const clk = p.clk !== undefined ? p.clk : 7;
+          const txt = params.text || 'HELLO';
+          const spd = Math.max(35, params.speed_ms || 100);
+          const frames = textToMatrixFrames(txt);
+          log(`🏃‍♂️ [Web Serial] 流程執行點陣跑馬燈: "${txt}" (共 ${frames.length} 幀)`);
+          for (const f of frames) {
+            if (!clientWfRunning && isWebSerialMode) break;
+            syncMatrixGrid(tid, f);
+            writeSerialLine(`MATRIX_ALL,${din},${cs},${clk},${f.join(',')}`);
+            await new Promise(r => setTimeout(r, spd));
+          }
+        }
+      } else if (act === 'matrix_anim') {
+        if (comp) {
+          const p = comp.pins || {};
+          const frames = PRESET_ANIMATIONS[params.anim] || [];
+          const spd = params.speed_ms || 90;
+          const rep = params.repeats || 2;
+          for (let i = 0; i < rep; i++) {
+            for (let f of frames) {
+              if (!clientWfRunning && isWebSerialMode) break;
+              syncMatrixGrid(tid, f);
+              writeSerialLine(`MATRIX_ALL,${p.din},${p.cs},${p.clk},${f.join(',')}`);
+              await new Promise(r => setTimeout(r, spd));
+            }
+          }
+        }
+      } else if (act === 'servo') {
+        if (comp) {
+          const pin = comp.pins?.pin || 3;
+          writeSerialLine(`SERVO,${pin},${params.angle}`);
+          const angEl = document.getElementById(`ang_${tid}`);
+          if (angEl) angEl.innerText = `${params.angle}°`;
+        }
+      } else if (act === 'switch') {
+        if (comp) {
+          const pin = comp.pins?.pin || 13;
+          writeSerialLine(`DWRITE,${pin},${params.on ? 1 : 0}`);
+          comp.state = { on: params.on };
+          const btn = document.getElementById(`sw_btn_${tid}`);
+          if (btn) {
+            btn.className = `switch-btn ${params.on ? 'on' : ''}`;
+            btn.innerText = params.on ? '🟢 開啟 (ON)' : '⚪ 關閉 (OFF)';
+          }
+        }
+      } else if (act === 'pwm') {
+        if (comp) {
+          const pin = comp.pins?.pin || 5;
+          writeSerialLine(`PWM,${pin},${params.val}`);
+          const pct = Math.round(params.val / 255 * 100);
+          const pwmEl = document.getElementById(`pwm_val_${tid}`);
+          if (pwmEl) pwmEl.innerText = `${params.val} (${pct}%)`;
+        }
+      }
+    }
+
+    function sendAction(data) {
+      if (isWebSerialMode) {
+        executeWebSerialAction(data);
+        return;
+      }
+      fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      }).catch(err => {
+        if (isWebSerialMode) executeWebSerialAction(data);
+      });
+    }
+    const sendWs = sendAction;
+
+    // Logging
+    function log(msg) {
+      const logBox = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString();
+      logBox.textContent += `[${time}] ${msg}\n`;
+      if (logBox.textContent.length > 20000) {
+        logBox.textContent = logBox.textContent.slice(-10000);
+      }
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+    function clearLog() {
+      document.getElementById('logBox').textContent = '';
+    }
+
+    // Status & Ports
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        components = data.components || [];
+        workflows = data.workflows || [];
+        if (!isWebSerialMode) {
+          updateConnStatus(data.connected, data.port);
+        }
+        if (data.tunnel_url) updateTunnelStatus(data.tunnel_url);
+        renderPorts(data.ports, data.port);
+        renderCards();
+        renderWorkflowList();
+      } catch (e) {
+        // 後端伺服器離線 (例如純前端託管於 Render / 靜態網站)
+        const local = localStorage.getItem('arduino_universal_profile');
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            components = parsed.components || DEFAULT_COMPONENTS;
+            workflows = parsed.workflows || [];
+          } catch(err) {
+            components = JSON.parse(JSON.stringify(DEFAULT_COMPONENTS));
+          }
+        } else {
+          components = JSON.parse(JSON.stringify(DEFAULT_COMPONENTS));
+        }
+        renderCards();
+        renderWorkflowList();
+        const pSel = document.getElementById('portSelect');
+        if (pSel) pSel.innerHTML = '<option value="">(瀏覽器直連模式)</option>';
+        log('💡 [純前端/雲端模式] 系統已就緒，請點擊上方「⚡ 瀏覽器 USB 直連」直接存取本機 Arduino！');
+      }
+    }
+
+    function updateConnStatus(connected, port) {
+      isConnected = connected;
+      const st = document.getElementById('connStatus');
+      const btn = document.getElementById('btnConnect');
+      const bannerSt = document.getElementById('syncBannerStatus');
+      const bannerDet = document.getElementById('syncBannerDetail');
+      if (connected) {
+        st.className = 'status-badge connected';
+        st.innerText = `● 已連線 (${port})`;
+        if (btn) btn.innerText = '❌ 斷開連線';
+        if (bannerSt) bannerSt.innerText = `跨電腦全功能雙向同步中 (${port})`;
+        if (bannerDet) bannerDet.innerText = '（主機 Arduino 已就緒，任何電腦/手機開此網頁皆可直接操作）';
+      } else {
+        st.className = 'status-badge';
+        st.innerText = '● 未連線';
+        if (btn) btn.innerText = '🔌 連線 (Python)';
+        if (bannerSt) bannerSt.innerText = '主機 Arduino 序列埠未連線';
+        if (bannerDet) bannerDet.innerText = '（請在插有 Arduino 的主機上選擇 COM 埠連線）';
+      }
+    }
+
+    function renderPorts(ports, current) {
+      const sel = document.getElementById('portSelect');
+      if (!sel) return;
+      sel.innerHTML = '';
+      if (!ports || ports.length === 0) {
+        sel.innerHTML = '<option value="">(未偵測到埠)</option>';
+        return;
+      }
+      ports.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.innerText = p;
+        if (p === current) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+
+    async function scanPorts() {
+      try {
+        const res = await fetch('/api/ports', { method: 'POST' });
+        const data = await res.json();
+        renderPorts(data.ports, data.selected);
+        log('已掃描序列埠：' + data.ports.join(', '));
+      } catch (e) {
+        log('💡 當前為瀏覽器原生直連模式，請直接點選「⚡ 瀏覽器 USB 直連」彈窗選擇硬體埠。');
+      }
+    }
+
+    async function toggleConnect() {
+      if (isConnected && !isWebSerialMode) {
+        await fetch('/api/disconnect', { method: 'POST' });
+        updateConnStatus(false, '');
+      } else {
+        const port = document.getElementById('portSelect').value;
+        if (!port) { alert('請先選取有效的 COM 埠，或使用右側「⚡ 瀏覽器 USB 直連」！'); return; }
+        await fetch('/api/connect', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ port })
+        });
+      }
+    }
+
+    async function emergencyStop() {
+      if (isWebSerialMode) {
+        stopClientDualEffect(true);
+        Object.keys(clientMarqueeState).forEach(cid => stopClientMatrixMarquee(cid));
+        // 全滅指令
+        components.forEach(c => {
+          if (c.type === 'switch') {
+            writeSerialLine(`DWRITE,${c.pins?.pin || 13},0`);
+            c.state = { on: false };
+          } else if (c.type === 'pwm') {
+            writeSerialLine(`PWM,${c.pins?.pin || 5},0`);
+            c.state = { val: 0 };
+          } else if (c.type === 'matrix') {
+            const p = c.pins || {};
+            writeSerialLine(`MATRIX_CLEAR,${p.din || 12},${p.cs || 8},${p.clk || 7}`);
+            syncMatrixGrid(c.id, [0,0,0,0,0,0,0,0]);
+          }
+        });
+        renderCards();
+        log('🛑 觸發緊急安全停機 (Web Serial Emergency Stop)！');
+        return;
+      }
+      await fetch('/api/emergency_stop', { method: 'POST' });
+      log('🛑 觸發緊急安全停機 (Emergency Stop)！');
+    }
+
+    async function runDiagnostics() {
+      if (isWebSerialMode) {
+        log('🔍 [Web Serial 巡檢] 連線正常，Baud: 115200，發送 PING...');
+        writeSerialLine('PING');
+        return;
+      }
+      await fetch('/api/diagnostics', { method: 'POST' });
+    }
+
+    async function saveProfile() {
+      try {
+        await fetch('/api/profile/save', { method: 'POST' });
+      } catch(e) {}
+      localStorage.setItem('arduino_universal_profile', JSON.stringify({ components, workflows }));
+      alert('配置已成功儲存！(包含瀏覽器本地儲存)');
+    }
+
+    async function loadProfile() {
+      try {
+        await fetch('/api/profile/load', { method: 'POST' });
+        refreshStatus();
+        alert('配置已從伺服器載入！');
+        return;
+      } catch(e) {}
+      const local = localStorage.getItem('arduino_universal_profile');
+      if (local) {
+        const parsed = JSON.parse(local);
+        components = parsed.components || DEFAULT_COMPONENTS;
+        workflows = parsed.workflows || [];
+        renderCards();
+        renderWorkflowList();
+        alert('配置已從瀏覽器本地載入！');
+      } else {
+        alert('未找到儲存的配置，已使用預設配置。');
+      }
+    }
+
+    // Render Component Cards
+    function renderCards() {
+      const c = document.getElementById('cardsContainer');
+      c.innerHTML = '';
+      if (!components || components.length === 0) {
+        c.innerHTML = '<div style="color:var(--text-muted); grid-column: 1/-1; text-align:center; padding:40px;">目前尚無配件，請點選上方「📂 載入」或確認 default_profile.json 配置。</div>';
+        return;
+      }
+      components.forEach(comp => {
+        try {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.id = `card_${comp.id}`;
+          c.appendChild(card);
+
+          if (comp.type === 'rgb') {
+            renderRGBCard(card, comp);
+          } else if (comp.type === 'matrix') {
+            renderMatrixCard(card, comp);
+          } else if (comp.type === 'pwm') {
+            renderPWMCard(card, comp);
+          } else if (comp.type === 'servo') {
+            renderServoCard(card, comp);
+          } else if (comp.type === 'switch') {
+            renderSwitchCard(card, comp);
+          } else if (comp.type === 'sensor') {
+            renderSensorCard(card, comp);
+          } else if (comp.type === 'sonar') {
+            renderSonarCard(card, comp);
+          }
+        } catch (err) {
+          console.error('Error rendering card', comp, err);
+          log('❌ 卡片渲染異常 [' + (comp.name || comp.id) + ']: ' + err);
+        }
+      });
+    }
+
+    // 1. RGB Card
+    function renderRGBCard(card, comp) {
+      const st = comp.state || { r: 255, g: 0, b: 128 };
+      const pins = comp.pins || {};
+      const hex = rgbToHex(st.r, st.g, st.b);
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">R:${pins.r} G:${pins.g} B:${pins.b} | ${comp.common_anode ? '共陽極' : '共陰極'}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="rgb-body">
+          <div class="color-preview-box" id="prev_${comp.id}" style="background-color: ${hex}"></div>
+          <div class="rgb-sliders">
+            <div class="slider-row">
+              <label style="color:var(--accent-red)">R</label>
+              <input type="range" id="range_r_${comp.id}" min="0" max="255" value="${st.r}" oninput="updateRGB('${comp.id}', 'r', this.value)">
+              <div class="slider-val" id="val_r_${comp.id}">${st.r}</div>
+            </div>
+            <div class="slider-row">
+              <label style="color:var(--accent-green)">G</label>
+              <input type="range" id="range_g_${comp.id}" min="0" max="255" value="${st.g}" oninput="updateRGB('${comp.id}', 'g', this.value)">
+              <div class="slider-val" id="val_g_${comp.id}">${st.g}</div>
+            </div>
+            <div class="slider-row">
+              <label style="color:var(--accent)">B</label>
+              <input type="range" id="range_b_${comp.id}" min="0" max="255" value="${st.b}" oninput="updateRGB('${comp.id}', 'b', this.value)">
+              <div class="slider-val" id="val_b_${comp.id}">${st.b}</div>
+            </div>
+          </div>
+        </div>
+        <div class="pill-group">
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 255, 0, 0)">🔴 紅</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 0, 255, 0)">🟢 綠</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 0, 0, 255)">🔵 藍</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 255, 200, 0)">🟡 黃</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 200, 0, 255)">🟣 紫</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 255, 255, 255)">⚪ 白</button>
+          <button class="pill-btn" onclick="setRGBColor('${comp.id}', 0, 0, 0)">⚫ 全熄</button>
+        </div>
+      `;
+    }
+
+    function rgbToHex(r, g, b) {
+      return "#" + [r, g, b].map(x => {
+        const hex = Math.max(0, Math.min(255, parseInt(x) || 0)).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      }).join('');
+    }
+
+    function syncRGBDirect(cid, r, g, b) {
+      r = Math.max(0, Math.min(255, Math.round(Number(r)) || 0));
+      g = Math.max(0, Math.min(255, Math.round(Number(g)) || 0));
+      b = Math.max(0, Math.min(255, Math.round(Number(b)) || 0));
+      const comp = components.find(c => c.id === cid);
+      if (comp) {
+        comp.state = comp.state || {};
+        comp.state.r = r;
+        comp.state.g = g;
+        comp.state.b = b;
+      }
+      const prev = document.getElementById(`prev_${cid}`);
+      if (prev) prev.style.backgroundColor = rgbToHex(r, g, b);
+      const vr = document.getElementById(`val_r_${cid}`);
+      const vg = document.getElementById(`val_g_${cid}`);
+      const vb = document.getElementById(`val_b_${cid}`);
+      if (vr) vr.innerText = r;
+      if (vg) vg.innerText = g;
+      if (vb) vb.innerText = b;
+      const rr = document.getElementById(`range_r_${cid}`);
+      const rg = document.getElementById(`range_g_${cid}`);
+      const rb = document.getElementById(`range_b_${cid}`);
+      if (rr && document.activeElement !== rr) rr.value = r;
+      if (rg && document.activeElement !== rg) rg.value = g;
+      if (rb && document.activeElement !== rb) rb.value = b;
+    }
+
+    function updateRGB(cid, channel, val) {
+      if (clientFxInterval) {
+        stopClientDualEffect(false);
+        if (!isWebSerialMode) sendWs({ action: 'stop_dual_rgb_effect' });
+      }
+      const comp = components.find(c => c.id === cid);
+      if (!comp) return;
+      comp.state = comp.state || {};
+      comp.state[channel] = parseInt(val) || 0;
+      const r = comp.state.r || 0;
+      const g = comp.state.g || 0;
+      const b = comp.state.b || 0;
+      const vr = document.getElementById(`val_${channel}_${cid}`);
+      if (vr) vr.innerText = comp.state[channel];
+      const prev = document.getElementById(`prev_${cid}`);
+      if (prev) prev.style.backgroundColor = rgbToHex(r, g, b);
+      sendWs({
+        action: 'rgb_set',
+        id: cid,
+        r: r,
+        g: g,
+        b: b
+      });
+    }
+
+    function setRGBColor(cid, r, g, b) {
+      if (clientFxInterval) {
+        stopClientDualEffect(false);
+        if (!isWebSerialMode) sendWs({ action: 'stop_dual_rgb_effect' });
+      }
+      syncRGBDirect(cid, r, g, b);
+      sendWs({ action: 'rgb_set', id: cid, r, g, b });
+    }
+
+    // 2. MAX7219 Dot Matrix Card
+    function renderMatrixCard(card, comp) {
+      const pins = comp.pins || {};
+      const matrix = comp.state?.matrix || [0, 0, 0, 0, 0, 0, 0, 0];
+      let dotsHtml = '';
+      for (let r = 0; r < 8; r++) {
+        const rowVal = matrix[r] || 0;
+        for (let c = 0; c < 8; c++) {
+          const isOn = Boolean(rowVal & (1 << (7 - c)));
+          dotsHtml += `<div class="matrix-dot ${isOn ? 'on' : ''}" data-r="${r}" data-c="${c}" onclick="toggleMatrixDot('${comp.id}', ${r}, ${c})"></div>`;
+        }
+      }
+
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">DIN:${pins.din} CS:${pins.cs} CLK:${pins.clk}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="matrix-body">
+          <div class="matrix-grid-container" id="grid_${comp.id}">
+            ${dotsHtml}
+          </div>
+          <div class="matrix-controls">
+            <div style="font-size:0.75rem; color:var(--text-muted);">經典圖案切換:</div>
+            <div class="pill-group">
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '❤️ 愛心')">❤️</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '😊 笑臉')">😊</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '👾 外星人')">👾</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', 'ᗧ 吃豆人')">ᗧ</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '💎 鑽石')">💎</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '⚡ 閃電')">⚡</button>
+              <button class="pill-btn" onclick="applyMatrixPreset('${comp.id}', '💀 骷髏')">💀</button>
+            </div>
+            <div class="pill-group" style="margin-top:2px;">
+              <button class="pill-btn" onclick="clearMatrixGrid('${comp.id}')">清空</button>
+              <button class="pill-btn" onclick="invertMatrixGrid('${comp.id}')">反轉</button>
+              <button class="pill-btn" onclick="fillMatrixGrid('${comp.id}')">全亮</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🏃‍♂️ 跑馬燈中樞 -->
+        <div class="marquee-panel">
+          <div class="marquee-panel-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>🏃‍♂️ 跑馬燈文字與動態動畫播放</span>
+            <span id="mq_status_${comp.id}" style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">[● 閒置中]</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="mq_mode_${comp.id}" style="flex:1;" onchange="onMqModeChange('${comp.id}')">
+              <option value="text">📝 自訂跑馬燈文字</option>
+              <option value="💓 心跳搏動動畫">💓 心跳搏動動畫</option>
+              <option value="🚀 火箭升空動畫">🚀 火箭升空動畫</option>
+              <option value="🌊 像素海浪動畫">🌊 像素海浪動畫</option>
+              <option value="⏳ 旋轉雷達動畫">⏳ 旋轉雷達動畫</option>
+              <option value="ᗧ 吃豆人動態">ᗧ 吃豆人動態</option>
+            </select>
+          </div>
+          <div id="mq_text_row_${comp.id}" style="display:flex; flex-direction:column; gap:4px;">
+            <input type="text" id="mq_text_${comp.id}" value="${comp.state?.marquee_text || 'HELLO ARDUINO UNO!'}" oninput="onMqTextInput('${comp.id}', this.value)" style="width:100%; box-sizing:border-box; font-size:0.85rem; padding:6px 10px; border-radius:4px;" placeholder="請輸入欲播放的長跑馬燈文字 (支援英數標點符號)...">
+            <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+              <span style="font-size:0.7rem; color:var(--text-muted);">常用:</span>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqText('${comp.id}', 'HELLO')">HELLO</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqText('${comp.id}', 'ARDUINO')">ARDUINO</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqText('${comp.id}', 'WELCOME TO LAB')">WELCOME TO LAB</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqText('${comp.id}', 'SYSTEM READY')">SYSTEM READY</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqText('${comp.id}', 'GOOD LUCK')">GOOD LUCK</button>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.75rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span>速度調整:</span>
+                <input type="range" id="mq_spd_range_${comp.id}" min="40" max="500" value="${comp.state?.marquee_speed || 150}" style="width:110px;" oninput="onMqSpeedInput('${comp.id}', this.value)">
+                <span id="mq_spd_lbl_${comp.id}" style="color:var(--accent); font-weight:bold;">${comp.state?.marquee_speed || 150}ms</span>
+              </div>
+              <label style="display:flex; align-items:center; gap:4px;">
+                <input type="checkbox" id="mq_loop_${comp.id}" checked> 🔁 循環
+              </label>
+            </div>
+            <div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">
+              <span style="font-size:0.7rem; color:var(--text-muted);">常用:</span>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqSpeed('${comp.id}', 80)">⚡ 快速 80ms</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqSpeed('${comp.id}', 150)">🚶 適中 150ms</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqSpeed('${comp.id}', 260)">🐢 慢速 260ms</button>
+              <button class="pill-btn" style="font-size:0.7rem; padding:2px 6px;" onclick="setMqSpeed('${comp.id}', 420)">🕯️ 極慢 420ms</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:6px; margin-top:2px;">
+            <button class="success" style="flex:1;" onclick="startMatrixMarquee('${comp.id}')">▶️ 啟動跑馬燈</button>
+            <button class="danger" style="flex:1;" onclick="stopMatrixMarquee('${comp.id}')">⏹️ 停止</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildMatrixGridDOM(cid, matrix) {
+      const container = document.getElementById(`grid_${cid}`);
+      if (!container) return;
+      container.innerHTML = '';
+      for (let r = 0; r < 8; r++) {
+        const rowVal = matrix[r] || 0;
+        for (let c = 0; c < 8; c++) {
+          const isOn = Boolean(rowVal & (1 << (7 - c)));
+          const dot = document.createElement('div');
+          dot.className = 'matrix-dot' + (isOn ? ' on' : '');
+          dot.dataset.r = r;
+          dot.dataset.c = c;
+          dot.onclick = () => toggleMatrixDot(cid, r, c);
+          container.appendChild(dot);
+        }
+      }
+    }
+
+    function toggleMatrixDot(cid, r, c) {
+      stopClientMatrixMarquee(cid);
+      const comp = components.find(x => x.id === cid);
+      if (!comp) return;
+      comp.state = comp.state || {};
+      comp.state.matrix = comp.state.matrix || [0,0,0,0,0,0,0,0];
+      comp.state.matrix[r] ^= (1 << (7 - c));
+      syncMatrixGrid(cid, comp.state.matrix);
+      sendWs({ action: 'matrix_all', id: cid, matrix: comp.state.matrix });
+    }
+
+    function syncMatrixGrid(cid, matrix) {
+      const comp = components.find(c => c.id === cid);
+      if (comp) {
+        comp.state = comp.state || {};
+        comp.state.matrix = matrix;
+      }
+      const container = document.getElementById(`grid_${cid}`);
+      if (!container) return;
+      const dots = container.querySelectorAll('.matrix-dot');
+      for (let r = 0; r < 8; r++) {
+        const rowVal = matrix[r] || 0;
+        for (let c = 0; c < 8; c++) {
+          const idx = r * 8 + c;
+          const isOn = Boolean(rowVal & (1 << (7 - c)));
+          dots[idx].className = 'matrix-dot' + (isOn ? ' on' : '');
+        }
+      }
+    }
+
+    function applyMatrixPreset(cid, name) {
+      stopClientMatrixMarquee(cid);
+      sendWs({ action: 'matrix_preset', id: cid, preset: name });
+    }
+    function clearMatrixGrid(cid) {
+      stopClientMatrixMarquee(cid);
+      sendWs({ action: 'matrix_all', id: cid, matrix: [0,0,0,0,0,0,0,0] });
+    }
+    function fillMatrixGrid(cid) {
+      stopClientMatrixMarquee(cid);
+      sendWs({ action: 'matrix_all', id: cid, matrix: [255,255,255,255,255,255,255,255] });
+    }
+    function invertMatrixGrid(cid) {
+      stopClientMatrixMarquee(cid);
+      const comp = components.find(x => x.id === cid);
+      if (!comp || !comp.state?.matrix) return;
+      const inverted = comp.state.matrix.map(b => b ^ 0xFF);
+      sendWs({ action: 'matrix_all', id: cid, matrix: inverted });
+    }
+
+    function onMqModeChange(cid) {
+      const mode = document.getElementById(`mq_mode_${cid}`).value;
+      const row = document.getElementById(`mq_text_row_${cid}`);
+      row.style.display = (mode === 'text') ? 'flex' : 'none';
+    }
+    let _mqDebounceTimer = null;
+    function onMqTextInput(cid, val) {
+      const comp = components.find(c => c.id === cid);
+      if (comp) {
+        comp.state = comp.state || {};
+        comp.state.marquee_text = val;
+      }
+      clearTimeout(_mqDebounceTimer);
+      _mqDebounceTimer = setTimeout(() => {
+        sendWs({ action: 'matrix_text_sync', id: cid, text: val });
+      }, 180);
+    }
+    function setMqText(cid, t) {
+      const inp = document.getElementById(`mq_text_${cid}`);
+      if (inp) {
+        inp.value = t;
+        onMqTextInput(cid, t);
+      }
+    }
+    let _mqSpeedDebounceTimer = null;
+    function onMqSpeedInput(cid, val) {
+      const lbl = document.getElementById(`mq_spd_lbl_${cid}`);
+      if (lbl) lbl.innerText = val + 'ms';
+      const comp = components.find(c => c.id === cid);
+      if (comp) {
+        comp.state = comp.state || {};
+        comp.state.marquee_speed = parseInt(val);
+      }
+      if (isWebSerialMode) {
+        updateClientMatrixSpeed(cid, val);
+      }
+      clearTimeout(_mqSpeedDebounceTimer);
+      _mqSpeedDebounceTimer = setTimeout(() => {
+        sendWs({ action: 'matrix_speed_sync', id: cid, speed: parseInt(val) });
+      }, 80);
+    }
+    function setMqSpeed(cid, val) {
+      const range = document.getElementById(`mq_spd_range_${cid}`);
+      if (range) range.value = val;
+      onMqSpeedInput(cid, val);
+    }
+
+    // ========================================================
+    // MAX7219 純前端 / Web Serial 點陣跑馬燈與動態動畫引擎
+    // ========================================================
+    const clientMarqueeState = {};
+
+    function startClientMatrixMarquee(cid, mode, text, speed_ms, loop = true) {
+      stopClientMatrixMarquee(cid);
+      const comp = components.find(c => c.id === cid);
+      if (!comp) return;
+
+      const p = comp.pins || {};
+      const din = p.din !== undefined ? p.din : 12;
+      const cs = p.cs !== undefined ? p.cs : 8;
+      const clk = p.clk !== undefined ? p.clk : 7;
+
+      let frames = [];
+      if (!mode || mode === 'text' || mode === '📝 自訂跑馬燈文字') {
+        const txt = text || comp.state?.marquee_text || 'HELLO ARDUINO!';
+        frames = textToMatrixFrames(txt);
+      } else if (PRESET_ANIMATIONS && PRESET_ANIMATIONS[mode]) {
+        frames = PRESET_ANIMATIONS[mode];
+      } else {
+        frames = textToMatrixFrames(text || 'HELLO');
+      }
+
+      if (!frames || frames.length === 0) return;
+
+      speed_ms = Math.max(35, parseInt(speed_ms) || 150);
+      comp.state = comp.state || {};
+      comp.state.marquee_speed = speed_ms;
+
+      const statusLbl = document.getElementById(`mq_status_${cid}`);
+      if (statusLbl) {
+        statusLbl.innerText = `[🟢 播放中 (${speed_ms}ms)]`;
+        statusLbl.style.color = 'var(--accent-green)';
+      }
+      log(`🏃‍♂️ [Web Serial] 啟動點陣跑馬燈/動畫: [${mode}] (共 ${frames.length} 幀, 速度: ${speed_ms}ms, 循環: ${loop})`);
+
+      const stateObj = {
+        frames: frames,
+        frameIdx: 0,
+        speed: speed_ms,
+        loop: Boolean(loop),
+        timer: null
+      };
+      clientMarqueeState[cid] = stateObj;
+
+      function tick() {
+        if (!clientMarqueeState[cid]) return;
+        if (stateObj.frameIdx >= stateObj.frames.length) {
+          if (stateObj.loop) {
+            stateObj.frameIdx = 0;
+          } else {
+            stopClientMatrixMarquee(cid);
+            return;
+          }
+        }
+
+        const f = stateObj.frames[stateObj.frameIdx];
+        stateObj.frameIdx++;
+
+        // 1. 同步 Web 端 8x8 點陣視覺效果
+        syncMatrixGrid(cid, f);
+
+        // 2. 寫入 Web Serial 傳送給實體硬體
+        if (isWebSerialMode) {
+          writeSerialLine(`MATRIX_ALL,${din},${cs},${clk},${f.join(',')}`);
+        }
+
+        stateObj.timer = setTimeout(tick, stateObj.speed);
+      }
+
+      stateObj.timer = setTimeout(tick, 10);
+    }
+
+    function stopClientMatrixMarquee(cid) {
+      if (clientMarqueeState[cid]) {
+        if (clientMarqueeState[cid].timer) {
+          clearTimeout(clientMarqueeState[cid].timer);
+        }
+        delete clientMarqueeState[cid];
+      }
+      const statusLbl = document.getElementById(`mq_status_${cid}`);
+      if (statusLbl) {
+        statusLbl.innerText = '[● 閒置中]';
+        statusLbl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    function updateClientMatrixSpeed(cid, newSpeed) {
+      if (clientMarqueeState[cid]) {
+        clientMarqueeState[cid].speed = Math.max(35, parseInt(newSpeed) || 150);
+        const statusLbl = document.getElementById(`mq_status_${cid}`);
+        if (statusLbl) {
+          statusLbl.innerText = `[🟢 播放中 (${clientMarqueeState[cid].speed}ms)]`;
+        }
+      }
+    }
+
+    function startMatrixMarquee(cid) {
+      const mode = document.getElementById(`mq_mode_${cid}`).value;
+      const text = document.getElementById(`mq_text_${cid}`).value;
+      const range = document.getElementById(`mq_spd_range_${cid}`);
+      const speed = range ? parseInt(range.value) : (parseInt(document.getElementById(`mq_spd_lbl_${cid}`).innerText) || 150);
+      const loop = document.getElementById(`mq_loop_${cid}`).checked;
+      if (isWebSerialMode) {
+        startClientMatrixMarquee(cid, mode, text, speed, loop);
+      } else {
+        sendWs({ action: 'matrix_start_marquee', id: cid, mode, text, speed_ms: speed, loop });
+      }
+    }
+
+    function stopMatrixMarquee(cid) {
+      if (isWebSerialMode) {
+        stopClientMatrixMarquee(cid);
+      } else {
+        sendWs({ action: 'matrix_stop_marquee', id: cid });
+      }
+    }
+
+    // 3. Servo Card
+    function renderServoCard(card, comp) {
+      const st = comp.state || { angle: 90 };
+      const pins = comp.pins || {};
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">Pin ${pins.pin}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="slider-row" style="margin-top:6px;">
+          <input type="range" id="range_servo_${comp.id}" min="0" max="180" value="${st.angle}" oninput="updateServo('${comp.id}', this.value)">
+          <div class="slider-val" id="ang_${comp.id}" style="color:var(--accent); font-size:1.1rem; width:55px;">${st.angle}°</div>
+        </div>
+        <div class="pill-group" style="margin-top:4px;">
+          <button class="pill-btn" onclick="updateServo('${comp.id}', 0)">0°</button>
+          <button class="pill-btn" onclick="updateServo('${comp.id}', 45)">45°</button>
+          <button class="pill-btn" onclick="updateServo('${comp.id}', 90)">90°</button>
+          <button class="pill-btn" onclick="updateServo('${comp.id}', 135)">135°</button>
+          <button class="pill-btn" onclick="updateServo('${comp.id}', 180)">180°</button>
+        </div>
+      `;
+    }
+    function updateServo(cid, ang) {
+      document.getElementById(`ang_${cid}`).innerText = `${ang}°`;
+      const slider = document.getElementById(`range_servo_${cid}`);
+      if (slider && slider.value != ang) slider.value = ang;
+      sendWs({ action: 'servo_set', id: cid, angle: parseInt(ang) });
+    }
+
+    // 4. PWM Card
+    function renderPWMCard(card, comp) {
+      const st = comp.state || { val: 0 };
+      const pins = comp.pins || {};
+      const pct = Math.round(st.val / 255 * 100);
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">PWM Pin ${pins.pin}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="slider-row" style="margin-top:6px;">
+          <input type="range" id="range_pwm_${comp.id}" min="0" max="255" value="${st.val}" oninput="updatePWM('${comp.id}', this.value)">
+          <div class="slider-val" id="pwm_val_${comp.id}" style="color:var(--accent); font-size:0.9rem; width:75px;">${st.val} (${pct}%)</div>
+        </div>
+        <div class="pill-group" style="margin-top:4px;">
+          <button class="pill-btn" onclick="updatePWM('${comp.id}', 0)">0%</button>
+          <button class="pill-btn" onclick="updatePWM('${comp.id}', 64)">25%</button>
+          <button class="pill-btn" onclick="updatePWM('${comp.id}', 128)">50%</button>
+          <button class="pill-btn" onclick="updatePWM('${comp.id}', 191)">75%</button>
+          <button class="pill-btn" onclick="updatePWM('${comp.id}', 255)">100%</button>
+        </div>
+      `;
+    }
+    function updatePWM(cid, val) {
+      const pct = Math.round(val / 255 * 100);
+      document.getElementById(`pwm_val_${cid}`).innerText = `${val} (${pct}%)`;
+      const slider = document.getElementById(`range_pwm_${cid}`);
+      if (slider && slider.value != val) slider.value = val;
+      sendWs({ action: 'pwm_set', id: cid, val: parseInt(val) });
+    }
+
+    // 5. Switch Card
+    function renderSwitchCard(card, comp) {
+      const isOn = Boolean(comp.state?.on);
+      const pins = comp.pins || {};
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">Pin ${pins.pin}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <button class="switch-btn ${isOn ? 'on' : ''}" id="sw_btn_${comp.id}" onclick="toggleSwitch('${comp.id}')">
+          ${isOn ? '🟢 開啟 (ON)' : '⚪ 關閉 (OFF)'}
+        </button>
+      `;
+    }
+    function toggleSwitch(cid) {
+      const comp = components.find(c => c.id === cid);
+      if (!comp) return;
+      const nextOn = !Boolean(comp.state?.on);
+      comp.state = { on: nextOn };
+      const btn = document.getElementById(`sw_btn_${cid}`);
+      btn.className = `switch-btn ${nextOn ? 'on' : ''}`;
+      btn.innerText = nextOn ? '🟢 開啟 (ON)' : '⚪ 關閉 (OFF)';
+      sendWs({ action: 'switch_set', id: cid, on: nextOn });
+    }
+
+    // 6. Sensor Card
+    function renderSensorCard(card, comp) {
+      const pins = comp.pins || {};
+      const type = comp.sensor_type || 'A';
+      const isStreaming = Boolean(comp.state?.streaming);
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">${type === 'A' ? '類比 A' + pins.pin : '數位 D' + pins.pin}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="sensor-display">
+          <div class="sensor-value" id="sens_val_${comp.id}">---</div>
+          <span style="font-size:0.75rem; color:var(--text-muted);">${type === 'A' ? '(0~1023)' : '(0/1)'}</span>
+        </div>
+        <canvas class="sensor-canvas" id="sens_chart_${comp.id}" width="300" height="48"></canvas>
+        <button id="stream_btn_${comp.id}" onclick="toggleSensorStream('${comp.id}')" style="width:100%; margin-top:4px;">
+          ${isStreaming ? '⏹️ 停止串流' : '▶️ 啟動串流監聽'}
+        </button>
+      `;
+    }
+    function toggleSensorStream(cid) {
+      const comp = components.find(c => c.id === cid);
+      if (!comp) return;
+      const nextStreaming = !Boolean(comp.state?.streaming);
+      comp.state = comp.state || {};
+      comp.state.streaming = nextStreaming;
+      document.getElementById(`stream_btn_${cid}`).innerText = nextStreaming ? '⏹️ 停止串流' : '▶️ 啟動串流監聽';
+      sendWs({ action: 'sensor_stream', id: cid, streaming: nextStreaming });
+    }
+    function updateSensorValue(pin, val) {
+      const comp = components.find(c => c.type === 'sensor' && c.pins?.pin == pin);
+      if (!comp) return;
+      const valEl = document.getElementById(`sens_val_${comp.id}`);
+      if (valEl) valEl.innerText = val;
+    }
+
+    // 7. Sonar Card
+    function renderSonarCard(card, comp) {
+      const pins = comp.pins || {};
+      card.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">${comp.name}</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="card-pins">Trig:${pins.trig} Echo:${pins.echo}</div>
+            <button class="pill-btn" style="padding:2px 7px; font-size:0.75rem;" onclick="openPinManagerModal('${comp.id}')">⚙️ 腳位</button>
+          </div>
+        </div>
+        <div class="sensor-display">
+          <div class="sensor-value" id="sonar_val_${comp.id}">--- cm</div>
+        </div>
+        <button style="width:100%;" onclick="measureSonar('${comp.id}')">📏 單次測距</button>
+      `;
+    }
+    function measureSonar(cid) {
+      sendWs({ action: 'sonar_measure', id: cid });
+    }
+    function updateSonarValue(trig, dist) {
+      const comp = components.find(c => c.type === 'sonar' && c.pins?.trig == trig);
+      if (!comp) return;
+      const el = document.getElementById(`sonar_val_${comp.id}`);
+      if (el) el.innerText = dist < 0 ? '超出範圍' : `${dist} cm`;
+    }
+
+    // Sync state received from server
+    function syncCompState(cid, state) {
+      const comp = components.find(c => c.id === cid);
+      if (!comp) return;
+      comp.state = Object.assign(comp.state || {}, state);
+      if (comp.type === 'rgb' && state.r !== undefined) {
+        syncRGBDirect(cid, state.r, state.g, state.b);
+      } else if (comp.type === 'servo' && state.angle !== undefined) {
+        const lbl = document.getElementById(`ang_${cid}`);
+        if (lbl) lbl.innerText = `${state.angle}°`;
+        const slider = document.getElementById(`range_servo_${cid}`);
+        if (slider && slider.value != state.angle) slider.value = state.angle;
+      } else if (comp.type === 'pwm' && state.val !== undefined) {
+        const pct = Math.round(state.val / 255 * 100);
+        const lbl = document.getElementById(`pwm_val_${cid}`);
+        if (lbl) lbl.innerText = `${state.val} (${pct}%)`;
+        const slider = document.getElementById(`range_pwm_${cid}`);
+        if (slider && slider.value != state.val) slider.value = state.val;
+      } else if (comp.type === 'switch' && state.on !== undefined) {
+        const btn = document.getElementById(`sw_btn_${cid}`);
+        if (btn) {
+          btn.className = `switch-btn ${state.on ? 'on' : ''}`;
+          btn.innerText = state.on ? '🟢 開啟 (ON)' : '⚪ 關閉 (OFF)';
+        }
+      }
+    }
+
+    // Workflow Sequencer Modal
+    function openWorkflowModal() {
+      document.getElementById('wfModal').classList.add('open');
+      renderWorkflowList();
+      renderStepTable();
+    }
+    function closeWorkflowModal() {
+      document.getElementById('wfModal').classList.remove('open');
+    }
+
+    function renderWorkflowList() {
+      const list = document.getElementById('wfList');
+      list.innerHTML = '';
+      workflows.forEach((wf, idx) => {
+        const li = document.createElement('li');
+        li.className = 'wf-item' + (idx === currentWfIdx ? ' active' : '');
+        li.innerText = `${wf.name} ${wf.loop ? '[🔁]' : ''}`;
+        li.onclick = () => selectWorkflow(idx);
+        list.appendChild(li);
+      });
+      if (workflows[currentWfIdx]) {
+        document.getElementById('wfLoopCheck').checked = Boolean(workflows[currentWfIdx].loop);
+        document.getElementById('wfTitleLbl').innerText = `步驟序列 - ${workflows[currentWfIdx].name}`;
+      }
+    }
+
+    function selectWorkflow(idx) {
+      currentWfIdx = idx;
+      renderWorkflowList();
+      renderStepTable();
+    }
+
+    let selectedStepIdx = -1;
+    function renderStepTable() {
+      const tbody = document.getElementById('stepTableBody');
+      tbody.innerHTML = '';
+      if (!workflows[currentWfIdx]) return;
+      const steps = workflows[currentWfIdx].steps || [];
+      steps.forEach((s, idx) => {
+        const tr = document.createElement('tr');
+        tr.id = `step_row_${idx}`;
+        if (idx === selectedStepIdx) tr.classList.add('selected-step');
+        let targetName = '系統延遲 (Delay)';
+        if (s.action === 'dual_effect') {
+          targetName = '✨ 雙燈連線特效';
+        } else if (s.action !== 'delay') {
+          const comp = components.find(c => c.id === s.target_id);
+          targetName = comp ? comp.name : '未綁定配件';
+        }
+        tr.innerHTML = `
+          <td style="text-align:center; font-weight:bold;">${idx + 1}</td>
+          <td style="color:var(--accent);">${targetName}</td>
+          <td>${s.desc || ''}</td>
+        `;
+        // 單步測試：點到哪就執行到哪！
+        tr.onclick = (e) => {
+          selectedStepIdx = idx;
+          document.querySelectorAll('#stepTableBody tr').forEach(r => r.classList.remove('selected-step'));
+          tr.classList.add('selected-step');
+          triggerSingleStep(currentWfIdx, idx);
+        };
+        tbody.appendChild(tr);
+      });
+    }
+
+    function moveCurrentStep(dir) {
+      if (selectedStepIdx < 0 || !workflows[currentWfIdx]) return;
+      const steps = workflows[currentWfIdx].steps || [];
+      const newIdx = selectedStepIdx + dir;
+      if (newIdx >= 0 && newIdx < steps.length) {
+        const tmp = steps[selectedStepIdx];
+        steps[selectedStepIdx] = steps[newIdx];
+        steps[newIdx] = tmp;
+        selectedStepIdx = newIdx;
+        sendWs({ action: 'profile_sync', workflows });
+        renderStepTable();
+      }
+    }
+
+    function deleteCurrentStep() {
+      if (selectedStepIdx < 0 || !workflows[currentWfIdx]) return;
+      const steps = workflows[currentWfIdx].steps || [];
+      if (confirm(`確定要刪除第 ${selectedStepIdx + 1} 個步驟嗎？`)) {
+        steps.splice(selectedStepIdx, 1);
+        selectedStepIdx = Math.max(0, steps.length - 1);
+        sendWs({ action: 'profile_sync', workflows });
+        renderStepTable();
+      }
+    }
+
+    function openAddStepModal() {
+      if (!workflows[currentWfIdx]) {
+        alert('請先選擇或建立流程！');
+        return;
+      }
+      const sel = document.getElementById('stepTargetSelect');
+      sel.innerHTML = `
+        <option value="delay">⏱️ 系統等待延遲 (Delay)</option>
+        <option value="dual_effect">✨ 雙燈連線特效 (18款炫彩)</option>
+      `;
+      components.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.innerText = `[${c.type.toUpperCase()}] ${c.name}`;
+        sel.appendChild(opt);
+      });
+      document.getElementById('addStepModal').classList.add('open');
+      onStepTargetChange();
+    }
+
+    function closeAddStepModal() {
+      document.getElementById('addStepModal').classList.remove('open');
+    }
+
+    function onStepTargetChange() {
+      const target = document.getElementById('stepTargetSelect').value;
+      const box = document.getElementById('stepParamContainer');
+      box.innerHTML = '';
+
+      if (target === 'delay') {
+        box.innerHTML = `
+          <label style="font-size:0.85rem;">延遲時間 (毫秒 ms):</label>
+          <input type="number" id="param_delay_ms" value="500" min="50" step="50" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+        `;
+      } else if (target === 'dual_effect') {
+        let fxOpts = DUAL_FX_LIST.map(([k, name]) => `<option value="${k}">${name}</option>`).join('');
+        box.innerHTML = `
+          <label style="font-size:0.85rem;">選擇特效種類:</label>
+          <select id="param_dual_fx" style="width:100%; margin-top:4px; margin-bottom:8px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+            ${fxOpts}
+          </select>
+          <label style="font-size:0.85rem;">持續時間 (毫秒 ms):</label>
+          <input type="number" id="param_dual_dur" value="3000" min="500" step="500" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+        `;
+      } else {
+        const comp = components.find(c => c.id === target);
+        if (!comp) return;
+        if (comp.type === 'rgb') {
+          box.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div><label style="color:var(--accent-red); font-size:0.85rem;">R (0~255):</label> <input type="number" id="param_rgb_r" value="255" min="0" max="255" style="width:100%; padding:4px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);"></div>
+              <div><label style="color:var(--accent-green); font-size:0.85rem;">G (0~255):</label> <input type="number" id="param_rgb_g" value="0" min="0" max="255" style="width:100%; padding:4px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);"></div>
+              <div><label style="color:var(--accent); font-size:0.85rem;">B (0~255):</label> <input type="number" id="param_rgb_b" value="128" min="0" max="255" style="width:100%; padding:4px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);"></div>
+            </div>
+          `;
+        } else if (comp.type === 'matrix') {
+          let patOpts = Object.keys(PRESET_MATRIX).map(p => `<option value="${p}">${p}</option>`).join('') + '<option value="清空">清空</option>';
+          box.innerHTML = `
+            <label style="font-size:0.85rem;">點陣模式:</label>
+            <select id="param_m_mode" onchange="onStepMatrixSubModeChange()" style="width:100%; margin-top:4px; margin-bottom:8px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+              <option value="1">1. 靜態圖案</option>
+              <option value="2">2. 跑馬燈文字</option>
+              <option value="3">3. 動態圖示動畫</option>
+            </select>
+            <div id="param_m_subbox">
+              <label style="font-size:0.85rem;">選擇圖案:</label>
+              <select id="param_m_pat" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">${patOpts}</select>
+            </div>
+          `;
+        } else if (comp.type === 'servo') {
+          box.innerHTML = `
+            <label style="font-size:0.85rem;">目標角度 (0~180°):</label>
+            <input type="number" id="param_servo_ang" value="90" min="0" max="180" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+          `;
+        } else if (comp.type === 'switch') {
+          box.innerHTML = `
+            <label style="font-size:0.85rem;">開關狀態:</label>
+            <select id="param_sw_on" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+              <option value="true">🟢 開啟 (ON)</option>
+              <option value="false">⚪ 關閉 (OFF)</option>
+            </select>
+          `;
+        } else if (comp.type === 'pwm') {
+          box.innerHTML = `
+            <label style="font-size:0.85rem;">PWM 亮度/數值 (0~255):</label>
+            <input type="number" id="param_pwm_val" value="128" min="0" max="255" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border); border-radius:4px;">
+          `;
+        }
+      }
+    }
+
+    function onStepMatrixSubModeChange() {
+      const mode = document.getElementById('param_m_mode').value;
+      const sub = document.getElementById('param_m_subbox');
+      if (mode === '1') {
+        let patOpts = Object.keys(PRESET_MATRIX).map(p => `<option value="${p}">${p}</option>`).join('') + '<option value="清空">清空</option>';
+        sub.innerHTML = `<label style="font-size:0.85rem;">選擇圖案:</label><select id="param_m_pat" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);">${patOpts}</select>`;
+      } else if (mode === '2') {
+        sub.innerHTML = `
+          <label style="font-size:0.85rem;">跑馬燈文字內容:</label>
+          <input type="text" id="param_m_txt" value="HELLO" style="width:100%; margin-top:4px; margin-bottom:6px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);">
+          <label style="font-size:0.85rem;">滾動速度 (毫秒 ms):</label>
+          <input type="number" id="param_m_spd" value="70" min="30" max="300" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);">
+        `;
+      } else {
+        let animOpts = Object.keys(PRESET_ANIMATIONS).map(a => `<option value="${a}">${a}</option>`).join('');
+        sub.innerHTML = `
+          <label style="font-size:0.85rem;">動畫種類:</label>
+          <select id="param_m_anim" style="width:100%; margin-top:4px; margin-bottom:6px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);">${animOpts}</select>
+          <label style="font-size:0.85rem;">播放次數:</label>
+          <input type="number" id="param_m_rep" value="2" min="1" max="20" style="width:100%; margin-top:4px; padding:6px; background:#11111B; color:#CDD6F4; border:1px solid var(--border);">
+        `;
+      }
+    }
+
+    function confirmAddStep() {
+      const target = document.getElementById('stepTargetSelect').value;
+      if (!workflows[currentWfIdx]) return;
+      workflows[currentWfIdx].steps = workflows[currentWfIdx].steps || [];
+      let newStep = null;
+
+      if (target === 'delay') {
+        const ms = parseInt(document.getElementById('param_delay_ms').value) || 500;
+        newStep = { action: 'delay', params: { ms }, desc: `延遲等待 ${ms} 毫秒` };
+      } else if (target === 'dual_effect') {
+        const fxKey = document.getElementById('param_dual_fx').value;
+        const dur = parseInt(document.getElementById('param_dual_dur').value) || 3000;
+        const fx = DUAL_FX_LIST.find(x => x[0] === fxKey);
+        const name = fx ? fx[1] : fxKey;
+        newStep = { action: 'dual_effect', params: { effect: fxKey, duration_ms: dur }, desc: `雙燈特效: 『${name}』(持續 ${dur}ms)` };
+      } else {
+        const comp = components.find(c => c.id === target);
+        if (!comp) return;
+        if (comp.type === 'rgb') {
+          const r = parseInt(document.getElementById('param_rgb_r').value) || 0;
+          const g = parseInt(document.getElementById('param_rgb_g').value) || 0;
+          const b = parseInt(document.getElementById('param_rgb_b').value) || 0;
+          newStep = { action: 'rgb', target_id: comp.id, params: { r, g, b }, desc: `設為調色 RGB(${r}, ${g}, ${b})` };
+        } else if (comp.type === 'matrix') {
+          const mode = document.getElementById('param_m_mode').value;
+          if (mode === '1') {
+            const pat = document.getElementById('param_m_pat').value;
+            newStep = { action: 'matrix', target_id: comp.id, params: { pattern: pat }, desc: `點陣靜態切換『${pat}』` };
+          } else if (mode === '2') {
+            const txt = document.getElementById('param_m_txt').value.trim() || 'HELLO';
+            const spd = parseInt(document.getElementById('param_m_spd').value) || 70;
+            newStep = { action: 'matrix_marquee', target_id: comp.id, params: { text: txt, speed_ms: spd }, desc: `點陣跑馬燈: 『${txt}』(${spd}ms)` };
+          } else {
+            const anim = document.getElementById('param_m_anim').value;
+            const rep = parseInt(document.getElementById('param_m_rep').value) || 2;
+            newStep = { action: 'matrix_anim', target_id: comp.id, params: { anim, repeats: rep }, desc: `點陣動畫: ${anim} (播 ${rep} 次)` };
+          }
+        } else if (comp.type === 'servo') {
+          const ang = parseInt(document.getElementById('param_servo_ang').value) || 90;
+          newStep = { action: 'servo', target_id: comp.id, params: { angle: ang }, desc: `舵機旋轉至 ${ang}°` };
+        } else if (comp.type === 'switch') {
+          const isOn = document.getElementById('param_sw_on').value === 'true';
+          newStep = { action: 'switch', target_id: comp.id, params: { on: isOn }, desc: isOn ? '開關切換為: 開啟 (ON)' : '開關切換為: 關閉 (OFF)' };
+        } else if (comp.type === 'pwm') {
+          const val = parseInt(document.getElementById('param_pwm_val').value) || 0;
+          newStep = { action: 'pwm', target_id: comp.id, params: { val }, desc: `PWM 調整至 ${val}` };
+        }
+      }
+
+      if (newStep) {
+        workflows[currentWfIdx].steps.push(newStep);
+        sendWs({ action: 'profile_sync', workflows });
+        renderStepTable();
+        closeAddStepModal();
+      }
+    }
+
+    // Single step click execution
+    function triggerSingleStep(wIdx, sIdx) {
+      log(`⚡ 單步即時觸發 [步驟 ${sIdx + 1}]`);
+      sendWs({ action: 'workflow_execute_step', workflow_idx: wIdx, step_idx: sIdx });
+    }
+
+    function highlightActiveStep(idx) {
+      const rows = document.querySelectorAll('#stepTableBody tr');
+      rows.forEach((r, i) => {
+        if (i === idx) {
+          r.classList.add('active-step');
+          r.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+          r.classList.remove('active-step');
+        }
+      });
+      const stLbl = document.getElementById('wfStatusLbl');
+      if (idx >= 0) {
+        stLbl.innerText = `🟢 正在執行: 步驟 ${idx + 1}`;
+        stLbl.style.color = 'var(--accent-green)';
+      } else {
+        stLbl.innerText = '狀態: 閒置';
+        stLbl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    function toggleWorkflowLoop(checked) {
+      if (workflows[currentWfIdx]) {
+        workflows[currentWfIdx].loop = checked;
+        sendWs({ action: 'workflow_update_loop', workflow_idx: currentWfIdx, loop: checked });
+        renderWorkflowList();
+      }
+    }
+
+    function startCurrentWorkflow() {
+      sendWs({ action: 'workflow_start', workflow_idx: currentWfIdx });
+    }
+    function stopCurrentWorkflow() {
+      sendWs({ action: 'workflow_stop' });
+      highlightActiveStep(-1);
+    }
+    function flashCurrentWorkflowStandalone() {
+      if (workflows.length === 0 || currentWfIdx < 0 || currentWfIdx >= workflows.length) {
+        alert('請先選擇要脫機燒錄的自訂流程！');
+        return;
+      }
+      const wf = workflows[currentWfIdx];
+      const stepCount = wf.steps ? wf.steps.length : 0;
+      const conf = confirm(
+        `🔥 即將把自訂流程【${wf.name}】（共 ${stepCount} 步驟）直接燒錄進 Arduino Uno 晶片！\n\n` +
+        `• 循環模式: ${wf.loop ? '🔁 循環播放 (Loop)' : '▶️ 單次播放'}\n\n` +
+        `【脫機獨立運行優勢】:\n` +
+        `✅ 燒錄完成後可完全拔除 USB 線，無需連接電腦或 Python！\n` +
+        `✅ 只要插上 5V 行動電源或手機充電頭，通電立即全自動獨立執行此流程！\n` +
+        `✅ 日後隨時點擊【⚡ 燒錄萬能韌體】即可一鍵復原回即時聯機控制！\n\n` +
+        `確定要開始編譯並燒錄嗎？`
+      );
+      if (!conf) return;
+
+      log(`🚀 開始發送脫機流程燒錄請求: 【${wf.name}】...`);
+      fetch('/api/flash_workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflow_index: currentWfIdx })
+      }).then(r => r.json()).then(res => {
+        if (res.ok) {
+          log(`⏳ ${res.message}，正在編譯上傳中...`);
+          alert(`已啟動脫機流程燒錄程序！\n\n系統正在後台調用 arduino-cli 進行編譯與上傳，請稍候並查看日誌。\n燒錄完成後晶片將會獨立執行！`);
+        } else {
+          log(`❌ 燒錄請求失敗: ` + (res.error || res.message));
+          alert(`燒錄請求失敗: ` + (res.error || res.message));
+        }
+      }).catch(err => {
+        log(`❌ 網路請求錯誤: ` + err);
+        alert(`網路請求錯誤: ` + err);
+      });
+    }
+    function addWorkflowPrompt() {
+      const name = prompt('請輸入新流程名稱：');
+      if (name && name.trim()) {
+        workflows.push({ id: `wf_${Date.now()}`, name: name.trim(), loop: false, steps: [] });
+        currentWfIdx = workflows.length - 1;
+        sendWs({ action: 'profile_sync', workflows });
+        renderWorkflowList();
+        renderStepTable();
+      }
+    }
+    function deleteWorkflowPrompt() {
+      if (confirm(`確定要刪除流程『${workflows[currentWfIdx]?.name}』嗎？`)) {
+        workflows.splice(currentWfIdx, 1);
+        currentWfIdx = Math.max(0, workflows.length - 1);
+        sendWs({ action: 'profile_sync', workflows });
+        renderWorkflowList();
+        renderStepTable();
+      }
+    }
+
+    // ========================================================
+    // 硬體腳位與配件管理中心 (Pin & Component Manager)
+    // ========================================================
+    let selectedPinCompId = '';
+
+    function openPinManagerModal(compId) {
+      const modal = document.getElementById('pinManagerModal');
+      if (!modal) return;
+      modal.classList.add('open');
+      if (compId && components.some(c => c.id === compId)) {
+        selectedPinCompId = compId;
+      } else if (components.length > 0) {
+        selectedPinCompId = components[0].id;
+      } else {
+        selectedPinCompId = '';
+      }
+      renderPinCompList();
+      renderPinEditForm(selectedPinCompId);
+    }
+
+    function closePinManagerModal() {
+      const modal = document.getElementById('pinManagerModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function renderPinCompList() {
+      const list = document.getElementById('pinCompList');
+      const countEl = document.getElementById('pinCompCount');
+      if (!list) return;
+      list.innerHTML = '';
+      if (countEl) countEl.innerText = `(共 ${components.length} 個)`;
+
+      components.forEach(comp => {
+        const li = document.createElement('li');
+        li.style.cssText = `
+          padding: 8px 10px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.82rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: ${comp.id === selectedPinCompId ? 'var(--accent)' : '#181825'};
+          color: ${comp.id === selectedPinCompId ? '#11111B' : 'var(--text)'};
+          font-weight: ${comp.id === selectedPinCompId ? 'bold' : 'normal'};
+          border: 1px solid ${comp.id === selectedPinCompId ? '#FFF' : 'var(--border)'};
+          transition: all 0.15s ease;
+        `;
+        let pinSummary = '';
+        if (comp.type === 'rgb') {
+          pinSummary = `R${comp.pins?.r} G${comp.pins?.g} B${comp.pins?.b}`;
+        } else if (comp.type === 'matrix') {
+          pinSummary = `D${comp.pins?.din} CS${comp.pins?.cs} CLK${comp.pins?.clk}`;
+        } else if (comp.type === 'sonar') {
+          pinSummary = `T${comp.pins?.trig} E${comp.pins?.echo}`;
+        } else if (comp.type === 'sensor') {
+          pinSummary = `${comp.sensor_type === 'D' ? 'D' : 'A'}${comp.pins?.pin}`;
+        } else {
+          pinSummary = `Pin ${comp.pins?.pin}`;
+        }
+
+        li.innerHTML = `
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:130px;">${comp.name}</span>
+          <span style="font-size:0.7rem; opacity:0.85;">${pinSummary}</span>
+        `;
+        li.onclick = () => {
+          selectedPinCompId = comp.id;
+          renderPinCompList();
+          renderPinEditForm(comp.id);
+        };
+        list.appendChild(li);
+      });
+    }
+
+    function renderPinEditForm(compId) {
+      const container = document.getElementById('pinEditFormContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      const comp = components.find(c => c.id === compId);
+      if (!comp) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:50px;">請先從左側選擇要編輯的配件，或點擊「➕ 新增自訂配件」。</div>';
+        return;
+      }
+
+      let typeBadge = '';
+      let specificFields = '';
+      const p = comp.pins || {};
+
+      if (comp.type === 'rgb') {
+        typeBadge = '🌈 RGB 彩色燈';
+        specificFields = `
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent-red); font-weight:bold;">🔴 R 腳位 (PWM)</label>
+              <input type="number" id="edit_rgb_r" value="${p.r !== undefined ? p.r : 6}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent-green); font-weight:bold;">🟢 G 腳位 (PWM)</label>
+              <input type="number" id="edit_rgb_g" value="${p.g !== undefined ? p.g : 3}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">🔵 B 腳位 (PWM)</label>
+              <input type="number" id="edit_rgb_b" value="${p.b !== undefined ? p.b : 5}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+          </div>
+          <div style="background:#181825; border:1px solid var(--border); border-radius:6px; padding:10px; margin-top:6px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-weight:bold;">
+              <input type="checkbox" id="edit_rgb_anode" ${comp.common_anode ? 'checked' : ''} style="width:16px; height:16px;">
+              <span>共陽極 (Common Anode) - 若勾選則高電位熄滅、低電位發光</span>
+            </label>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+              💡 推薦硬體配置：M1 (R:6, G:3, B:5) / M2 (R:11, G:9, B:10)。請使用 Uno 支援 PWM 調光的腳位 (3, 5, 6, 9, 10, 11)。
+            </div>
+          </div>
+        `;
+      } else if (comp.type === 'matrix') {
+        typeBadge = '👾 MAX7219 8x8 點陣';
+        specificFields = `
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">DIN 資料腳位</label>
+              <input type="number" id="edit_matrix_din" value="${p.din !== undefined ? p.din : 12}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">CS 片選腳位</label>
+              <input type="number" id="edit_matrix_cs" value="${p.cs !== undefined ? p.cs : 8}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">CLK 時脈腳位</label>
+              <input type="number" id="edit_matrix_clk" value="${p.clk !== undefined ? p.clk : 7}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+            💡 預設連接：DIN=12, CS=8, CLK=7。可依實際麵包板接線自訂任何數位腳位。
+          </div>
+        `;
+      } else if (comp.type === 'servo') {
+        typeBadge = '🦾 伺服舵機 (Servo)';
+        specificFields = `
+          <div>
+            <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">控制信號腳位 (PWM Pin)</label>
+            <input type="number" id="edit_single_pin" value="${p.pin !== undefined ? p.pin : 3}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+            💡 建議接在 D3、D5 等腳位。注意：若使用 Uno 內建 Timer1，D9/D10 的 PWM 可能受舵機庫影響。
+          </div>
+        `;
+      } else if (comp.type === 'pwm') {
+        typeBadge = '⚡ PWM 調光 / 馬達轉速';
+        specificFields = `
+          <div>
+            <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">PWM 輸出腳位 (PWM Pin)</label>
+            <input type="number" id="edit_single_pin" value="${p.pin !== undefined ? p.pin : 5}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+          </div>
+          <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">
+            💡 Uno 支援 PWM 輸出腳位：3, 5, 6, 9, 10, 11。
+          </div>
+        `;
+      } else if (comp.type === 'switch') {
+        typeBadge = '💡 開關 / 繼電器 / 單色 LED';
+        specificFields = `
+          <div>
+            <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">數位控制腳位 (Digital Pin)</label>
+            <input type="number" id="edit_single_pin" value="${p.pin !== undefined ? p.pin : 13}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+          </div>
+        `;
+      } else if (comp.type === 'sensor') {
+        typeBadge = '🌡️ 感測器採樣 (光敏/可變電阻/按鈕)';
+        specificFields = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">感測器訊號類型</label>
+              <select id="edit_sensor_type" style="width:100%; box-sizing:border-box; margin-top:4px;">
+                <option value="A" ${comp.sensor_type === 'A' ? 'selected' : ''}>類比輸入 (Analog A0~A5)</option>
+                <option value="D" ${comp.sensor_type === 'D' ? 'selected' : ''}>數位輸入 (Digital D0~D13)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">腳位編號 (類比填 0~5 代表 A0~A5)</label>
+              <input type="number" id="edit_single_pin" value="${p.pin !== undefined ? p.pin : 0}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+          </div>
+        `;
+      } else if (comp.type === 'sonar') {
+        typeBadge = '📏 HC-SR04 超音波測距';
+        specificFields = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">Trig 發射腳位</label>
+              <input type="number" id="edit_sonar_trig" value="${p.trig !== undefined ? p.trig : 2}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+            <div>
+              <label style="font-size:0.8rem; color:var(--accent); font-weight:bold;">Echo 接收腳位</label>
+              <input type="number" id="edit_sonar_echo" value="${p.echo !== undefined ? p.echo : 4}" min="0" max="13" style="width:100%; box-sizing:border-box; margin-top:4px;">
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:8px;">
+          <div>
+            <span style="font-size:0.8rem; color:var(--accent); font-weight:bold;">${typeBadge}</span>
+            <span style="font-size:0.75rem; color:var(--text-muted); margin-left:6px;">[ID: ${comp.id}]</span>
+          </div>
+          <button class="danger" style="font-size:0.75rem; padding:3px 8px;" onclick="deleteComponentPrompt('${comp.id}')">🗑️ 刪除此配件</button>
+        </div>
+
+        <div>
+          <label style="font-size:0.8rem; font-weight:bold;">配件顯示名稱</label>
+          <input type="text" id="edit_comp_name" value="${comp.name}" style="width:100%; box-sizing:border-box; margin-top:4px; font-size:0.9rem; padding:6px 10px;">
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          ${specificFields}
+        </div>
+
+        <div style="margin-top:auto; padding-top:10px; display:flex; justify-content:flex-end; gap:8px;">
+          <button class="primary" style="font-weight:700; padding:8px 16px;" onclick="applySingleComponentPins('${comp.id}')">💾 套用此配件腳位變更</button>
+        </div>
+      `;
+    }
+
+    function applySingleComponentPins(compId) {
+      const comp = components.find(c => c.id === compId);
+      if (!comp) return;
+
+      const nameInp = document.getElementById('edit_comp_name');
+      if (nameInp && nameInp.value.trim()) {
+        comp.name = nameInp.value.trim();
+      }
+
+      comp.pins = comp.pins || {};
+      if (comp.type === 'rgb') {
+        const r = parseInt(document.getElementById('edit_rgb_r')?.value) || 0;
+        const g = parseInt(document.getElementById('edit_rgb_g')?.value) || 0;
+        const b = parseInt(document.getElementById('edit_rgb_b')?.value) || 0;
+        const anode = Boolean(document.getElementById('edit_rgb_anode')?.checked);
+        comp.pins = { r, g, b };
+        comp.common_anode = anode;
+      } else if (comp.type === 'matrix') {
+        const din = parseInt(document.getElementById('edit_matrix_din')?.value) || 12;
+        const cs = parseInt(document.getElementById('edit_matrix_cs')?.value) || 8;
+        const clk = parseInt(document.getElementById('edit_matrix_clk')?.value) || 7;
+        comp.pins = { din, cs, clk };
+      } else if (comp.type === 'sonar') {
+        const trig = parseInt(document.getElementById('edit_sonar_trig')?.value) || 2;
+        const echo = parseInt(document.getElementById('edit_sonar_echo')?.value) || 4;
+        comp.pins = { trig, echo };
+      } else if (comp.type === 'sensor') {
+        const pin = parseInt(document.getElementById('edit_single_pin')?.value) || 0;
+        const stype = document.getElementById('edit_sensor_type')?.value || 'A';
+        comp.pins = { pin };
+        comp.sensor_type = stype;
+      } else {
+        const pin = parseInt(document.getElementById('edit_single_pin')?.value) || 0;
+        comp.pins = { pin };
+      }
+
+      renderCards();
+      renderPinCompList();
+      saveAllComponentPins(true);
+      log(`⚙️ 已更新配件腳位: ${comp.name}`);
+      alert(`✅ 已成功套用【${comp.name}】的腳位設定！`);
+    }
+
+    function promptAddNewComponent() {
+      const typeStr = prompt(
+        '請選擇欲新增的配件類型編號：\n\n' +
+        '1: 🌈 RGB 彩色燈\n' +
+        '2: 👾 MAX7219 8x8 點陣\n' +
+        '3: 🦾 伺服舵機 (Servo)\n' +
+        '4: ⚡ PWM 調光 / 馬達\n' +
+        '5: 💡 繼電器 / LED 開關\n' +
+        '6: 🌡️ 類比/數位感測器採樣\n' +
+        '7: 📏 HC-SR04 超音波測距\n\n' +
+        '請輸入數字 (1~7):', '1'
+      );
+      if (!typeStr) return;
+
+      const typeMap = {
+        '1': { type: 'rgb', name: '🌈 新增 RGB 燈', pins: { r: 6, g: 3, b: 5 }, common_anode: true, state: { r: 255, g: 255, b: 255 } },
+        '2': { type: 'matrix', name: '👾 MAX7219 點陣', pins: { din: 12, cs: 8, clk: 7 }, state: { matrix: [0,0,0,0,0,0,0,0], marquee_speed: 150 } },
+        '3': { type: 'servo', name: '🦾 伺服舵機', pins: { pin: 3 }, state: { angle: 90 } },
+        '4': { type: 'pwm', name: '⚡ PWM 輸出', pins: { pin: 5 }, state: { val: 0 } },
+        '5': { type: 'switch', name: '💡 開關 / LED', pins: { pin: 13 }, state: { on: false } },
+        '6': { type: 'sensor', name: '🌡️ 感測器採樣', pins: { pin: 0 }, sensor_type: 'A', state: { streaming: false } },
+        '7': { type: 'sonar', name: '📏 超音波測距', pins: { trig: 2, echo: 4 }, state: {} }
+      };
+
+      const template = typeMap[typeStr.trim()];
+      if (!template) {
+        alert('無效的配件類型編號！');
+        return;
+      }
+
+      const newId = 'comp_' + Date.now();
+      const newComp = JSON.parse(JSON.stringify(template));
+      newComp.id = newId;
+      components.push(newComp);
+      selectedPinCompId = newId;
+
+      renderCards();
+      renderPinCompList();
+      renderPinEditForm(newId);
+      saveAllComponentPins(true);
+      log(`➕ 已新增配件: ${newComp.name} (${newComp.type})`);
+    }
+
+    function deleteComponentPrompt(compId) {
+      const comp = components.find(c => c.id === compId);
+      if (!comp) return;
+      if (!confirm(`確定要刪除配件【${comp.name}】嗎？`)) return;
+
+      components = components.filter(c => c.id !== compId);
+      if (selectedPinCompId === compId) {
+        selectedPinCompId = components.length > 0 ? components[0].id : '';
+      }
+      renderCards();
+      renderPinCompList();
+      renderPinEditForm(selectedPinCompId);
+      saveAllComponentPins(true);
+      log(`🗑️ 已刪除配件: ${comp.name}`);
+    }
+
+    function saveAllComponentPins(silent = false) {
+      try {
+        localStorage.setItem('arduino_components', JSON.stringify(components));
+      } catch (e) {}
+
+      // 同步到後端 default_profile.json
+      fetch('/api/profile/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ components, workflows })
+      }).then(r => r.json()).then(res => {
+        if (!silent) {
+          if (res.ok) {
+            log('💾 [腳位與配件設定] 成功儲存並套用至系統配置檔 default_profile.json');
+            alert('🎉 恭喜！所有配件與腳位設定已成功儲存至 default_profile.json 並即刻生效！');
+          } else {
+            log('⚠️ 儲存至設定檔伺服器回傳提示: ' + (res.error || res.message));
+          }
+        }
+      }).catch(err => {
+        if (!silent) {
+          log('💡 已在瀏覽器本地快取保存腳位配置 (Render 雲端 / 離線模式)');
+          alert('💡 已在瀏覽器本地保存腳位配置 (純前端/離線模式)');
+        }
+      });
+    }
+
+    // Init on page load
+    window.onload = () => {
+      renderFxButtons();
+      refreshStatus();
+      initEventStream();
+      startAdaptivePolling();
+    };
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,23 @@
+{
+  "m1_r_pin": "6",
+  "m1_g_pin": "3",
+  "m1_b_pin": "5",
+  "m2_r_pin": "11",
+  "m2_g_pin": "9",
+  "m2_b_pin": "10",
+  "matrix_din_pin": "12",
+  "matrix_cs_pin": "8",
+  "matrix_clk_pin": "7",
+  "matrix_custom_bitmap": [
+    6,
+    12,
+    24,
+    63,
+    12,
+    24,
+    48,
+    0
+  ],
+  "common_anode": true,
+  "last_com_port": "COM4"
+}

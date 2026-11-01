@@ -1,0 +1,326 @@
+{
+  "profile_name": "Arduino Universal Hub Profile",
+  "components": [
+    {
+      "id": "comp_1",
+      "type": "rgb",
+      "name": "🌈 RGB 燈 1 (M1)",
+      "pins": {
+        "r": 6,
+        "g": 3,
+        "b": 5
+      },
+      "common_anode": true,
+      "state": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      }
+    },
+    {
+      "id": "comp_2",
+      "type": "rgb",
+      "name": "🌈 RGB 燈 2 (M2)",
+      "pins": {
+        "r": 11,
+        "g": 9,
+        "b": 10
+      },
+      "common_anode": true,
+      "state": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      }
+    },
+    {
+      "id": "comp_3",
+      "type": "matrix",
+      "name": "👾 MAX7219 8x8 點陣",
+      "pins": {
+        "din": 12,
+        "cs": 8,
+        "clk": 7
+      },
+      "state": {
+        "matrix": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "marquee_speed": 260,
+        "marquee_text": "WELCOME TO LAB"
+      }
+    },
+    {
+      "id": "comp_4",
+      "type": "servo",
+      "name": "🦾 伺服舵機 (示範)",
+      "pins": {
+        "pin": 4
+      },
+      "state": {
+        "angle": 90
+      }
+    },
+    {
+      "id": "comp_5",
+      "type": "switch",
+      "name": "💡 繼電器 / LED (示範)",
+      "pins": {
+        "pin": 13
+      },
+      "state": {
+        "on": false
+      }
+    },
+    {
+      "id": "comp_6",
+      "type": "sensor",
+      "name": "🌡️ 類比感測 / 光敏 (示範)",
+      "pins": {
+        "pin": 0
+      },
+      "sensor_type": "A",
+      "interval_ms": 200,
+      "state": {
+        "streaming": false
+      }
+    }
+  ],
+  "workflows": [
+    {
+      "id": "wf_welcome",
+      "name": "🎉 迎賓聯動燈光秀",
+      "loop": false,
+      "steps": [
+        {
+          "action": "rgb",
+          "target_id": "comp_1",
+          "params": {
+            "r": 255,
+            "g": 0,
+            "b": 120
+          },
+          "desc": "RGB 1 炫彩紫紅"
+        },
+        {
+          "action": "matrix",
+          "target_id": "comp_3",
+          "params": {
+            "pattern": "😊 笑臉"
+          },
+          "desc": "點陣顯示笑臉"
+        },
+        {
+          "action": "delay",
+          "params": {
+            "ms": 600
+          },
+          "desc": "等待 600ms"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_2",
+          "params": {
+            "r": 0,
+            "g": 220,
+            "b": 255
+          },
+          "desc": "RGB 2 冰川亮藍"
+        },
+        {
+          "action": "matrix",
+          "target_id": "comp_3",
+          "params": {
+            "pattern": "❤️ 愛心"
+          },
+          "desc": "點陣切換愛心"
+        },
+        {
+          "action": "delay",
+          "params": {
+            "ms": 600
+          },
+          "desc": "等待 600ms"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_1",
+          "params": {
+            "r": 255,
+            "g": 200,
+            "b": 0
+          },
+          "desc": "RGB 1 暖金黃光"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_2",
+          "params": {
+            "r": 255,
+            "g": 0,
+            "b": 255
+          },
+          "desc": "RGB 2 電光洋紅"
+        },
+        {
+          "action": "matrix",
+          "target_id": "comp_3",
+          "params": {
+            "pattern": "💎 鑽石"
+          },
+          "desc": "點陣切換鑽石"
+        },
+        {
+          "action": "delay",
+          "params": {
+            "ms": 800
+          },
+          "desc": "等待 800ms"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_1",
+          "params": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          },
+          "desc": "熄滅 RGB 1"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_2",
+          "params": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          },
+          "desc": "熄滅 RGB 2"
+        }
+      ]
+    },
+    {
+      "id": "wf_police",
+      "name": "🚨 警車爆閃與警報",
+      "loop": true,
+      "steps": [
+        {
+          "action": "rgb",
+          "target_id": "comp_1",
+          "params": {
+            "r": 255,
+            "g": 0,
+            "b": 0
+          },
+          "desc": "RGB 1 紅光爆閃"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_2",
+          "params": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          },
+          "desc": "RGB 2 熄滅"
+        },
+        {
+          "action": "matrix",
+          "target_id": "comp_3",
+          "params": {
+            "pattern": "⚡ 閃電"
+          },
+          "desc": "點陣顯示閃電"
+        },
+        {
+          "action": "delay",
+          "params": {
+            "ms": 120
+          },
+          "desc": "閃動 120ms"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_1",
+          "params": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          },
+          "desc": "RGB 1 熄滅"
+        },
+        {
+          "action": "rgb",
+          "target_id": "comp_2",
+          "params": {
+            "r": 0,
+            "g": 0,
+            "b": 255
+          },
+          "desc": "RGB 2 藍光爆閃"
+        },
+        {
+          "action": "delay",
+          "params": {
+            "ms": 120
+          },
+          "desc": "閃動 120ms"
+        }
+      ]
+    },
+    {
+      "id": "wf_marquee_show",
+      "name": "🏃‍♂️ MAX7219 跑馬燈與動態秀",
+      "loop": false,
+      "steps": [
+        {
+          "action": "matrix_marquee",
+          "target_id": "comp_3",
+          "params": {
+            "text": "HELLO",
+            "speed_ms": 60,
+            "loops": 1
+          },
+          "desc": "跑馬燈滾動: 『HELLO』"
+        },
+        {
+          "action": "matrix_anim",
+          "target_id": "comp_3",
+          "params": {
+            "anim": "💓 心跳搏動動畫",
+            "repeats": 2,
+            "speed_ms": 75
+          },
+          "desc": "動態播放: 心跳搏動 2 次"
+        },
+        {
+          "action": "matrix_marquee",
+          "target_id": "comp_3",
+          "params": {
+            "text": "ARDUINO",
+            "speed_ms": 60,
+            "loops": 1
+          },
+          "desc": "跑馬燈滾動: 『ARDUINO』"
+        },
+        {
+          "action": "matrix_anim",
+          "target_id": "comp_3",
+          "params": {
+            "anim": "🚀 火箭升空動畫",
+            "repeats": 2,
+            "speed_ms": 70
+          },
+          "desc": "動態播放: 火箭升空 2 次"
+        }
+      ]
+    }
+  ]
+}

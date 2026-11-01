@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Large binaries & Build artifacts
+*.exe
+build/
+dist/
+*.egg-info/
+cloudflared.exe
+ArduinoController.exe
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE & Editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
