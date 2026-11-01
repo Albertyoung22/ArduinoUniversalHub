@@ -27,7 +27,7 @@ import serial.tools.list_ports
 from flask import Flask, request, Response, jsonify, send_file
 import waitress
 
-from universal_gui import (
+from universal_shared import (
     FONT_5X7,
     PRESET_MATRIX,
     PRESET_ANIMATIONS,

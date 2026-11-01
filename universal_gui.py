@@ -33,11 +33,31 @@ try:
     from tkinter import filedialog, messagebox, ttk
     from tkinter.scrolledtext import ScrolledText
 except (ImportError, Exception):
-    tk = None
-    filedialog = messagebox = ttk = ScrolledText = None
+    class _DummyTk(type):
+        def __getattr__(self, name):
+            return object
+    class _DummyModule(metaclass=_DummyTk):
+        def __getattr__(self, name):
+            return object
+        def __call__(self, *args, **kwargs):
+            return object()
+    tk = _DummyModule()
+    filedialog = messagebox = ttk = ScrolledText = _DummyModule()
 
 import serial
 import serial.tools.list_ports
+
+from universal_shared import (
+    WORKSPACE_DIR,
+    ARDUINO_CLI_PATH,
+    FIRMWARE_DIR,
+    DEFAULT_PROFILE_PATH,
+    PRESET_MATRIX,
+    FONT_5X7,
+    text_to_matrix_frames,
+    PRESET_ANIMATIONS,
+    parse_pin
+)
 
 # 基本路徑配置
 WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
