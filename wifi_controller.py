@@ -758,22 +758,23 @@ class WiFiControllerApp:
                         "-p", port,
                         WIFI_FIRMWARE_INO
                     ]
-                    p = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+                    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
                     if p.returncode == 0:
                         self.root.after(0, lambda: [
                             lbl_flash_status.configure(text="🎉 燒錄成功！板子正在連線 Wi-Fi，稍後即可拔除 USB 線！", fg=self.ACCENT_GREEN),
                             messagebox.showinfo("燒錄成功", f"Wi-Fi 韌體已成功燒錄至 {port}！\n\nArduino Uno 現在會自動連線到您的 Wi-Fi。\n請留意 Webduino Fly 板上的紅燈熄滅代表連線成功，接著即可點擊「🔍 自動搜尋區網」進行無線操控！")
                         ])
                     else:
-                        err = p.stderr or p.stdout
-                        self.root.after(0, lambda: [
+                        err_text = p.stderr or p.stdout or "未知錯誤"
+                        self.root.after(0, lambda msg=err_text: [
                             lbl_flash_status.configure(text="❌ 燒錄失敗，請檢查序列埠是否有佔用", fg=self.ACCENT_RED),
-                            messagebox.showerror("燒錄失敗", f"Arduino-CLI 燒錄錯誤：\n{err[-300:]}")
+                            messagebox.showerror("燒錄失敗", f"Arduino-CLI 燒錄錯誤：\n{msg[-300:]}")
                         ])
                 except Exception as ex:
-                    self.root.after(0, lambda: [
-                        lbl_flash_status.configure(text=f"❌ 錯誤: {ex}", fg=self.ACCENT_RED),
-                        messagebox.showerror("例外錯誤", str(ex))
+                    err_msg = str(ex)
+                    self.root.after(0, lambda msg=err_msg: [
+                        lbl_flash_status.configure(text=f"❌ 錯誤: {msg}", fg=self.ACCENT_RED),
+                        messagebox.showerror("例外錯誤", msg)
                     ])
 
             threading.Thread(target=flash_worker, daemon=True).start()
