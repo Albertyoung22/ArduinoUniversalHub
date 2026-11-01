@@ -70,17 +70,27 @@ class WiFiArduinoClient:
 
     def ping(self) -> bool:
         start = time.time()
-        # 1. 優先嘗試 Webduino WebSocket 直連握手
-        try:
-            if self.ws_sock:
+        # 1. 若已有活著的 WebSocket 連線，直接測試 PING 影格
+        if self.is_websocket and self.ws_sock:
+            try:
+                payload = b"PING\n"
+                frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
+                self.ws_sock.sendall(frame)
+                self.latency_ms = max(1, int((time.time() - start) * 1000))
+                self.is_connected = True
+                return True
+            except Exception:
                 try:
                     self.ws_sock.close()
                 except Exception:
                     pass
                 self.ws_sock = None
+                self.is_connected = False
 
+        # 重新建立 Webduino WebSocket 直連握手
+        try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1.2)
+            sock.settimeout(1.5)
             sock.connect((self.ip, self.port))
             handshake = (
                 f"GET / HTTP/1.1\r\n"
@@ -96,7 +106,11 @@ class WiFiArduinoClient:
                 self.is_websocket = True
                 self.ws_sock = sock
                 self.is_connected = True
-                self.latency_ms = int((time.time() - start) * 1000)
+                self.latency_ms = max(1, int((time.time() - start) * 1000))
+                # 握手後發送一次二進位 PING 保持連線
+                payload = b"PING\n"
+                frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
+                self.ws_sock.sendall(frame)
                 return True
             sock.close()
         except Exception:
@@ -119,15 +133,16 @@ class WiFiArduinoClient:
         return False
 
     def send_cmd_sync(self, cmd: str, timeout: float = 0.8) -> dict:
-        """同步發送指令至 Arduino Wi-Fi 伺服器 (支援 WebSocket 與 HTTP)"""
+        """同步發送指令至 Arduino Wi-Fi 伺服器 (支援 Webduino 二進位 WebSocket 與 HTTP)"""
         if self.is_websocket and self.ws_sock:
             try:
+                # 關鍵：Webduino Fly ESP8266 僅將二進位影格 (0x82) 直通轉發至 Uno 序列埠
                 payload = (cmd.strip() + "\n").encode("utf-8")
                 length = len(payload)
                 if length < 126:
-                    header = bytearray([0x81, 0x80 | length, 0, 0, 0, 0])
+                    header = bytearray([0x82, 0x80 | length, 0, 0, 0, 0])
                 else:
-                    header = bytearray([0x81, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
+                    header = bytearray([0x82, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
                 frame = header + payload
                 self.ws_sock.sendall(frame)
                 return {"ok": True, "res": "sent_via_websocket"}
@@ -538,6 +553,12 @@ class WiFiControllerApp:
     def toggle_connection(self):
         if self.client.is_connected:
             self.client.is_connected = False
+            if self.client.ws_sock:
+                try:
+                    self.client.ws_sock.close()
+                except Exception:
+                    pass
+                self.client.ws_sock = None
             self.lbl_status.configure(text="● 未連線", fg=self.ACCENT_RED)
             self.btn_connect.configure(text="📶 連線 Wi-Fi", bg=self.ACCENT)
             self.log("已中斷 Wi-Fi 連線")
