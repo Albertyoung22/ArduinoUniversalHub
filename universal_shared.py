@@ -177,3 +177,4 @@ def parse_pin(val):
         return int(s)
     except ValueError:
         return 0
+

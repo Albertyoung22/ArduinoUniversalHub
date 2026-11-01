@@ -33,8 +33,6 @@ try:
     from tkinter import filedialog, messagebox, ttk
     from tkinter.scrolledtext import ScrolledText
 except (ImportError, Exception):
-    class _DummyTk(type):
-        def __getattr__(self, name):
             return object
     class _DummyModule(metaclass=_DummyTk):
         def __getattr__(self, name):
