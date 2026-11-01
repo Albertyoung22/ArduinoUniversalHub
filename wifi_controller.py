@@ -180,6 +180,37 @@ class WiFiArduinoClient:
                 pass
 
 
+PIN_CONFIG_FILE = os.path.join(WORKSPACE_DIR, "wifi_pins_config.json")
+
+def load_pin_config():
+    defaults = {
+        "switch_pin": 13,
+        "pwm_pin": 9,
+        "servo_pin": 10,
+        "rgb_r_pin": 6,
+        "rgb_g_pin": 3,
+        "rgb_b_pin": 5,
+        "matrix_din": 12,
+        "matrix_cs": 8,
+        "matrix_clk": 7,
+    }
+    if os.path.exists(PIN_CONFIG_FILE):
+        try:
+            with open(PIN_CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                defaults.update(data)
+        except Exception:
+            pass
+    return defaults
+
+def save_pin_config(cfg):
+    try:
+        with open(PIN_CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
+
+
 class WiFiControllerApp:
     # 現代深色系主題配色
     BG_MAIN = "#1E1E2E"
@@ -211,6 +242,18 @@ class WiFiControllerApp:
         # MAX7219 點陣畫布狀態 (8 bytes)
         self.matrix_state = [0] * 8
         self.matrix_btns = []
+
+        # 手動自訂腳位配置 (支援記憶存檔)
+        self.pin_cfg = load_pin_config()
+        self.sw_pin_var = tk.IntVar(value=self.pin_cfg.get("switch_pin", 13))
+        self.pwm_pin_var = tk.IntVar(value=self.pin_cfg.get("pwm_pin", 9))
+        self.srv_pin_var = tk.IntVar(value=self.pin_cfg.get("servo_pin", 10))
+        self.rgb_r_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_r_pin", 6))
+        self.rgb_g_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_g_pin", 3))
+        self.rgb_b_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_b_pin", 5))
+        self.matrix_din_var = tk.IntVar(value=self.pin_cfg.get("matrix_din", 12))
+        self.matrix_cs_var = tk.IntVar(value=self.pin_cfg.get("matrix_cs", 8))
+        self.matrix_clk_var = tk.IntVar(value=self.pin_cfg.get("matrix_clk", 7))
 
         self._build_ui()
         self.client.start_worker()
@@ -264,35 +307,69 @@ class WiFiControllerApp:
         self._build_matrix_card()
         self._build_log_console()
 
+    def _save_pins(self, *args):
+        self.pin_cfg["switch_pin"] = self.sw_pin_var.get()
+        self.pin_cfg["pwm_pin"] = self.pwm_pin_var.get()
+        self.pin_cfg["servo_pin"] = self.srv_pin_var.get()
+        self.pin_cfg["rgb_r_pin"] = self.rgb_r_pin_var.get()
+        self.pin_cfg["rgb_g_pin"] = self.rgb_g_pin_var.get()
+        self.pin_cfg["rgb_b_pin"] = self.rgb_b_pin_var.get()
+        self.pin_cfg["matrix_din"] = self.matrix_din_var.get()
+        self.pin_cfg["matrix_cs"] = self.matrix_cs_var.get()
+        self.pin_cfg["matrix_clk"] = self.matrix_clk_var.get()
+        save_pin_config(self.pin_cfg)
+        self.log(f"⚙️ 腳位設定已自動保存！")
+
     def _build_switch_servo_card(self):
         row = tk.Frame(self.cards_frame, bg=self.BG_MAIN)
         row.pack(fill=tk.X, pady=(0, 12))
 
-        # 開關卡片
-        f_sw = tk.LabelFrame(row, text="💡 數位開關 (Pin 13 LED / 繼電器)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
+        # 1. 數位開關卡片 (附腳位自訂)
+        f_sw = tk.LabelFrame(row, text="💡 數位開關 (LED / 繼電器)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
         f_sw.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
+
+        top_sw = tk.Frame(f_sw, bg=self.BG_CARD)
+        top_sw.pack(fill=tk.X, pady=(0, 6))
+        tk.Label(top_sw, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        cb_sw = ttk.Combobox(top_sw, textvariable=self.sw_pin_var, values=list(range(2, 14)), width=4, state="readonly")
+        cb_sw.pack(side=tk.LEFT, padx=4)
+        cb_sw.bind("<<ComboboxSelected>>", self._save_pins)
 
         self.sw_state = False
         self.btn_sw = tk.Button(f_sw, text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 10, "bold"), bd=0, pady=8, cursor="hand2", command=self.toggle_switch)
         self.btn_sw.pack(fill=tk.X, pady=4)
 
-        # PWM 滑桿卡片
-        f_pwm = tk.LabelFrame(row, text="⚡ PWM 功率/馬達 (Pin 9)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
+        # 2. PWM 滑桿卡片 (附腳位自訂)
+        f_pwm = tk.LabelFrame(row, text="⚡ PWM 功率/馬達", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
         f_pwm.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
 
+        top_pwm = tk.Frame(f_pwm, bg=self.BG_CARD)
+        top_pwm.pack(fill=tk.X, pady=(0, 4))
+        tk.Label(top_pwm, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        cb_pwm = ttk.Combobox(top_pwm, textvariable=self.pwm_pin_var, values=[3, 5, 6, 9, 10, 11], width=4, state="readonly")
+        cb_pwm.pack(side=tk.LEFT, padx=4)
+        cb_pwm.bind("<<ComboboxSelected>>", self._save_pins)
+
         self.pwm_val = tk.IntVar(value=0)
-        self.pwm_lbl = tk.Label(f_pwm, text="0 (0%)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
-        self.pwm_lbl.pack(anchor="e")
+        self.pwm_lbl = tk.Label(top_pwm, text="0 (0%)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
+        self.pwm_lbl.pack(side=tk.RIGHT)
         scale_pwm = tk.Scale(f_pwm, from_=0, to=255, orient=tk.HORIZONTAL, variable=self.pwm_val, bg=self.BG_CARD, fg=self.TEXT_MAIN, highlightthickness=0, bd=0, command=self._on_pwm_change)
         scale_pwm.pack(fill=tk.X)
 
-        # 伺服舵機卡片
-        f_srv = tk.LabelFrame(row, text="🎯 伺服舵機 (Pin 10 / 0°~180°)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
+        # 3. 伺服舵機卡片 (附腳位自訂)
+        f_srv = tk.LabelFrame(row, text="🎯 伺服舵機 (0°~180°)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
         f_srv.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        top_srv = tk.Frame(f_srv, bg=self.BG_CARD)
+        top_srv.pack(fill=tk.X, pady=(0, 4))
+        tk.Label(top_srv, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        cb_srv = ttk.Combobox(top_srv, textvariable=self.srv_pin_var, values=list(range(2, 14)), width=4, state="readonly")
+        cb_srv.pack(side=tk.LEFT, padx=4)
+        cb_srv.bind("<<ComboboxSelected>>", self._save_pins)
+
         self.srv_val = tk.IntVar(value=90)
-        self.srv_lbl = tk.Label(f_srv, text="90° (中間歸位)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
-        self.srv_lbl.pack(anchor="e")
+        self.srv_lbl = tk.Label(top_srv, text="90° (中間歸位)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
+        self.srv_lbl.pack(side=tk.RIGHT)
         scale_srv = tk.Scale(f_srv, from_=0, to=180, orient=tk.HORIZONTAL, variable=self.srv_val, bg=self.BG_CARD, fg=self.TEXT_MAIN, highlightthickness=0, bd=0, command=self._on_servo_change)
         scale_srv.pack(fill=tk.X)
 
@@ -304,15 +381,33 @@ class WiFiControllerApp:
         top_r.pack(fill=tk.X, pady=(0, 8))
 
         # 色塊預覽
-        self.rgb_preview = tk.Canvas(top_r, width=50, height=50, bg="#000000", highlightthickness=1, highlightbackground=self.BORDER_COLOR)
-        self.rgb_preview.pack(side=tk.LEFT, padx=(0, 12))
+        self.rgb_preview = tk.Canvas(top_r, width=44, height=44, bg="#000000", highlightthickness=1, highlightbackground=self.BORDER_COLOR)
+        self.rgb_preview.pack(side=tk.LEFT, padx=(0, 10))
 
         btn_color = tk.Button(top_r, text="🎨 選擇色彩", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 9), bd=0, padx=10, pady=4, cursor="hand2", command=self.pick_color)
         btn_color.pack(side=tk.LEFT, padx=4)
 
         self.anode_var = tk.BooleanVar(value=True)
-        chk_anode = tk.Checkbutton(top_r, text="共陽 (Common Anode)", variable=self.anode_var, bg=self.BG_CARD, fg=self.TEXT_MUTED, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8))
-        chk_anode.pack(side=tk.LEFT, padx=10)
+        chk_anode = tk.Checkbutton(top_r, text="共陽 (Anode)", variable=self.anode_var, bg=self.BG_CARD, fg=self.TEXT_MUTED, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8))
+        chk_anode.pack(side=tk.LEFT, padx=6)
+
+        # RGB 腳位自訂
+        pin_box = tk.Frame(top_r, bg="#252538", padx=6, pady=3, bd=1, relief=tk.SOLID)
+        pin_box.pack(side=tk.LEFT, padx=8)
+        tk.Label(pin_box, text="📌 腳位 R:", bg="#252538", fg=self.ACCENT_RED, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT)
+        cb_r = ttk.Combobox(pin_box, textvariable=self.rgb_r_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
+        cb_r.pack(side=tk.LEFT, padx=2)
+        cb_r.bind("<<ComboboxSelected>>", self._save_pins)
+
+        tk.Label(pin_box, text="G:", bg="#252538", fg=self.ACCENT_GREEN, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(4, 0))
+        cb_g = ttk.Combobox(pin_box, textvariable=self.rgb_g_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
+        cb_g.pack(side=tk.LEFT, padx=2)
+        cb_g.bind("<<ComboboxSelected>>", self._save_pins)
+
+        tk.Label(pin_box, text="B:", bg="#252538", fg=self.ACCENT, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(4, 0))
+        cb_b = ttk.Combobox(pin_box, textvariable=self.rgb_b_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
+        cb_b.pack(side=tk.LEFT, padx=2)
+        cb_b.bind("<<ComboboxSelected>>", self._save_pins)
 
         btn_stop_fx = tk.Button(top_r, text="⏹️ 停止特效", bg=self.ACCENT_RED, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.stop_dual_effect)
         btn_stop_fx.pack(side=tk.RIGHT)
@@ -373,6 +468,24 @@ class WiFiControllerApp:
         # 右側控制區
         ctrl_frame = tk.Frame(body, bg=self.BG_CARD)
         ctrl_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        # 點陣腳位自訂
+        m_pin_row = tk.Frame(ctrl_frame, bg="#252538", padx=6, pady=4, bd=1, relief=tk.SOLID)
+        m_pin_row.pack(fill=tk.X, pady=(0, 8))
+        tk.Label(m_pin_row, text="📌 點陣腳位 DIN: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        cb_din = ttk.Combobox(m_pin_row, textvariable=self.matrix_din_var, values=list(range(2, 14)), width=3, state="readonly")
+        cb_din.pack(side=tk.LEFT, padx=2)
+        cb_din.bind("<<ComboboxSelected>>", self._save_pins)
+
+        tk.Label(m_pin_row, text="CS: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT, padx=(6, 0))
+        cb_cs = ttk.Combobox(m_pin_row, textvariable=self.matrix_cs_var, values=list(range(2, 14)), width=3, state="readonly")
+        cb_cs.pack(side=tk.LEFT, padx=2)
+        cb_cs.bind("<<ComboboxSelected>>", self._save_pins)
+
+        tk.Label(m_pin_row, text="CLK: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT, padx=(6, 0))
+        cb_clk = ttk.Combobox(m_pin_row, textvariable=self.matrix_clk_var, values=list(range(2, 14)), width=3, state="readonly")
+        cb_clk.pack(side=tk.LEFT, padx=2)
+        cb_clk.bind("<<ComboboxSelected>>", self._save_pins)
 
         # 經典預設圖形
         pre_row = tk.Frame(ctrl_frame, bg=self.BG_CARD)
@@ -545,19 +658,19 @@ class WiFiControllerApp:
             self.btn_sw.configure(text="🟢 目前：開啟 (點擊關閉)", bg=self.ACCENT_GREEN, fg="#11111B")
         else:
             self.btn_sw.configure(text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN)
-        self.client.send_cmd(f"DWRITE,13,{val}")
+        self.client.send_cmd(f"DWRITE,{self.sw_pin_var.get()},{val}")
         self.log(f"💡 [Wi-Fi] 數位開關 (Pin 13): {'開啟' if self.sw_state else '關閉'}")
 
     def _on_pwm_change(self, val):
         v = int(val)
         pct = int(v / 255.0 * 100)
         self.pwm_lbl.configure(text=f"{v} ({pct}%)")
-        self.client.send_cmd(f"PWM,9,{v}")
+        self.client.send_cmd(f"PWM,{self.pwm_pin_var.get()},{v}")
 
     def _on_servo_change(self, val):
         ang = int(val)
         self.srv_lbl.configure(text=f"{ang}°")
-        self.client.send_cmd(f"SERVO,10,{ang}")
+        self.client.send_cmd(f"SERVO,{self.srv_pin_var.get()},{ang}")
 
     def pick_color(self):
         self.stop_dual_effect()
@@ -567,7 +680,7 @@ class WiFiControllerApp:
             hex_c = f"#{r:02x}{g:02x}{b:02x}"
             self.rgb_preview.configure(bg=hex_c)
             anode = 1 if self.anode_var.get() else 0
-            self.client.send_cmd(f"RGB,6,5,3,{anode},{r},{g},{b}")
+            self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
             self.log(f"🎨 [Wi-Fi] 設定 RGB 色彩: R={r}, G={g}, B={b}")
 
     def start_dual_effect(self, effect_name: str):
@@ -602,7 +715,7 @@ class WiFiControllerApp:
                     r1, g1, b1 = v, int(v * 0.6), 255 - v
                     delay_s = 0.06
 
-                self.client.send_cmd(f"RGB,6,5,3,{anode},{r1},{g1},{b1}")
+                self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r1},{g1},{b1}")
                 step += 1
                 time.sleep(delay_s)
 
@@ -615,7 +728,7 @@ class WiFiControllerApp:
             self.effect_thread.join(timeout=0.3)
             self.effect_thread = None
             anode = 1 if self.anode_var.get() else 0
-            self.client.send_cmd(f"RGB,6,5,3,{anode},0,0,0")
+            self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},0,0,0")
             self.log("⏹️ [Wi-Fi] 特效已停止")
 
     # ==========================
@@ -631,7 +744,7 @@ class WiFiControllerApp:
     def _sync_matrix_to_hardware(self):
         bytes_str = ",".join(str(b) for b in self.matrix_state)
         # 預設點陣 Pin: DIN=12, CS=8, CLK=7
-        self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
+        self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
 
     def _apply_matrix_preset(self, bmp):
         self.matrix_state = list(bmp)
@@ -646,7 +759,7 @@ class WiFiControllerApp:
         for r in range(8):
             for c in range(8):
                 self.matrix_btns[r][c].configure(bg="#313244")
-        self.client.send_cmd("MATRIX_CLEAR,12,8,7")
+        self.client.send_cmd(f"MATRIX_CLEAR,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()}")
         self.log("🧹 [Wi-Fi] 已清空 8x8 點陣")
 
     def play_marquee(self):
@@ -657,7 +770,7 @@ class WiFiControllerApp:
         def worker():
             for f in frames:
                 bytes_str = ",".join(str(b) for b in f)
-                self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
+                self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
                 time.sleep(0.08)
         threading.Thread(target=worker, daemon=True).start()
 
@@ -669,7 +782,7 @@ class WiFiControllerApp:
             for _ in range(3):
                 for f in frames:
                     bytes_str = ",".join(str(b) for b in f)
-                    self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
+                    self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
                     time.sleep(0.09)
         threading.Thread(target=worker, daemon=True).start()
 
