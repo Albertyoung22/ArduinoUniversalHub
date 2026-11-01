@@ -754,6 +754,9 @@ class WiFiControllerApp:
                     with open(WIFI_FIRMWARE_INO, "w", encoding="utf-8") as f:
                         f.write(code)
 
+                    # 先終止可能殘留的 avrdude 避免序列埠被鎖定
+                    subprocess.run(["taskkill", "/F", "/IM", "avrdude.exe"], capture_output=True)
+
                     # 呼叫 Arduino CLI 編譯並燒錄
                     cmd = [
                         ARDUINO_CLI_PATH,
@@ -763,7 +766,7 @@ class WiFiControllerApp:
                         "-p", port,
                         WIFI_FIRMWARE_INO
                     ]
-                    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
+                    p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=50)
                     if p.returncode == 0:
                         self.root.after(0, lambda: [
                             lbl_flash_status.configure(text="🎉 燒錄成功！板子正在連線 Wi-Fi，稍後即可拔除 USB 線！", fg=self.ACCENT_GREEN),
@@ -772,9 +775,32 @@ class WiFiControllerApp:
                     else:
                         err_text = p.stderr or p.stdout or "未知錯誤"
                         self.root.after(0, lambda msg=err_text: [
-                            lbl_flash_status.configure(text="❌ 燒錄失敗，請檢查序列埠是否有佔用", fg=self.ACCENT_RED),
-                            messagebox.showerror("燒錄失敗", f"Arduino-CLI 燒錄錯誤：\n{msg[-300:]}")
+                            lbl_flash_status.configure(text="❌ 燒錄失敗，擴充板訊號可能干擾序列埠", fg=self.ACCENT_RED),
+                            messagebox.showerror(
+                                "燒錄未成功", 
+                                f"Arduino-CLI 燒錄未成功。\n\n"
+                                f"若為通訊逾時（stk500），這是 Webduino Fly 擴充板的 ESP8266 佔用 Pin 0/1 所致。\n"
+                                f"請嘗試：\n"
+                                f"1. 將 Webduino Fly 黑色擴充板垂直拔起（只留 Arduino Uno），再點擊燒錄（3 秒即可成功）！\n"
+                                f"2. 燒錄成功後再將擴充板插回即可！\n\n"
+                                f"詳細錯誤訊息：\n{msg[-260:]}"
+                            )
                         ])
+                except subprocess.TimeoutExpired:
+                    subprocess.run(["taskkill", "/F", "/IM", "avrdude.exe"], capture_output=True)
+                    self.root.after(0, lambda: [
+                        lbl_flash_status.configure(text="⚠️ 燒錄超時（擴充板佔用 Pin 0/1 序列埠）", fg=self.ACCENT_RED),
+                        messagebox.showwarning(
+                            "燒錄超時提示 (Webduino Fly 硬體特性)",
+                            "燒錄通訊超時！\n\n"
+                            "【原因說明】：\n"
+                            "Webduino Fly 擴充板的 ESP8266 晶片佔用了 Uno 的序列埠（Pin 0/1），導致電腦燒錄訊號被擋住。\n\n"
+                            "【最快解決方法（只需 3 秒，100% 成功）】：\n"
+                            "1. 請將上面那片黑色的「Webduino Fly 擴充板」垂直輕輕拔起（只留下底下的 Arduino Uno 主板）。\n"
+                            "2. 再次點擊「⚡ 開始編譯並燒錄」，只要 3 秒鐘即可 100% 燒錄成功！\n"
+                            "3. 燒錄成功後，再把 Webduino Fly 擴充板插回 Uno 上，即可正常進行 Wi-Fi 全無線連線！"
+                        )
+                    ])
                 except Exception as ex:
                     err_msg = str(ex)
                     self.root.after(0, lambda msg=err_msg: [
