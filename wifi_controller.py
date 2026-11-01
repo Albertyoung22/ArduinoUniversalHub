@@ -641,11 +641,15 @@ class WiFiControllerApp:
         row0.pack(fill=tk.X, pady=4)
         tk.Label(row0, text="COM 序列埠:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         import serial.tools.list_ports
+        all_ports = serial.tools.list_ports.comports()
+        ports = [p.device for p in all_ports]
+        exact_uno = [p.device for p in all_ports if "arduino" in p.description.lower()]
+        sel_port = exact_uno[0] if exact_uno else (ports[0] if ports else "COM5")
         port_var = tk.StringVar(value=sel_port)
         combo = ttk.Combobox(row0, textvariable=port_var, values=ports, width=12)
         combo.pack(side=tk.LEFT, padx=10)
 
-        # Wi-Fi SSID (支援下拉選單與手動輸入)
+        # Wi-Fi SSID
         row1 = tk.Frame(body, bg=self.BG_CARD)
         row1.pack(fill=tk.X, pady=4)
         tk.Label(row1, text="Wi-Fi 名稱 (SSID):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9)).pack(side=tk.LEFT)
