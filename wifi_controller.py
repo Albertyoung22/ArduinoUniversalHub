@@ -626,14 +626,11 @@ class WiFiControllerApp:
     def open_flash_dialog(self):
         dlg = tk.Toplevel(self.root)
         dlg.title("🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno")
-        dlg.geometry("580x460")
-        dlg.configure(bg=self.BG_TOP)
         dlg.transient(self.root)
 
         tk.Label(dlg, text="🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno", bg=self.BG_TOP, fg=self.ACCENT, font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=16, pady=(12, 4))
         tk.Label(dlg, text="在拔除 USB 線改用純 Wi-Fi 控制前，請先將 Wi-Fi 韌體燒錄至 Uno 晶片中：", bg=self.BG_TOP, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w", padx=16, pady=(0, 8))
 
-        # 硬件燒錄技巧卡片
         tip_frame = tk.Frame(dlg, bg="#2A2218", padx=10, pady=8, bd=1, relief=tk.SOLID)
         tip_frame.pack(fill=tk.X, padx=16, pady=(0, 8))
         tk.Label(tip_frame, text="📌 Webduino Fly 燒錄小撇步 (必看)：\n擴充板的 Wi-Fi 晶片佔用 Uno 第 0/1 腳位。點擊燒錄後，請【按住擴充板上的 ESP RESET 鈕】\n或【暫時將擴充板拔起】約 3 秒完成燒錄，再放開/插回即可！", bg="#2A2218", fg=self.ACCENT_YELLOW, font=("Segoe UI", 8, "bold"), justify="left").pack(anchor="w")
@@ -642,31 +639,24 @@ class WiFiControllerApp:
         body.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 10))
 
         # COM 埠選擇
-        row0 = tk.Frame(body, bg=self.BG_CARD)
         row0.pack(fill=tk.X, pady=4)
         tk.Label(row0, text="COM 序列埠:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
         import serial.tools.list_ports
         all_ports = serial.tools.list_ports.comports()
         ports = [p.device for p in all_ports]
-        exact_uno = [p.device for p in all_ports if getattr(p, 'description', None) and "arduino" in str(p.description).lower()]
         sel_port = exact_uno[0] if exact_uno else (ports[0] if ports else "COM5")
         port_var = tk.StringVar(value=sel_port)
         combo = ttk.Combobox(row0, textvariable=port_var, values=ports, width=14)
         combo.pack(side=tk.LEFT, padx=6)
-
         # Wi-Fi SSID
         row1 = tk.Frame(body, bg=self.BG_CARD)
         row1.pack(fill=tk.X, pady=4)
-        tk.Label(row1, text="Wi-Fi 名稱 (SSID):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
-        ssid_var = tk.StringVar(value="jupiter")
         ssid_combo = ttk.Combobox(row1, textvariable=ssid_var, width=18)
         ssid_combo.pack(side=tk.LEFT, padx=6)
 
         btn_scan_ap = tk.Button(row1, text="🔄 透過 USB 掃描 Wi-Fi AP", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2")
         btn_scan_ap.pack(side=tk.LEFT, padx=4)
 
-        # Wi-Fi 密碼
-        row2 = tk.Frame(body, bg=self.BG_CARD)
         row2.pack(fill=tk.X, pady=4)
         tk.Label(row2, text="Wi-Fi 密碼 (Password):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
         pass_entry = tk.Entry(row2, bg="#11111B", fg=self.TEXT_MAIN, relief=tk.FLAT, font=("Segoe UI", 9), width=20, show="*")
@@ -686,7 +676,6 @@ class WiFiControllerApp:
 
             def scan_worker():
                 found_ssids = []
-                import serial, re
                 for baud in [115200, 57600, 9600]:
                     try:
                         s = serial.Serial(port, baud, timeout=1.0)
