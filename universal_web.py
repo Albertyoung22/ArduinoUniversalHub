@@ -1108,26 +1108,39 @@ def api_tunnel_stop():
     return jsonify({"ok": True})
 
 
+@app.route("/healthz")
+@app.route("/health")
+def healthz():
+    return jsonify({"status": "ok", "app": "ArduinoUniversalHub"})
+
+
 # ==========================
 # 啟動函式 (Standalone & GUI 嵌入模式)
 # ==========================
-def run_standalone(host="0.0.0.0", port=5000):
-    import webbrowser
+def run_standalone(host="0.0.0.0", port=None):
+    if port is None:
+        port = int(os.environ.get("PORT", 5000))
+
     hub.local_port = port
     hub.auto_connect()
+
+    is_cloud = bool(os.environ.get("RENDER") or os.environ.get("PORT"))
 
     print("=" * 65)
     print("⚡ Arduino Universal Web Hub 萬能硬體控制中心 (Flask + Waitress)")
     print(f"🏠 本地存取網址: http://127.0.0.1:{port}")
     print(f"📱 區網存取網址: http://0.0.0.0:{port}")
-    print("🌐 正在背景啟動 Cloudflare Tunnel 內網穿透...")
+    if not is_cloud:
+        print("🌐 正在背景啟動 Cloudflare Tunnel 內網穿透...")
+        hub.tunnel_manager.start(local_port=port)
+        try:
+            import webbrowser
+            threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
+        except Exception:
+            pass
+    else:
+        print("☁️ 正在雲端環境 (Render) 運行，健康檢查路由: /healthz")
     print("=" * 65)
-
-    # 啟動 Cloudflare Tunnel
-    hub.tunnel_manager.start(local_port=port)
-
-    # 開啟瀏覽器
-    threading.Timer(1.2, lambda: webbrowser.open(f"http://127.0.0.1:{port}")).start()
 
     # 以 Waitress 正式生產伺服器運行
     waitress.serve(app, host=host, port=port, threads=8, _quiet=True)
@@ -1162,4 +1175,4 @@ def start_web_server_thread(gui_app, host="0.0.0.0", port=5000):
 
 
 if __name__ == "__main__":
-    run_standalone(port=5000)
+    run_standalone()

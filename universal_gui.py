@@ -28,9 +28,13 @@ import subprocess
 import sys
 import threading
 import time
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-from tkinter.scrolledtext import ScrolledText
+try:
+    import tkinter as tk
+    from tkinter import filedialog, messagebox, ttk
+    from tkinter.scrolledtext import ScrolledText
+except (ImportError, Exception):
+    tk = None
+    filedialog = messagebox = ttk = ScrolledText = None
 
 import serial
 import serial.tools.list_ports
