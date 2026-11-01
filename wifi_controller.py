@@ -314,6 +314,7 @@ class WiFiControllerApp:
         self.pin_cfg["rgb_r_pin"] = self.rgb_r_pin_var.get()
         self.pin_cfg["rgb_g_pin"] = self.rgb_g_pin_var.get()
         self.pin_cfg["rgb_b_pin"] = self.rgb_b_pin_var.get()
+        self.pin_cfg["anode"] = self.anode_var.get()
         self.pin_cfg["matrix_din"] = self.matrix_din_var.get()
         self.pin_cfg["matrix_cs"] = self.matrix_cs_var.get()
         self.pin_cfg["matrix_clk"] = self.matrix_clk_var.get()
@@ -388,7 +389,7 @@ class WiFiControllerApp:
         btn_color.pack(side=tk.LEFT, padx=4)
 
         self.anode_var = tk.BooleanVar(value=True)
-        chk_anode = tk.Checkbutton(top_r, text="共陽 (Anode)", variable=self.anode_var, bg=self.BG_CARD, fg=self.TEXT_MUTED, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8))
+        chk_anode = tk.Checkbutton(top_r, text="共陽 (V接5V)", variable=self.anode_var, command=self._save_pins, bg=self.BG_CARD, fg=self.ACCENT_YELLOW, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8, "bold"))
         chk_anode.pack(side=tk.LEFT, padx=6)
 
         # RGB 腳位自訂

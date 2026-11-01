@@ -1,10 +1,11 @@
 {
   "switch_pin": 13,
-  "pwm_pin": 9,
-  "servo_pin": 10,
-  "rgb_r_pin": 6,
-  "rgb_g_pin": 3,
-  "rgb_b_pin": 5,
+  "pwm_pin": 3,
+  "servo_pin": 4,
+  "rgb_r_pin": 9,
+  "rgb_g_pin": 10,
+  "rgb_b_pin": 11,
+  "anode": true,
   "matrix_din": 12,
   "matrix_cs": 8,
   "matrix_clk": 7
