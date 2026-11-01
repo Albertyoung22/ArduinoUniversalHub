@@ -70,15 +70,19 @@ class WiFiArduinoClient:
 
     def ping(self) -> bool:
         start = time.time()
-        # 1. 若已有活著的 WebSocket 連線，直接測試 PING 影格
+        # 1. 若已有活著的 WebSocket 連線，發送輕量探測
         if self.is_websocket and self.ws_sock:
             try:
+                self.ws_sock.settimeout(0.6)
                 payload = b"PING\n"
                 frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
                 self.ws_sock.sendall(frame)
-                self.latency_ms = max(1, int((time.time() - start) * 1000))
-                self.is_connected = True
-                return True
+                # 讀取回應確認存活
+                resp = self.ws_sock.recv(256)
+                if resp:
+                    self.latency_ms = max(1, int((time.time() - start) * 1000))
+                    self.is_connected = True
+                    return True
             except Exception:
                 try:
                     self.ws_sock.close()
@@ -107,10 +111,15 @@ class WiFiArduinoClient:
                 self.ws_sock = sock
                 self.is_connected = True
                 self.latency_ms = max(1, int((time.time() - start) * 1000))
-                # 握手後發送一次二進位 PING 保持連線
+                # 握手後發送一次二進位 PING
                 payload = b"PING\n"
                 frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
                 self.ws_sock.sendall(frame)
+                try:
+                    self.ws_sock.settimeout(0.5)
+                    self.ws_sock.recv(256)
+                except Exception:
+                    pass
                 return True
             sock.close()
         except Exception:
@@ -145,8 +154,20 @@ class WiFiArduinoClient:
                     header = bytearray([0x82, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
                 frame = header + payload
                 self.ws_sock.sendall(frame)
-                return {"ok": True, "res": "sent_via_websocket"}
+                # 即時清空回傳緩衝區，杜絕黏包
+                try:
+                    self.ws_sock.settimeout(0.2)
+                    r = self.ws_sock.recv(256)
+                    r_str = r.decode("utf-8", errors="ignore").strip()
+                    return {"ok": True, "res": r_str}
+                except Exception:
+                    return {"ok": True, "res": "sent"}
             except Exception as e:
+                try:
+                    self.ws_sock.close()
+                except Exception:
+                    pass
+                self.ws_sock = None
                 self.is_connected = False
                 return {"ok": False, "error": str(e)}
 
