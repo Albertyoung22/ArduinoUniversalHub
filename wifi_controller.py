@@ -49,7 +49,7 @@ WIFI_FIRMWARE_INO = os.path.join(WIFI_FIRMWARE_DIR, "wifi_firmware.ino")
 
 
 class WiFiArduinoClient:
-    """Wi-Fi 通訊客戶端核心 (支援 Webduino WebSocket 直連與 HTTP REST 雙協議)"""
+    """Wi-Fi 通訊客戶端核心 (Webduino 二進位 WebSocket 高速直通引擎)"""
     def __init__(self, ip: str = "192.168.1.134", port: int = 80):
         self.ip = ip.strip()
         self.port = port
@@ -57,10 +57,12 @@ class WiFiArduinoClient:
         self.latency_ms = 0
         self.cmd_queue = queue.Queue(maxsize=100)
         self.worker_thread = None
+        self.rx_thread = None
         self.running = False
         self.on_log = None
         self.ws_sock = None
         self.is_websocket = False
+        self._lock = threading.Lock()
 
     def log(self, msg: str):
         if self.on_log:
@@ -68,125 +70,117 @@ class WiFiArduinoClient:
         else:
             print(f"[WiFiClient] {msg}")
 
-    def ping(self) -> bool:
-        start = time.time()
-        # 1. 若已有活著的 WebSocket 連線，發送輕量探測
-        if self.is_websocket and self.ws_sock:
+    def connect(self) -> bool:
+        """主動連線至 Webduino Fly WebSocket 伺服器"""
+        with self._lock:
+            if self.ws_sock:
+                try:
+                    self.ws_sock.close()
+                except Exception:
+                    pass
+                self.ws_sock = None
+
+            start = time.time()
             try:
-                self.ws_sock.settimeout(0.6)
-                payload = b"PING\n"
-                frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
-                self.ws_sock.sendall(frame)
-                # 讀取回應確認存活
-                resp = self.ws_sock.recv(256)
-                if resp:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(2.0)
+                sock.connect((self.ip, self.port))
+                handshake = (
+                    f"GET / HTTP/1.1\r\n"
+                    f"Host: {self.ip}\r\n"
+                    f"Upgrade: websocket\r\n"
+                    f"Connection: Upgrade\r\n"
+                    f"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                    f"Sec-WebSocket-Version: 13\r\n\r\n"
+                )
+                sock.sendall(handshake.encode())
+                resp = sock.recv(512)
+                if b"101 Switching" in resp or b"WebSockets" in resp or b"Webduino" in resp:
+                    sock.settimeout(None)  # 設為長連線暢通模式
+                    self.ws_sock = sock
+                    self.is_websocket = True
+                    self.is_connected = True
                     self.latency_ms = max(1, int((time.time() - start) * 1000))
-                    self.is_connected = True
+                    
+                    # 立即回應 Handshake 夾帶的 PING (Webduino-Server 特性)
+                    if b"\x89" in resp:
+                        try:
+                            pong = bytearray([0x8A, 0x80, 0, 0, 0, 0])
+                            sock.sendall(pong)
+                        except Exception:
+                            pass
+
+                    # 啟動非阻塞背景排空與心跳接收執行緒
+                    self.rx_thread = threading.Thread(target=self._rx_loop, daemon=True)
+                    self.rx_thread.start()
                     return True
-            except Exception:
-                try:
-                    self.ws_sock.close()
-                except Exception:
-                    pass
-                self.ws_sock = None
-                self.is_connected = False
-
-        # 重新建立 Webduino WebSocket 直連握手
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(1.5)
-            sock.connect((self.ip, self.port))
-            handshake = (
-                f"GET / HTTP/1.1\r\n"
-                f"Host: {self.ip}\r\n"
-                f"Upgrade: websocket\r\n"
-                f"Connection: Upgrade\r\n"
-                f"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                f"Sec-WebSocket-Version: 13\r\n\r\n"
-            )
-            sock.sendall(handshake.encode())
-            resp = sock.recv(512)
-            if b"101 Switching" in resp or b"WebSockets" in resp or b"Webduino" in resp:
-                self.is_websocket = True
-                self.ws_sock = sock
-                self.is_connected = True
-                self.latency_ms = max(1, int((time.time() - start) * 1000))
-                # 握手後發送一次二進位 PING
-                payload = b"PING\n"
-                frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
-                self.ws_sock.sendall(frame)
-                try:
-                    self.ws_sock.settimeout(0.5)
-                    self.ws_sock.recv(256)
-                except Exception:
-                    pass
-                return True
-            sock.close()
-        except Exception:
-            pass
-
-        # 2. 備用語法: HTTP REST /status
-        try:
-            url = f"http://{self.ip}:{self.port}/status"
-            req = urllib.request.Request(url, headers={"User-Agent": "WiFiArduinoHub/1.0"})
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
-                if resp.status == 200:
-                    self.is_websocket = False
-                    self.latency_ms = int((time.time() - start) * 1000)
-                    self.is_connected = True
-                    return True
-        except Exception:
-            pass
-
-        self.is_connected = False
-        return False
-
-    def send_cmd_sync(self, cmd: str, timeout: float = 0.8) -> dict:
-        """同步發送指令至 Arduino Wi-Fi 伺服器 (支援 Webduino 二進位 WebSocket 與 HTTP)"""
-        if self.is_websocket and self.ws_sock:
-            try:
-                # 關鍵：Webduino Fly ESP8266 僅將二進位影格 (0x82) 直通轉發至 Uno 序列埠
-                payload = (cmd.strip() + "\n").encode("utf-8")
-                length = len(payload)
-                if length < 126:
-                    header = bytearray([0x82, 0x80 | length, 0, 0, 0, 0])
-                else:
-                    header = bytearray([0x82, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
-                frame = header + payload
-                self.ws_sock.sendall(frame)
-                # 即時清空回傳緩衝區，杜絕黏包
-                try:
-                    self.ws_sock.settimeout(0.2)
-                    r = self.ws_sock.recv(256)
-                    r_str = r.decode("utf-8", errors="ignore").strip()
-                    return {"ok": True, "res": r_str}
-                except Exception:
-                    return {"ok": True, "res": "sent"}
+                sock.close()
             except Exception as e:
-                try:
-                    self.ws_sock.close()
-                except Exception:
-                    pass
-                self.ws_sock = None
-                self.is_connected = False
-                return {"ok": False, "error": str(e)}
+                self.log(f"連線失敗: {e}")
+            self.is_connected = False
+            return False
+
+    def _rx_loop(self):
+        """背景接收執行緒：持續清空接收緩衝區，杜絕 TCP 阻塞黏包並自動回應 PONG 心跳"""
+        sock = self.ws_sock
+        while self.running and sock and self.is_connected:
+            try:
+                data = sock.recv(512)
+                if not data:
+                    break
+                # 若收到 Webduino Fly 的 WebSocket PING (\x89)，自動回應 PONG (\x8A)
+                if b"\x89" in data:
+                    with self._lock:
+                        if self.ws_sock:
+                            self.ws_sock.sendall(bytearray([0x8A, 0x80, 0, 0, 0, 0]))
+            except Exception:
+                break
+        if self.ws_sock == sock:
+            self.is_connected = False
+
+    def ping(self) -> bool:
+        if not self.is_connected or not self.ws_sock:
+            return self.connect()
+
+        # 透過現有連線發送輕量探測
+        start = time.time()
+        try:
+            payload = b"PING\n"
+            frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
+            with self._lock:
+                if self.ws_sock:
+                    self.ws_sock.sendall(frame)
+            self.latency_ms = max(1, int((time.time() - start) * 1000))
+            return True
+        except Exception:
+            self.is_connected = False
+            return False
+
+    def send_cmd_sync(self, cmd: str) -> dict:
+        """即時發送指令至 Arduino Uno 晶片 (二進位高速轉發)"""
+        if not self.is_connected or not self.ws_sock:
+            if not self.connect():
+                return {"ok": False, "error": "not_connected"}
 
         try:
-            encoded_cmd = urllib.parse.quote(cmd)
-            url = f"http://{self.ip}:{self.port}/cmd?c={encoded_cmd}"
-            req = urllib.request.Request(url, headers={"User-Agent": "WiFiArduinoHub/1.0"})
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                if resp.status == 200:
-                    data = resp.read().decode("utf-8")
-                    return json.loads(data)
+            payload = (cmd.strip() + "\n").encode("utf-8")
+            length = len(payload)
+            if length < 126:
+                header = bytearray([0x82, 0x80 | length, 0, 0, 0, 0])
+            else:
+                header = bytearray([0x82, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
+            frame = header + payload
+            with self._lock:
+                if self.ws_sock:
+                    self.ws_sock.sendall(frame)
+                    return {"ok": True, "res": "sent"}
         except Exception as e:
+            self.is_connected = False
             return {"ok": False, "error": str(e)}
-        return {"ok": False, "error": "timeout"}
+        return {"ok": False, "error": "send_failed"}
 
     def send_cmd(self, cmd: str):
-        """異步發送指令（放入佇列，不阻塞 UI）"""
         try:
-            # 若佇列已滿，丟棄舊的頻繁連續指令 (如 PWM/RGB 滑桿) 以免積壓
             if self.cmd_queue.full():
                 try:
                     self.cmd_queue.get_nowait()
@@ -203,11 +197,18 @@ class WiFiArduinoClient:
 
     def stop_worker(self):
         self.running = False
+        with self._lock:
+            if self.ws_sock:
+                try:
+                    self.ws_sock.close()
+                except Exception:
+                    pass
+                self.ws_sock = None
 
     def _worker_loop(self):
         while self.running:
             try:
-                cmd = self.cmd_queue.get(timeout=0.1)
+                cmd = self.cmd_queue.get(timeout=0.08)
                 self.send_cmd_sync(cmd)
                 self.cmd_queue.task_done()
             except queue.Empty:
@@ -215,37 +216,35 @@ class WiFiArduinoClient:
             except Exception:
                 pass
 
+PIN_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wifi_pins_config.json')
 
-PIN_CONFIG_FILE = os.path.join(WORKSPACE_DIR, "wifi_pins_config.json")
-
-def load_pin_config():
+def load_pin_config() -> dict:
     defaults = {
-        "switch_pin": 13,
-        "pwm_pin": 9,
-        "servo_pin": 10,
-        "rgb_r_pin": 6,
-        "rgb_g_pin": 3,
-        "rgb_b_pin": 5,
-        "matrix_din": 12,
-        "matrix_cs": 8,
-        "matrix_clk": 7,
+        'switch_pin': 13,
+        'pwm_pin': 3,
+        'servo_pin': 4,
+        'rgb_r_pin': 9,
+        'rgb_g_pin': 10,
+        'rgb_b_pin': 11,
+        'anode': True,
+        'matrix_din': 12,
+        'matrix_cs': 8,
+        'matrix_clk': 7
     }
     if os.path.exists(PIN_CONFIG_FILE):
         try:
-            with open(PIN_CONFIG_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                defaults.update(data)
+            with open(PIN_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                defaults.update(json.load(f))
         except Exception:
             pass
     return defaults
 
-def save_pin_config(cfg):
+def save_pin_config(cfg: dict):
     try:
-        with open(PIN_CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2)
+        with open(PIN_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
     except Exception:
         pass
-
 
 class WiFiControllerApp:
     # 現代深色系主題配色
@@ -293,6 +292,9 @@ class WiFiControllerApp:
 
         self._build_ui()
         self.client.start_worker()
+
+        # 啟動時自動嘗試無線連線 (200ms 後無感接入)
+        self.root.after(200, self.toggle_connection)
 
         # 背景定時延遲更新
         self._start_ping_timer()
@@ -448,6 +450,24 @@ class WiFiControllerApp:
 
         btn_stop_fx = tk.Button(top_r, text="⏹️ 停止特效", bg=self.ACCENT_RED, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.stop_dual_effect)
         btn_stop_fx.pack(side=tk.RIGHT)
+
+        # 即時快捷單鍵調色盤
+        quick_frame = tk.Frame(f, bg=self.BG_CARD)
+        quick_frame.pack(fill=tk.X, pady=(0, 8))
+        tk.Label(quick_frame, text="⚡ 即時單鍵變色:", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+
+        palette = [
+            ("🔴 紅", 255, 0, 0, "#F38BA8"),
+            ("🟢 綠", 0, 255, 0, "#A6E3A1"),
+            ("🔵 藍", 0, 0, 255, "#89B4FA"),
+            ("🟡 黃", 255, 255, 0, "#F9E2AF"),
+            ("🟣 紫", 255, 0, 255, "#CBA6F7"),
+            ("⚪ 白光", 255, 255, 255, "#CDD6F4"),
+            ("⚫ 全滅", 0, 0, 0, "#A6ADC8")
+        ]
+        for lbl, r, g, b, fg_c in palette:
+            btn = tk.Button(quick_frame, text=lbl, bg="#181825", fg=fg_c, font=("Segoe UI", 8, "bold"), bd=1, relief=tk.SOLID, padx=6, pady=2, cursor="hand2", command=lambda r=r, g=g, b=b: self.set_rgb_color(r, g, b))
+            btn.pack(side=tk.LEFT, padx=3)
 
         # 18 款炫彩特效按鈕網格
         fx_grid = tk.Frame(f, bg=self.BG_CARD)
@@ -605,6 +625,9 @@ class WiFiControllerApp:
         self.lbl_status.configure(text=f"● Wi-Fi 已連線 ({ip}, {self.client.latency_ms}ms)", fg=self.ACCENT_GREEN)
         self.btn_connect.configure(text="❌ 中斷連線", bg="#45475A")
         self.log(f"🎉 成功連線至 Arduino Wi-Fi！(延遲: {self.client.latency_ms}ms)")
+        # 連線就緒後主動發送初始 RGB 指令，確保硬體燈號即時受控
+        anode = 1 if self.anode_var.get() else 0
+        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},0,0,0")
 
     def _on_connect_fail(self):
         self.lbl_status.configure(text="● 連線失敗", fg=self.ACCENT_RED)
@@ -715,16 +738,20 @@ class WiFiControllerApp:
         self.srv_lbl.configure(text=f"{ang}°")
         self.client.send_cmd(f"SERVO,{self.srv_pin_var.get()},{ang}")
 
+    def set_rgb_color(self, r: int, g: int, b: int):
+        self.stop_dual_effect()
+        hex_c = f"#{r:02x}{g:02x}{b:02x}"
+        self.rgb_preview.configure(bg=hex_c)
+        anode = 1 if self.anode_var.get() else 0
+        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
+        self.log(f"🎨 [Wi-Fi] 設定 RGB 色彩: R={r}, G={g}, B={b}")
+
     def pick_color(self):
         self.stop_dual_effect()
         clr = colorchooser.askcolor(title="選取 RGB 色彩")
         if clr and clr[0]:
             r, g, b = int(clr[0][0]), int(clr[0][1]), int(clr[0][2])
-            hex_c = f"#{r:02x}{g:02x}{b:02x}"
-            self.rgb_preview.configure(bg=hex_c)
-            anode = 1 if self.anode_var.get() else 0
-            self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
-            self.log(f"🎨 [Wi-Fi] 設定 RGB 色彩: R={r}, G={g}, B={b}")
+            self.set_rgb_color(r, g, b)
 
     def start_dual_effect(self, effect_name: str):
         self.stop_dual_effect()
