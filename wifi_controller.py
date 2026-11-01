@@ -626,6 +626,8 @@ class WiFiControllerApp:
     def open_flash_dialog(self):
         dlg = tk.Toplevel(self.root)
         dlg.title("🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno")
+        dlg.geometry("580x480")
+        dlg.configure(bg=self.BG_TOP)
         dlg.transient(self.root)
 
         tk.Label(dlg, text="🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno", bg=self.BG_TOP, fg=self.ACCENT, font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=16, pady=(12, 4))
@@ -639,24 +641,31 @@ class WiFiControllerApp:
         body.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 10))
 
         # COM 埠選擇
+        row0 = tk.Frame(body, bg=self.BG_CARD)
         row0.pack(fill=tk.X, pady=4)
         tk.Label(row0, text="COM 序列埠:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
         import serial.tools.list_ports
         all_ports = serial.tools.list_ports.comports()
         ports = [p.device for p in all_ports]
+        exact_uno = [p.device for p in all_ports if getattr(p, 'description', None) and "arduino" in str(p.description).lower()]
         sel_port = exact_uno[0] if exact_uno else (ports[0] if ports else "COM5")
         port_var = tk.StringVar(value=sel_port)
         combo = ttk.Combobox(row0, textvariable=port_var, values=ports, width=14)
         combo.pack(side=tk.LEFT, padx=6)
+
         # Wi-Fi SSID
         row1 = tk.Frame(body, bg=self.BG_CARD)
         row1.pack(fill=tk.X, pady=4)
+        tk.Label(row1, text="Wi-Fi 名稱 (SSID):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
+        ssid_var = tk.StringVar(value="jupiter")
         ssid_combo = ttk.Combobox(row1, textvariable=ssid_var, width=18)
         ssid_combo.pack(side=tk.LEFT, padx=6)
 
         btn_scan_ap = tk.Button(row1, text="🔄 透過 USB 掃描 Wi-Fi AP", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2")
         btn_scan_ap.pack(side=tk.LEFT, padx=4)
 
+        # Wi-Fi 密碼
+        row2 = tk.Frame(body, bg=self.BG_CARD)
         row2.pack(fill=tk.X, pady=4)
         tk.Label(row2, text="Wi-Fi 密碼 (Password):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=16, anchor="w").pack(side=tk.LEFT)
         pass_entry = tk.Entry(row2, bg="#11111B", fg=self.TEXT_MAIN, relief=tk.FLAT, font=("Segoe UI", 9), width=20, show="*")
