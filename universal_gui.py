@@ -434,7 +434,7 @@ class UniversalControllerApp:
 
         # 右側高權限操作：全體急停與 Web 控制台
         ttk.Button(row1, text="🌐 Web 控制台", style="Primary.TButton", command=self.open_web_console).pack(side=tk.RIGHT, padx=4)
-        ttk.Button(row1, text="📱 跨電腦同步", style="Primary.TButton", command=self.open_share_dialog).pack(side=tk.RIGHT, padx=4)
+        ttk.Button(row1, text="🌐 外網穿透 / 跨電腦同步", style="Primary.TButton", command=self.open_share_dialog).pack(side=tk.RIGHT, padx=4)
         ttk.Button(row1, text="🛑 全體急停", command=self.emergency_stop).pack(side=tk.RIGHT, padx=4)
 
         # 第 2 列：配置檔案管理與擴充功能按鈕（兩列排版，在任何螢幕解析度下 100% 完整顯示不被擠壓裁切）

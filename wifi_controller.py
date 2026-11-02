@@ -321,6 +321,10 @@ class WiFiControllerApp:
         btn_flash = tk.Button(top_frame, text="🛠️ 一鍵燒錄 Wi-Fi 韌體", bg="#F5C2E7", fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.open_flash_dialog)
         btn_flash.pack(side=tk.LEFT, padx=4)
 
+        btn_tunnel = tk.Button(top_frame, text="🌐 外網穿透", bg="#89B4FA", fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.open_tunnel_dialog)
+        btn_tunnel.pack(side=tk.LEFT, padx=4)
+        self.btn_tunnel = btn_tunnel
+
         self.lbl_status = tk.Label(top_frame, text="● 未連線", bg=self.BG_TOP, fg=self.ACCENT_RED, font=("Segoe UI", 9, "bold"))
         self.lbl_status.pack(side=tk.LEFT, padx=12)
 
@@ -867,6 +871,111 @@ class WiFiControllerApp:
     # ==========================
     # 一鍵燒錄 Wi-Fi 韌體對話框
     # ==========================
+    def open_tunnel_dialog(self):
+        """開啟 Cloudflare Tunnel 內網穿透控制視窗"""
+        dlg = tk.Toplevel(self.root)
+        dlg.title("🌐 Cloudflare Tunnel 外網穿透控制台")
+        dlg.geometry("580x430")
+        dlg.configure(bg=self.BG_TOP)
+        dlg.transient(self.root)
+
+        tk.Label(dlg, text="🌐 Cloudflare Tunnel 內網穿透 (外網遠端操控)", bg=self.BG_TOP, fg=self.ACCENT, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
+        tk.Label(dlg, text="自動產生 trycloudflare.com 加密外網通道，手機 (4G/5G) 或任何遠端電腦點擊即可直接連線！", bg=self.BG_TOP, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w", padx=16, pady=(0, 10))
+
+        body = tk.Frame(dlg, bg=self.BG_CARD, padx=16, pady=14, bd=1, relief=tk.SOLID)
+        body.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 12))
+
+        # Port 設定
+        row_p = tk.Frame(body, bg=self.BG_CARD)
+        row_p.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(row_p, text="目標本地通訊埠 (Port):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=20, anchor="w").pack(side=tk.LEFT)
+        port_ent = tk.Entry(row_p, bg="#11111B", fg=self.TEXT_MAIN, insertbackground=self.TEXT_MAIN, font=("Consolas", 10), width=10, relief=tk.FLAT)
+        port_ent.insert(0, str(getattr(self, "tunnel_port", 5000)))
+        port_ent.pack(side=tk.LEFT, padx=6)
+
+        # 狀態顯示
+        row_s = tk.Frame(body, bg=self.BG_CARD)
+        row_s.pack(fill=tk.X, pady=(0, 10))
+        tk.Label(row_s, text="目前連線狀態:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=20, anchor="w").pack(side=tk.LEFT)
+        from cloudflare_tunnel import tunnel_manager, copy_to_clipboard
+        cur_url = tunnel_manager.get_url()
+        lbl_st = tk.Label(row_s, text="🟢 已連線" if cur_url else "⚪ 尚未啟動", bg=self.BG_CARD, fg=self.ACCENT_GREEN if cur_url else self.TEXT_MUTED, font=("Segoe UI", 9, "bold"))
+        lbl_st.pack(side=tk.LEFT, padx=6)
+
+        # 網址卡片
+        box = tk.LabelFrame(body, text="🔗 trycloudflare.com 外網存取網址", bg="#181825", fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=12, pady=10)
+        box.pack(fill=tk.X, pady=(0, 12))
+
+        lbl_url = tk.Label(box, text=cur_url or "尚未啟動，請點擊下方「🚀 啟動外網穿透」按鈕", bg="#181825", fg="#A6E3A1" if cur_url else "#F9E2AF", font=("Consolas", 10, "bold"), wraplength=500, justify="left")
+        lbl_url.pack(anchor="w", pady=(0, 4))
+
+        # 操作按鈕列
+        act_row = tk.Frame(body, bg=self.BG_CARD)
+        act_row.pack(fill=tk.X, pady=(6, 0))
+
+        def do_copy():
+            u = tunnel_manager.get_url()
+            if u:
+                copy_to_clipboard(u)
+                messagebox.showinfo("已複製", "外網網址已複製至剪貼簿：\n" + str(u) + "\n\n請在手機或遠端瀏覽器開啟！")
+            else:
+                messagebox.showwarning("提示", "尚未建立外網連線，請先啟動穿透！")
+
+        def do_open():
+            u = tunnel_manager.get_url()
+            if u:
+                import webbrowser
+                webbrowser.open(u)
+            else:
+                messagebox.showwarning("提示", "尚未建立外網連線，請先啟動穿透！")
+
+        def do_start():
+            try:
+                p = int(port_ent.get().strip())
+            except ValueError:
+                messagebox.showwarning("錯誤", "通訊埠必須為數字 (如 5000)！")
+                return
+            self.tunnel_port = p
+            lbl_st.configure(text="🟡 正在啟動並捕獲網址...", fg=self.ACCENT_YELLOW)
+            lbl_url.configure(text="正在透過 Cloudflare 建立通道，約需 3~5 秒...", fg=self.ACCENT_YELLOW)
+
+            def _bg():
+                ok = tunnel_manager.start(local_port=p)
+                if ok:
+                    u = tunnel_manager.wait_for_url(timeout=25.0)
+                    if u and dlg.winfo_exists():
+                        self.root.after(0, lambda: (
+                            lbl_st.configure(text="🟢 穿透中", fg=self.ACCENT_GREEN),
+                            lbl_url.configure(text=u, fg="#A6E3A1"),
+                            self.btn_tunnel.configure(text="🌐 外網就緒", bg=self.ACCENT_GREEN)
+                        ))
+                    elif dlg.winfo_exists():
+                        self.root.after(0, lambda: (
+                            lbl_st.configure(text="❌ 逾時", fg=self.ACCENT_RED),
+                            lbl_url.configure(text="獲取外網網址逾時，請檢查連線後重試", fg=self.ACCENT_RED)
+                        ))
+
+            threading.Thread(target=_bg, daemon=True).start()
+
+        def do_stop():
+            tunnel_manager.stop()
+            if dlg.winfo_exists():
+                lbl_st.configure(text="⚪ 已停止", fg=self.TEXT_MUTED)
+                lbl_url.configure(text="外網穿透已停止", fg=self.TEXT_MUTED)
+                self.btn_tunnel.configure(text="🌐 外網穿透", bg="#89B4FA")
+
+        btn_run = tk.Button(act_row, text="🚀 啟動外網穿透", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=10, pady=4, cursor="hand2", command=do_start)
+        btn_run.pack(side=tk.LEFT, padx=(0, 6))
+
+        btn_copy = tk.Button(act_row, text="📋 複製外網網址", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), bd=0, padx=8, pady=4, cursor="hand2", command=do_copy)
+        btn_copy.pack(side=tk.LEFT, padx=4)
+
+        btn_browser = tk.Button(act_row, text="↗️ 在瀏覽器中開啟", bg="#313244", fg=self.TEXT_MAIN, font=("Segoe UI", 9), bd=0, padx=8, pady=4, cursor="hand2", command=do_open)
+        btn_browser.pack(side=tk.LEFT, padx=4)
+
+        btn_kill = tk.Button(act_row, text="⏹️ 停止", bg=self.ACCENT_RED, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=8, pady=4, cursor="hand2", command=do_stop)
+        btn_kill.pack(side=tk.RIGHT)
+
     def open_flash_dialog(self):
         dlg = tk.Toplevel(self.root)
         dlg.title("🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno")
