@@ -258,44 +258,61 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>⚡ Arduino Wi-Fi 外網遠端遙控</title>
+  <title>⚡ Arduino Wi-Fi 雙向即時同步遙控</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #1E1E2E; color: #CDD6F4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 16px; text-align: center; }
-    .header { margin-bottom: 16px; }
+    body { background: #1E1E2E; color: #CDD6F4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 14px; text-align: center; }
+    .header { margin-bottom: 14px; }
     .header h1 { font-size: 1.35rem; color: #89B4FA; margin-bottom: 4px; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: #313244; color: #A6E3A1; }
-    .card { background: #313244; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border: 1px solid #45475A; }
-    .card-title { font-size: 0.95rem; font-weight: bold; color: #89B4FA; margin-bottom: 10px; text-align: left; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: bold; padding: 12px 16px; cursor: pointer; transition: transform 0.1s, opacity 0.2s; user-select: none; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: bold; background: #313244; color: #A6E3A1; border: 1px solid #45475A; }
+    .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #A6E3A1; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .card { background: #313244; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border: 1px solid #45475A; text-align: left; }
+    .card-title { font-size: 0.95rem; font-weight: bold; color: #89B4FA; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: bold; padding: 12px 16px; cursor: pointer; transition: transform 0.1s, opacity 0.2s, background 0.2s; user-select: none; }
     .btn:active { transform: scale(0.96); }
-    .btn-primary { background: #89B4FA; color: #11111B; }
-    .btn-success { background: #A6E3A1; color: #11111B; }
+    .btn-toggle { width: 100%; font-size: 1.05rem; padding: 14px; border-radius: 10px; }
+    .btn-on { background: #A6E3A1; color: #11111B; }
+    .btn-off { background: #45475A; color: #CDD6F4; }
     .btn-danger { background: #F38BA8; color: #11111B; }
     .btn-dark { background: #181825; color: #CDD6F4; border: 1px solid #45475A; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-    .palette-btn { height: 40px; border-radius: 6px; font-weight: bold; font-size: 0.82rem; border: none; cursor: pointer; }
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #181825; color: #89B4FA; border: 1px solid #89B4FA; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .btn-active-fx { background: #FAB387 !important; color: #11111B !important; font-weight: bold; border-color: #FAB387 !important; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .palette-btn { height: 38px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; border: none; cursor: pointer; }
+    .color-preview { width: 38px; height: 38px; border-radius: 8px; border: 2px solid #CDD6F4; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: inline-block; vertical-align: middle; }
+    .sync-hint { font-size: 0.72rem; color: #A6ADC8; text-align: right; }
+    .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #181825; color: #89B4FA; border: 1px solid #89B4FA; padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999; }
     .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>⚡ Arduino Wi-Fi 遠端遙控</h1>
-    <span class="badge" id="stBadge">● 連線就緒 (Cloudflare Tunnel)</span>
-  </div>
-
-  <div class="card">
-    <div class="card-title">💡 數位開關 (Pin 13)</div>
-    <div class="grid-2">
-      <button class="btn btn-success" onclick="sendCmd('DWRITE,13,1')">開燈 (ON)</button>
-      <button class="btn btn-danger" onclick="sendCmd('DWRITE,13,0')">關燈 (OFF)</button>
+    <h1>⚡ Arduino Wi-Fi 雙向同步中樞</h1>
+    <div class="badge" id="stBadge">
+      <div class="badge-dot" id="stDot"></div>
+      <span id="stText">● 雙向連線同步中 (10ms)</span>
     </div>
   </div>
 
+  <!-- 1. 數位開關卡片 (即時同步) -->
   <div class="card">
-    <div class="card-title">🎨 RGB 燈光即時調色 (Pin 9, 10, 11)</div>
+    <div class="card-title">
+      <span>💡 數位開關 (Pin <span id="lblSwPin">13</span>)</span>
+      <span class="sync-hint">電腦與手機 100% 同步</span>
+    </div>
+    <button class="btn btn-toggle btn-off" id="btnSw" onclick="toggleSwitch()">⚪ 目前狀態：關閉 (點擊開啟)</button>
+  </div>
+
+  <!-- 2. RGB 全彩燈光卡片 (即時同步) -->
+  <div class="card">
+    <div class="card-title">
+      <span>🎨 RGB 全彩調光 (Pin <span id="lblRgbPins">9, 11, 10</span>)</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="rgbHexText" style="font-family:monospace; font-size:0.8rem; color:#A6ADC8;">#000000</span>
+        <div class="color-preview" id="colorBox" style="background:#000000;"></div>
+      </div>
+    </div>
     <div class="grid-4" style="margin-bottom: 10px;">
       <button class="palette-btn" style="background:#F38BA8; color:#111;" onclick="setRgb(255,0,0)">🔴 紅</button>
       <button class="palette-btn" style="background:#A6E3A1; color:#111;" onclick="setRgb(0,255,0)">🟢 綠</button>
@@ -306,49 +323,145 @@ WEB_REMOTE_HTML = """<!DOCTYPE html>
       <button class="palette-btn" style="background:#FFFFFF; color:#111;" onclick="setRgb(255,255,255)">⚪ 白光</button>
       <button class="palette-btn" style="background:#181825; color:#A6ADC8; border:1px solid #45475A;" onclick="setRgb(0,0,0)">⚫ 關閉</button>
     </div>
-    <div style="display:flex; align-items:center; gap:10px; justify-content:center;">
-      <span style="font-size:0.85rem; color:#A6ADC8;">自訂選色:</span>
-      <input type="color" id="picker" value="#ff0000" onchange="onColorPick(this.value)" style="width:50px; height:34px; border:none; border-radius:6px; cursor:pointer;">
+    <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;">
+      <span style="font-size:0.85rem; color:#A6ADC8;">調色盤自選色彩:</span>
+      <input type="color" id="picker" value="#000000" onchange="onColorPick(this.value)" style="width:60px; height:34px; border:none; border-radius:6px; cursor:pointer; background:transparent;">
     </div>
   </div>
 
+  <!-- 3. 炫彩即時特效卡片 -->
   <div class="card">
-    <div class="card-title">✨ 炫彩即時特效</div>
+    <div class="card-title">
+      <span>✨ 炫彩即時特效</span>
+      <span id="activeFxText" style="font-size:0.8rem; color:#FAB387;">未運行</span>
+    </div>
     <div class="grid-2" style="margin-bottom: 8px;">
-      <button class="btn btn-dark" onclick="sendCmd('FX,sync_rainbow')">🌈 同步彩虹</button>
-      <button class="btn btn-dark" onclick="sendCmd('FX,police_strobe')">🚨 警車爆閃</button>
+      <button class="btn btn-dark fx-btn" id="fx_sync_rainbow" onclick="startFx('sync_rainbow')">🌈 同步彩虹</button>
+      <button class="btn btn-dark fx-btn" id="fx_police_strobe" onclick="startFx('police_strobe')">🚨 警車爆閃</button>
     </div>
     <div class="grid-2">
-      <button class="btn btn-dark" onclick="sendCmd('FX,alt_breathing')">🫁 呼吸漸變</button>
-      <button class="btn btn-danger" onclick="sendCmd('FX,stop')">⏹️ 停止特效</button>
+      <button class="btn btn-dark fx-btn" id="fx_alt_breathing" onclick="startFx('alt_breathing')">🫁 呼吸漸變</button>
+      <button class="btn btn-danger" onclick="stopFx()">⏹️ 停止特效</button>
     </div>
   </div>
 
-  <button class="btn btn-danger" style="width:100%; padding:14px; font-size:1.05rem;" onclick="sendCmd('STOP')">🛑 全體急停 (STOP)</button>
+  <button class="btn btn-danger" style="width:100%; padding:14px; font-size:1.05rem;" onclick="sendStop()">🛑 全體急停 (STOP)</button>
 
-  <div class="toast" id="toastMsg">指令已送出</div>
+  <div class="toast" id="toastMsg">已同步</div>
 
   <script>
+    let appState = {
+      switch: false,
+      switch_pin: 13,
+      rgb_hex: '#000000',
+      rgb_pins: [9, 10, 11],
+      anode: true,
+      effect: ''
+    };
+
     function showToast(msg) {
       const t = document.getElementById('toastMsg');
       t.innerText = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 1200);
+      setTimeout(() => t.classList.remove('show'), 1000);
     }
+
+    // 渲染 UI 狀態
+    function renderState(s) {
+      appState = s;
+      document.getElementById('lblSwPin').innerText = s.switch_pin || 13;
+      if (s.rgb_pins) {
+        document.getElementById('lblRgbPins').innerText = s.rgb_pins.join(', ');
+      }
+
+      // 開關狀態
+      const btnSw = document.getElementById('btnSw');
+      if (s.switch) {
+        btnSw.className = 'btn btn-toggle btn-on';
+        btnSw.innerText = '🟢 目前狀態：已開啟 (點擊關閉)';
+      } else {
+        btnSw.className = 'btn btn-toggle btn-off';
+        btnSw.innerText = '⚪ 目前狀態：已關閉 (點擊開啟)';
+      }
+
+      // RGB 狀態
+      const hex = s.rgb_hex || '#000000';
+      document.getElementById('colorBox').style.background = hex;
+      document.getElementById('rgbHexText').innerText = hex;
+      if (document.activeElement !== document.getElementById('picker')) {
+        document.getElementById('picker').value = hex;
+      }
+
+      // 特效狀態
+      const fxMap = { 'sync_rainbow': '🌈 同步彩虹', 'police_strobe': '🚨 警車爆閃', 'alt_breathing': '🫁 呼吸漸變' };
+      document.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('btn-active-fx'));
+      if (s.effect) {
+        document.getElementById('activeFxText').innerText = '🔥 ' + (fxMap[s.effect] || s.effect);
+        const activeBtn = document.getElementById('fx_' + s.effect);
+        if (activeBtn) activeBtn.classList.add('btn-active-fx');
+      } else {
+        document.getElementById('activeFxText').innerText = '未運行';
+      }
+
+      // 連線資訊
+      const dot = document.getElementById('stDot');
+      const txt = document.getElementById('stText');
+      if (s.connected) {
+        dot.style.background = '#A6E3A1';
+        txt.innerText = '● 已連線 Arduino (' + (s.latency || 10) + 'ms)';
+      } else {
+        dot.style.background = '#F38BA8';
+        txt.innerText = '● Arduino 離線中';
+      }
+    }
+
+    // 快速輪詢與即時拉取 (300ms 超即時感)
+    function pollSync() {
+      fetch('/api/sync')
+        .then(r => r.json())
+        .then(s => renderState(s))
+        .catch(e => {})
+        .finally(() => setTimeout(pollSync, 300));
+    }
+    pollSync();
+
     function sendCmd(cmd) {
       fetch('/api/cmd?c=' + encodeURIComponent(cmd))
         .then(r => r.json())
-        .then(d => { showToast('⚡ 已送出: ' + cmd); })
-        .catch(e => { showToast('❌ 發送失敗'); });
+        .then(s => {
+          if (s && s.state) renderState(s.state);
+        });
     }
+
+    function toggleSwitch() {
+      const nextVal = appState.switch ? 0 : 1;
+      sendCmd('DWRITE,' + appState.switch_pin + ',' + nextVal);
+    }
+
     function setRgb(r, g, b) {
-      sendCmd('RGB,9,10,11,1,' + r + ',' + g + ',' + b);
+      const anodeVal = appState.anode ? 1 : 0;
+      const pins = appState.rgb_pins || [9, 10, 11];
+      sendCmd('RGB,' + pins[0] + ',' + pins[1] + ',' + pins[2] + ',' + anodeVal + ',' + r + ',' + g + ',' + b);
     }
+
     function onColorPick(hex) {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
       const b = parseInt(hex.slice(5, 7), 16);
       setRgb(r, g, b);
+    }
+
+    function startFx(name) {
+      sendCmd('FX,' + name);
+    }
+
+    function stopFx() {
+      sendCmd('FX,stop');
+    }
+
+    function sendStop() {
+      sendCmd('STOP');
+      showToast('🛑 全體急停');
     }
   </script>
 </body>
@@ -361,45 +474,36 @@ class WiFiWebRemoteHandler(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        app = getattr(self.server, "app", None)
+
         if parsed.path == "/" or parsed.path == "/index.html":
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
             self.end_headers()
             self.wfile.write(WEB_REMOTE_HTML.encode("utf-8"))
-        elif parsed.path == "/api/status":
+
+        elif parsed.path == "/api/sync" or parsed.path == "/api/status":
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "no-cache")
             self.end_headers()
-            app = getattr(self.server, "app", None)
-            st = {
-                "connected": app.client.is_connected if app else False,
-                "ip": app.client.ip if app else "",
-                "latency": app.client.latency_ms if app else 0
-            }
-            self.wfile.write(json.dumps(st).encode("utf-8"))
+            st = app.get_sync_state() if app else {}
+            self.wfile.write(json.dumps(st, ensure_ascii=False).encode("utf-8"))
+
         elif parsed.path == "/api/cmd":
             query = urllib.parse.parse_qs(parsed.query)
             cmd = query.get("c", [""])[0]
-            app = getattr(self.server, "app", None)
             if app and cmd:
-                if cmd.startswith("FX,"):
-                    fx = cmd.split(",")[1]
-                    if fx == "stop":
-                        app.stop_dual_effect()
-                    else:
-                        app.start_dual_effect(fx)
-                elif cmd == "STOP":
-                    app.emergency_stop()
-                else:
-                    app.client.send_cmd(cmd)
-                app.log(f"📱 [外網遙控] 收到指令: {cmd}")
+                app.handle_remote_cmd(cmd)
+
             self.send_response(200)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
-            self.wfile.write(b'{"ok": true}')
+            st = app.get_sync_state() if app else {}
+            self.wfile.write(json.dumps({"ok": True, "state": st}, ensure_ascii=False).encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
@@ -554,6 +658,71 @@ class WiFiControllerApp:
         self.pin_cfg["matrix_clk"] = self.matrix_clk_var.get()
         save_pin_config(self.pin_cfg)
         self.log(f"⚙️ 腳位設定已自動保存！")
+
+    def get_sync_state(self) -> dict:
+        """取得目前硬體與 UI 狀態，供手機/網頁即時雙向同步"""
+        cur_rgb = getattr(self, "current_rgb", [0, 0, 0])
+        hex_c = f"#{cur_rgb[0]:02x}{cur_rgb[1]:02x}{cur_rgb[2]:02x}"
+        return {
+            "connected": self.client.is_connected,
+            "ip": self.client.ip,
+            "latency": self.client.latency_ms,
+            "switch": getattr(self, "sw_state", False),
+            "switch_pin": self.sw_pin_var.get() if hasattr(self, "sw_pin_var") else 13,
+            "rgb": cur_rgb,
+            "rgb_hex": hex_c,
+            "rgb_pins": [
+                self.rgb_r_pin_var.get() if hasattr(self, "rgb_r_pin_var") else 9,
+                self.rgb_g_pin_var.get() if hasattr(self, "rgb_g_pin_var") else 10,
+                self.rgb_b_pin_var.get() if hasattr(self, "rgb_b_pin_var") else 11,
+            ],
+            "anode": bool(self.anode_var.get()) if hasattr(self, "anode_var") else True,
+            "effect": self.current_effect_name or ""
+        }
+
+    def handle_remote_cmd(self, cmd: str):
+        """處理來自手機/網頁的外網指令，並即時更新電腦桌面 UI 與硬體"""
+        self.log(f"📱 [外網同步遙控] {cmd}")
+        if cmd.startswith("DWRITE,"):
+            parts = cmd.split(",")
+            if len(parts) >= 3:
+                val = int(parts[2]) > 0
+                self.root.after(0, lambda: self.apply_switch_ui(val))
+        elif cmd.startswith("RGB,"):
+            parts = cmd.split(",")
+            if len(parts) >= 8:
+                r, g, b = int(parts[5]), int(parts[6]), int(parts[7])
+                self.root.after(0, lambda: self.apply_rgb_ui(r, g, b))
+        elif cmd.startswith("FX,"):
+            fx = cmd.split(",")[1]
+            if fx == "stop":
+                self.root.after(0, self.stop_dual_effect)
+            else:
+                self.root.after(0, lambda: self.start_dual_effect(fx))
+        elif cmd == "STOP":
+            self.root.after(0, self.emergency_stop)
+        else:
+            self.client.send_cmd(cmd)
+
+    def apply_switch_ui(self, val: bool):
+        """同步更新桌面端開關狀態與外觀"""
+        self.sw_state = val
+        if hasattr(self, "btn_sw") and self.btn_sw.winfo_exists():
+            if self.sw_state:
+                self.btn_sw.configure(text="🟢 目前：開啟 (點擊關閉)", bg=self.ACCENT_GREEN, fg="#11111B")
+            else:
+                self.btn_sw.configure(text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN)
+        self.client.send_cmd(f"DWRITE,{self.sw_pin_var.get()},{1 if val else 0}")
+
+    def apply_rgb_ui(self, r: int, g: int, b: int):
+        """同步更新桌面端 RGB 預覽色塊與硬體"""
+        self.stop_dual_effect()
+        self.current_rgb = [r, g, b]
+        hex_c = f"#{r:02x}{g:02x}{b:02x}"
+        if hasattr(self, "rgb_preview") and self.rgb_preview.winfo_exists():
+            self.rgb_preview.configure(bg=hex_c)
+        anode = 1 if self.anode_var.get() else 0
+        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
 
     def _build_switch_servo_card(self):
         row = tk.Frame(self.cards_frame, bg=self.BG_MAIN)
@@ -943,6 +1112,7 @@ class WiFiControllerApp:
 
     def set_rgb_color(self, r: int, g: int, b: int):
         self.stop_dual_effect()
+        self.current_rgb = [r, g, b]
         hex_c = f"#{r:02x}{g:02x}{b:02x}"
         self.rgb_preview.configure(bg=hex_c)
         anode = 1 if self.anode_var.get() else 0
