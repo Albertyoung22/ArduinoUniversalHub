@@ -246,6 +246,197 @@ def save_pin_config(cfg: dict):
     except Exception:
         pass
 
+
+# ==========================
+# 內嵌式超輕量 Web 遙控伺服器 (供 Cloudflare Tunnel 外網穿透直連)
+# ==========================
+import http.server
+import urllib.parse
+
+WEB_REMOTE_HTML = """<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>⚡ Arduino Wi-Fi 外網遠端遙控</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #1E1E2E; color: #CDD6F4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 16px; text-align: center; }
+    .header { margin-bottom: 16px; }
+    .header h1 { font-size: 1.35rem; color: #89B4FA; margin-bottom: 4px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; background: #313244; color: #A6E3A1; }
+    .card { background: #313244; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border: 1px solid #45475A; }
+    .card-title { font-size: 0.95rem; font-weight: bold; color: #89B4FA; margin-bottom: 10px; text-align: left; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: bold; padding: 12px 16px; cursor: pointer; transition: transform 0.1s, opacity 0.2s; user-select: none; }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary { background: #89B4FA; color: #11111B; }
+    .btn-success { background: #A6E3A1; color: #11111B; }
+    .btn-danger { background: #F38BA8; color: #11111B; }
+    .btn-dark { background: #181825; color: #CDD6F4; border: 1px solid #45475A; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .palette-btn { height: 40px; border-radius: 6px; font-weight: bold; font-size: 0.82rem; border: none; cursor: pointer; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #181825; color: #89B4FA; border: 1px solid #89B4FA; padding: 8px 16px; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚡ Arduino Wi-Fi 遠端遙控</h1>
+    <span class="badge" id="stBadge">● 連線就緒 (Cloudflare Tunnel)</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">💡 數位開關 (Pin 13)</div>
+    <div class="grid-2">
+      <button class="btn btn-success" onclick="sendCmd('DWRITE,13,1')">開燈 (ON)</button>
+      <button class="btn btn-danger" onclick="sendCmd('DWRITE,13,0')">關燈 (OFF)</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎨 RGB 燈光即時調色 (Pin 9, 10, 11)</div>
+    <div class="grid-4" style="margin-bottom: 10px;">
+      <button class="palette-btn" style="background:#F38BA8; color:#111;" onclick="setRgb(255,0,0)">🔴 紅</button>
+      <button class="palette-btn" style="background:#A6E3A1; color:#111;" onclick="setRgb(0,255,0)">🟢 綠</button>
+      <button class="palette-btn" style="background:#89B4FA; color:#111;" onclick="setRgb(0,0,255)">🔵 藍</button>
+      <button class="palette-btn" style="background:#F9E2AF; color:#111;" onclick="setRgb(255,255,0)">🟡 黃</button>
+      <button class="palette-btn" style="background:#CBA6F7; color:#111;" onclick="setRgb(255,0,255)">🟣 紫</button>
+      <button class="palette-btn" style="background:#94E2D5; color:#111;" onclick="setRgb(0,255,255)">🩵 青</button>
+      <button class="palette-btn" style="background:#FFFFFF; color:#111;" onclick="setRgb(255,255,255)">⚪ 白光</button>
+      <button class="palette-btn" style="background:#181825; color:#A6ADC8; border:1px solid #45475A;" onclick="setRgb(0,0,0)">⚫ 關閉</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px; justify-content:center;">
+      <span style="font-size:0.85rem; color:#A6ADC8;">自訂選色:</span>
+      <input type="color" id="picker" value="#ff0000" onchange="onColorPick(this.value)" style="width:50px; height:34px; border:none; border-radius:6px; cursor:pointer;">
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✨ 炫彩即時特效</div>
+    <div class="grid-2" style="margin-bottom: 8px;">
+      <button class="btn btn-dark" onclick="sendCmd('FX,sync_rainbow')">🌈 同步彩虹</button>
+      <button class="btn btn-dark" onclick="sendCmd('FX,police_strobe')">🚨 警車爆閃</button>
+    </div>
+    <div class="grid-2">
+      <button class="btn btn-dark" onclick="sendCmd('FX,alt_breathing')">🫁 呼吸漸變</button>
+      <button class="btn btn-danger" onclick="sendCmd('FX,stop')">⏹️ 停止特效</button>
+    </div>
+  </div>
+
+  <button class="btn btn-danger" style="width:100%; padding:14px; font-size:1.05rem;" onclick="sendCmd('STOP')">🛑 全體急停 (STOP)</button>
+
+  <div class="toast" id="toastMsg">指令已送出</div>
+
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toastMsg');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1200);
+    }
+    function sendCmd(cmd) {
+      fetch('/api/cmd?c=' + encodeURIComponent(cmd))
+        .then(r => r.json())
+        .then(d => { showToast('⚡ 已送出: ' + cmd); })
+        .catch(e => { showToast('❌ 發送失敗'); });
+    }
+    function setRgb(r, g, b) {
+      sendCmd('RGB,9,10,11,1,' + r + ',' + g + ',' + b);
+    }
+    function onColorPick(hex) {
+      const r = parseInt(hex.slice(1, 3), 16);
+      const g = parseInt(hex.slice(3, 5), 16);
+      const b = parseInt(hex.slice(5, 7), 16);
+      setRgb(r, g, b);
+    }
+  </script>
+</body>
+</html>
+"""
+
+class WiFiWebRemoteHandler(http.server.BaseHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass  # 壓制終端存取洗版
+
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/" or parsed.path == "/index.html":
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            self.wfile.write(WEB_REMOTE_HTML.encode("utf-8"))
+        elif parsed.path == "/api/status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            app = getattr(self.server, "app", None)
+            st = {
+                "connected": app.client.is_connected if app else False,
+                "ip": app.client.ip if app else "",
+                "latency": app.client.latency_ms if app else 0
+            }
+            self.wfile.write(json.dumps(st).encode("utf-8"))
+        elif parsed.path == "/api/cmd":
+            query = urllib.parse.parse_qs(parsed.query)
+            cmd = query.get("c", [""])[0]
+            app = getattr(self.server, "app", None)
+            if app and cmd:
+                if cmd.startswith("FX,"):
+                    fx = cmd.split(",")[1]
+                    if fx == "stop":
+                        app.stop_dual_effect()
+                    else:
+                        app.start_dual_effect(fx)
+                elif cmd == "STOP":
+                    app.emergency_stop()
+                else:
+                    app.client.send_cmd(cmd)
+                app.log(f"📱 [外網遙控] 收到指令: {cmd}")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(b'{"ok": true}')
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+class EmbeddedWebServer:
+    def __init__(self, app, port=5000):
+        self.app = app
+        self.port = port
+        self.httpd = None
+        self.thread = None
+
+    def start(self, port=5000):
+        if self.httpd:
+            return True
+        self.port = port
+        try:
+            self.httpd = http.server.ThreadingHTTPServer(("0.0.0.0", self.port), WiFiWebRemoteHandler)
+            self.httpd.app = self.app
+            self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+            self.thread.start()
+            self.app.log(f"🌐 內嵌式 Web 遙控伺服器已在 Port {self.port} 啟動！")
+            return True
+        except Exception as e:
+            self.app.log(f"❌ 啟動 Web 伺服器失敗: {e}")
+            return False
+
+    def stop(self):
+        if self.httpd:
+            try:
+                self.httpd.shutdown()
+                self.httpd.server_close()
+            except Exception:
+                pass
+            self.httpd = None
+            self.thread = None
+            self.app.log("⏹️ 內嵌式 Web 遙控伺服器已停止")
+
 class WiFiControllerApp:
     # 現代深色系主題配色
     BG_MAIN = "#1E1E2E"
@@ -267,6 +458,7 @@ class WiFiControllerApp:
         self.root.configure(bg=self.BG_MAIN)
 
         self.client = WiFiArduinoClient()
+        self.web_server = EmbeddedWebServer(self, port=5000)
         self.client.on_log = self.log
 
         # 雙燈即時特效執行緒控制
@@ -586,11 +778,18 @@ class WiFiControllerApp:
     def log(self, msg: str):
         t = time.strftime("%H:%M:%S")
         line = f"[{t}] {msg}\n"
+        print(f"[WiFiLog] {msg}", flush=True)
         def _append():
-            if hasattr(self, "log_text"):
-                self.log_text.insert(tk.END, line)
-                self.log_text.see(tk.END)
-        self.root.after(0, _append)
+            try:
+                if hasattr(self, "log_text"):
+                    self.log_text.insert(tk.END, line)
+                    self.log_text.see(tk.END)
+            except Exception:
+                pass
+        try:
+            self.root.after(0, _append)
+        except Exception:
+            pass
 
     # ==========================
     # 連線與通訊邏輯
@@ -940,6 +1139,8 @@ class WiFiControllerApp:
             lbl_url.configure(text="正在透過 Cloudflare 建立通道，約需 3~5 秒...", fg=self.ACCENT_YELLOW)
 
             def _bg():
+                # 啟動內嵌 Web 遙控伺服器以接收外網請求
+                self.web_server.start(port=p)
                 ok = tunnel_manager.start(local_port=p)
                 if ok:
                     u = tunnel_manager.wait_for_url(timeout=25.0)
@@ -959,6 +1160,7 @@ class WiFiControllerApp:
 
         def do_stop():
             tunnel_manager.stop()
+            self.web_server.stop()
             if dlg.winfo_exists():
                 lbl_st.configure(text="⚪ 已停止", fg=self.TEXT_MUTED)
                 lbl_url.configure(text="外網穿透已停止", fg=self.TEXT_MUTED)
