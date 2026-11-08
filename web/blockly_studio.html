@@ -795,15 +795,15 @@
     <!-- 中間：硬體連線中樞 (現代化整合膠囊) -->
     <div class="nav-center-group">
       <div class="connection-hub">
-        <!-- Web Serial 瀏覽器直連 -->
-        <button id="btnWebSerial" class="btn-web-serial" onclick="toggleWebSerial()" title="Chrome/Edge 瀏覽器原生直連 USB (超低延遲、雲端 Render 免後端必用)">
-          <span style="font-size: 12px;">⚡</span> Web Serial
+        <!-- Web Serial 瀏覽器直連 (雲端與本機通用) -->
+        <button id="btnWebSerial" class="btn-web-serial" onclick="toggleWebSerial()" title="Chrome/Edge 瀏覽器原生直連 USB (超低延遲、雲端 Render 免後端直連)">
+          <span style="font-size: 12px;">⚡</span> <span id="btnWebSerialText">Web Serial</span>
         </button>
 
-        <div class="hub-divider"></div>
+        <div class="hub-divider" id="localComDivider"></div>
 
-        <!-- 本地 COM 埠選擇與連線 -->
-        <div class="com-selector-wrapper">
+        <!-- 本地 COM 埠選擇與連線 (僅在 localhost 顯示，雲端 Render 自動隱藏) -->
+        <div class="com-selector-wrapper" id="localComWrapper">
           <span style="font-size: 12px;" title="USB 串列埠">🔌</span>
           <select id="comPortSelect" class="com-select" title="選取本地 Arduino COM 埠">
             <option value="">搜尋 COM 埠中...</option>
@@ -1536,6 +1536,9 @@
           window.resizeTo(Math.min(1360, screen.availWidth), Math.min(880, screen.availHeight));
         } catch (e) {}
       }
+
+      // 雲端 Render 模式自動淨化導覽列
+      checkCloudEnvironment();
 
       // 預設載入範例：Arduino 板載 LED 閃爍 (Pin 13)
       document.getElementById('exampleSelect').value = 'ex_arduino_blink';
@@ -2528,8 +2531,52 @@ void loop() {
     let webSerialWriter = null;
     let webSerialReader = null;
     let isWebSerialConnected = false;
+    const isCloudHost = (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1');
+
+    function checkCloudEnvironment() {
+      if (isCloudHost) {
+        const comWrapper = document.getElementById('localComWrapper');
+        const comDivider = document.getElementById('localComDivider');
+        if (comWrapper) comWrapper.style.display = 'none';
+        if (comDivider) comDivider.style.display = 'none';
+
+        const btnWebSerial = document.getElementById('btnWebSerial');
+        const txtWebSerial = document.getElementById('btnWebSerialText');
+        if (txtWebSerial && !isWebSerialConnected) {
+          txtWebSerial.innerText = 'USB 瀏覽器直連 (Web Serial)';
+        }
+        if (btnWebSerial) {
+          btnWebSerial.style.padding = '6px 14px';
+          btnWebSerial.style.fontSize = '12px';
+        }
+        const txt = document.getElementById('usbStatusText');
+        if (txt && !isWebSerialConnected) {
+          txt.textContent = 'USB: 請點 Web Serial 直連';
+        }
+      }
+    }
 
     function updateUsbUI(connected, current_port, ports) {
+      if (isCloudHost) {
+        checkCloudEnvironment();
+        const dot = document.getElementById('usbDot');
+        const txt = document.getElementById('usbStatusText');
+        if (isWebSerialConnected) {
+          if (dot) {
+            dot.style.background = '#00E5FF';
+            dot.style.boxShadow = '0 0 8px #00E5FF';
+          }
+          if (txt) txt.textContent = 'Web Serial: 已連線';
+        } else {
+          if (dot) {
+            dot.style.background = '#888';
+            dot.style.boxShadow = 'none';
+          }
+          if (txt) txt.textContent = 'USB: 請點 Web Serial 直連';
+        }
+        return;
+      }
+
       const sel = document.getElementById('comPortSelect');
       const btn = document.getElementById('btnConnectUSB');
       const dot = document.getElementById('usbDot');
@@ -4869,6 +4916,24 @@ void loop() {
     }
 
     function updateBurnBoards() {
+      if (isCloudHost) {
+        const portGroup = document.getElementById('burnPortGroup');
+        if (portGroup) {
+          portGroup.innerHTML = `
+            <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:4px; font-weight:bold;">🔌 燒錄方式 (雲端直刷):</label>
+            <div style="background:#181825; color:#00E5FF; border:1px solid #313244; padding:7px 10px; border-radius:6px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px;">
+              <span>⚡</span> Web Serial 瀏覽器直刷 (免驅動)
+            </div>
+            <select id="burnPortSelect" style="display:none;"><option value="WebSerial">WebSerial</option></select>
+          `;
+        }
+        const info = document.getElementById('burnCliStatus');
+        if (info) {
+          info.innerHTML = `☁️ <b>雲端直連模式</b>：點擊下方【⚡ 還原積木互動韌體】即由瀏覽器直刷晶片！若需單機離線燒錄請點【📥 下載 .ino】。`;
+        }
+        return;
+      }
+
       fetch('/api/burn/boards')
         .then(r => r.json())
         .then(data => {
@@ -5720,7 +5785,7 @@ void loop() {
             <option value="arduino:esp32:esp32">ESP32 Dev Module</option>
           </select>
         </div>
-        <div>
+        <div id="burnPortGroup">
           <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:4px; font-weight:bold;">🔌 燒錄 USB 串列埠:</label>
           <select id="burnPortSelect" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:7px; border-radius:6px; font-size:12px; outline:none;">
             <option value="COM4" selected>COM4 (Arduino Uno)</option>
