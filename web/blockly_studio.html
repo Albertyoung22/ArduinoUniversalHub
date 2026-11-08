@@ -1530,9 +1530,6 @@
       // 預設載入範例：Arduino 板載 LED 閃爍 (Pin 13)
       document.getElementById('exampleSelect').value = 'ex_arduino_blink';
       loadExample('ex_arduino_blink');
-
-      // 🌟 自動偵測先前已授權的 USB 連接埠並嘗試自動靜默連線
-      setTimeout(initAutoWebSerial, 600);
     });
 
     let rawPythonCode = '';
@@ -2706,31 +2703,10 @@ void loop() {
       }
     }
 
-    // 自動偵測與重連功能 (Auto-reconnect on Load & Hotplug Connect/Disconnect)
-    async function initAutoWebSerial() {
+    // Web Serial 安全拔除監聽 (絕不自動搶佔序列埠，保持純手動明確連線)
+    function initAutoWebSerial() {
       if (!('serial' in navigator)) return;
-
-      // 1. 頁面載入時：查詢瀏覽器先前已授權過的連接埠，若存在且目前未連線，自動靜默連線！
-      try {
-        const grantedPorts = await navigator.serial.getPorts();
-        if (grantedPorts.length > 0 && !isWebSerialConnected && !isUsbConnected) {
-          log('✨ [Web Serial] 偵測到先前已授權之 Arduino 設備，正在自動建立直連...');
-          await openSerialPort(grantedPorts[0]);
-        }
-      } catch (e) {
-        console.warn('Web Serial auto getPorts failed:', e);
-      }
-
-      // 2. 熱插拔監聽：當使用者將 USB 線插入電腦時，若已授權過即自動連線
-      navigator.serial.addEventListener('connect', async (event) => {
-        log('🔌 [Web Serial] 偵測到 Arduino USB 纜線已插入！正在自動建立直連...');
-        if (!isWebSerialConnected && !isUsbConnected) {
-          await openSerialPort(event.port);
-        }
-      });
-
-      // 3. 拔除監聽：當使用者拔除 USB 線時，自動更新 UI
-      navigator.serial.addEventListener('disconnect', (event) => {
+      navigator.serial.addEventListener('disconnect', () => {
         log('🔌 [Web Serial] 偵測到 Arduino USB 纜線已拔除。');
         disconnectWebSerial();
       });
@@ -4310,6 +4286,42 @@ void loop() {
       log('📥 已成功下載 Arduino 離線原始碼: Sophia_Offline_Firmware.ino');
     }
 
+    async function restoreInteractiveFirmware() {
+      const port = document.getElementById('burnPortSelect').value || 'COM4';
+      const fqbn = document.getElementById('burnBoardSelect').value || 'arduino:avr:uno';
+      const logBox = document.getElementById('burnLogBox');
+
+      logBox.style.display = 'block';
+      logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 🛠️ 正在重新上傳萬能積木互動韌體至板子 (${port})...</div>`;
+
+      if (isWebSerialConnected) {
+        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 暫時關閉 Web Serial 串列埠以供燒錄...</div>`;
+        try {
+          await disconnectWebSerial();
+          await new Promise(r => setTimeout(r, 800));
+        } catch (_) {}
+      }
+
+      fetch('/api/burn/restore_interactive_firmware', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: port, fqbn: fqbn })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:6px;">🎉🎉 萬能積木互動韌體還原大成功！板子已就緒！</div>`;
+          log(`⚡ [韌體還原成功] Arduino Uno (${port}) 已成功恢復積木互動模式！`);
+        } else {
+          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 還原失敗: ${data.error || '未知錯誤'}</div>`;
+          log(`❌ [韌體還原失敗]: ${data.error || ''}`);
+        }
+      })
+      .catch(err => {
+        logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 請求伺服器異常: ${err}</div>`;
+      });
+    }
+
     // ==========================================
     // ⚙️ 硬體腳位與極性配置彈窗控制
     // ==========================================
@@ -4848,11 +4860,16 @@ void loop() {
       <!-- 燒錄即時日誌視窗 -->
       <div id="burnLogBox" style="display:none; background:#11111B; border:1px solid #313244; border-radius:8px; padding:10px; font-family:'Consolas', monospace; font-size:11px; color:#A6ADC8; max-height:160px; overflow-y:auto; margin-bottom:14px; line-height:1.4;"></div>
 
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <button onclick="downloadInoSketch()" style="background:#313244; color:#CDD6F4; border:1px solid #45475A; padding:8px 14px; border-radius:6px; font-size:12px; cursor:pointer;">
-          📥 下載 .ino 原始碼
-        </button>
-        <div style="display:flex; gap:10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <button onclick="downloadInoSketch()" style="background:#313244; color:#CDD6F4; border:1px solid #45475A; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer;">
+            📥 下載 .ino 原始碼
+          </button>
+          <button onclick="restoreInteractiveFirmware()" style="background:#2563EB; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="將板子從離線程式恢復成可與網頁積木即時互動的萬能韌體">
+            ⚡ 還原積木互動韌體
+          </button>
+        </div>
+        <div style="display:flex; gap:8px;">
           <button onclick="closeBurnModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">關閉</button>
           <button id="btnStartBurn" onclick="startOfflineBurn()" style="background:linear-gradient(135deg, #EA580C, #F97316); color:white; border:none; padding:8px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(234,88,12,0.45);">
             🔥 開始燒錄 (Burn to Board)

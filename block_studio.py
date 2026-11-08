@@ -1477,6 +1477,41 @@ def api_burn_compile_and_upload():
             pass
 
 
+@app.route("/api/burn/restore_interactive_firmware", methods=["POST"])
+def api_burn_restore_interactive_firmware():
+    cli_path = find_arduino_cli()
+    if not cli_path:
+        return jsonify({"ok": False, "error": "伺服器未找到 arduino-cli 編譯器"}), 400
+
+    data = request.get_json(silent=True) or {}
+    port = data.get("port") or arduino_serial.port or "COM4"
+    fqbn = data.get("fqbn", "arduino:avr:uno")
+
+    sketch_dir = os.path.join(BASE_DIR, "universal_firmware")
+    if not os.path.exists(sketch_dir):
+        return jsonify({"ok": False, "error": "找不到 universal_firmware 目錄"}), 400
+
+    # 釋放序列埠
+    if arduino_serial.is_connected:
+        arduino_serial.disconnect()
+        time.sleep(1.0)
+
+    try:
+        arduino_serial.log(f"🛠️ [還原互動韌體] 正在為 {port} 上傳萬能積木互動韌體 (universal_firmware)...")
+        ret, out, err = safe_run_process([cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir], timeout=60)
+        if ret != 0:
+            err_msg = err or out
+            arduino_serial.log(f"❌ [還原互動韌體] 上傳失敗:\n{err_msg}")
+            return jsonify({"ok": False, "error": f"韌體上傳失敗: {err_msg}", "log": out + "\n" + err}), 400
+
+        arduino_serial.log(f"🎉🎉 [還原互動韌體] 成功還原萬能積木互動韌體！現在板子已重新支援即時積木互動點燈！")
+        # 自動恢復後端序列埠連線
+        threading.Thread(target=lambda: (time.sleep(2.0), arduino_serial.connect(port)), daemon=True).start()
+        return jsonify({"ok": True, "message": "成功還原萬能積木互動韌體！板子已就緒即時控制！", "log": out})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
 @app.route("/api/burn/download_ino", methods=["POST"])
 def api_burn_download_ino():
     data = request.get_json(silent=True) or {}
