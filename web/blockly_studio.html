@@ -4252,9 +4252,55 @@ void loop() {
       return numBlock;
     }
 
+    // --- 🌈 昕蓉教學積木拼裝小幫手 (自動扣接、居中與音效引擎) ---
+    function snapRgbBlock(parentBlock, target, r, g, b, waitSec, isLoopRoot = false) {
+      const rgb = workspace.newBlock('arduino_rgb_color');
+      rgb.setFieldValue(String(target), 'TARGET');
+      attachNumberBlock(rgb, 'R', r);
+      attachNumberBlock(rgb, 'G', g);
+      attachNumberBlock(rgb, 'B', b);
+      rgb.initSvg();
+      rgb.render();
+
+      if (isLoopRoot) {
+        const doInput = parentBlock.getInput('DO');
+        if (doInput && doInput.connection) {
+          doInput.connection.connect(rgb.previousConnection);
+        }
+      } else if (parentBlock && parentBlock.nextConnection) {
+        parentBlock.nextConnection.connect(rgb.previousConnection);
+      }
+
+      let tail = rgb;
+      let waitBlock = null;
+      if (waitSec !== null && waitSec !== undefined && waitSec > 0) {
+        waitBlock = workspace.newBlock('control_wait');
+        waitBlock.initSvg();
+        waitBlock.render();
+        attachNumberBlock(waitBlock, 'SECONDS', waitSec);
+        rgb.nextConnection.connect(waitBlock.previousConnection);
+        tail = waitBlock;
+      }
+
+      rgb.select();
+      tutorialBlocks.lastPlaced = rgb;
+      if (workspace && typeof workspace.centerOnBlock === 'function') {
+        try { workspace.centerOnBlock(rgb.id); } catch (_) {}
+      }
+      playSound('pop');
+      return { rgbBlock: rgb, waitBlock: waitBlock, tailBlock: tail };
+    }
+
+    function snapDualRgbBlock(parentBlock, target1, r1, g1, b1, target2, r2, g2, b2, waitSec, isLoopRoot = false) {
+      const res1 = snapRgbBlock(parentBlock, target1, r1, g1, b1, null, isLoopRoot);
+      const res2 = snapRgbBlock(res1.rgbBlock, target2, r2, g2, b2, waitSec, false);
+      return { firstRgb: res1.rgbBlock, secondRgb: res2.rgbBlock, waitBlock: res2.waitBlock, tailBlock: res2.tailBlock };
+    }
+
     const LESSONS_DATA = [
       {
         id: 1,
+        category: 'general',
         title: '💡 第 1 課：讓小燈泡為你眨眨眼 (板載 LED 閃爍)',
         tag: '基礎必修',
         badge: '🌟 初級小學徒',
@@ -4368,22 +4414,27 @@ void loop() {
           }
         ]
       },
+
+      // ========================================================
+      // 🌈 RGB 炫彩光學學院專屬系列課程 (6 大漸進式精彩關卡)
+      // ========================================================
       {
-        id: 2,
-        title: '🎨 第 2 課：小小調色大師 (RGB 全彩混色魔法)',
-        tag: '色彩科學',
-        badge: '🎨 色彩魔術師',
-        concept: '探索光學三原色 (Red 紅, Green 綠, Blue 藍)，調出上百萬種彩虹色彩！',
+        id: 101,
+        category: 'rgb',
+        title: '🌈 RGB 1 課：光的三原色神奇調色大典 (七彩光譜漫遊)',
+        tag: '光學混色',
+        badge: '🌈 光學大師',
+        concept: '探索光學加法混色原理：紅+綠=黃、綠+藍=青、紅+藍=紫、三色全滿=純白光！',
         exampleKey: 'ex_rgb_rainbow',
         steps: [
           {
             target: 'current_block',
             title: '第 1 步：放上綠旗起點積木',
-            text: '我們從空白畫布開始拼出彩虹調色積木！先放上【🚩 當綠旗被點擊時】！',
+            text: '我們從空白畫布開始拼出七彩光譜漫遊程式！先放上【🚩 當綠旗被點擊時】！',
             action: () => {
               resetTutorialWorkspace();
               const b = workspace.newBlock('event_when_flag_clicked');
-              b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
               tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
               playSound('pop');
             }
@@ -4404,84 +4455,97 @@ void loop() {
           },
           {
             target: 'current_block',
-            title: '第 3 步：加入紅色光 (R=255, G=0, B=0)',
-            text: '放入第 1 個顏色：【🎨 RGB 全彩 - 紅色光】並等待 0.6 秒！',
+            title: '第 3 步：加入烈焰大紅光 (R=255)',
+            text: '放入光譜起點：【🎨 紅色光】並維持 0.5 秒！',
+            colorChip: { r: 255, g: 0, b: 0, name: '烈焰大紅', targetText: '雙燈' },
             action: () => {
               if (!tutorialBlocks.loop) return;
-              const red = workspace.newBlock('arduino_rgb_color');
-              red.setFieldValue('ALL', 'TARGET');
-              attachNumberBlock(red, 'R', 255); attachNumberBlock(red, 'G', 0); attachNumberBlock(red, 'B', 0);
-              red.initSvg(); red.render();
-              tutorialBlocks.loop.getInput('DO').connection.connect(red.previousConnection);
-              const w1 = workspace.newBlock('control_wait');
-              w1.initSvg(); w1.render(); attachNumberBlock(w1, 'SECONDS', 0.6);
-              red.nextConnection.connect(w1.previousConnection);
-              w1.select();
-              tutorialBlocks.w1 = w1; tutorialBlocks.lastPlaced = red;
-              playSound('pop');
+              const res = snapRgbBlock(tutorialBlocks.loop, 'ALL', 255, 0, 0, 0.5, true);
+              tutorialBlocks.c1 = res.tailBlock;
             }
           },
           {
             target: 'current_block',
-            title: '第 4 步：加入翠綠色 (R=0, G=255, B=0)',
-            text: '接上第 2 個顏色：【🎨 RGB 全彩 - 翠綠色】並等待 0.6 秒！',
+            title: '第 4 步：調入活力暖橙色 (紅+少許綠)',
+            text: '施展調色：紅光全開 (255) 加上少許綠光 (120) 就會變成暖洋洋的橙橘色！',
+            colorChip: { r: 255, g: 120, b: 0, name: '活力暖橙', targetText: '雙燈' },
             action: () => {
-              if (!tutorialBlocks.w1) return;
-              const green = workspace.newBlock('arduino_rgb_color');
-              green.setFieldValue('ALL', 'TARGET');
-              attachNumberBlock(green, 'R', 0); attachNumberBlock(green, 'G', 255); attachNumberBlock(green, 'B', 0);
-              green.initSvg(); green.render();
-              tutorialBlocks.w1.nextConnection.connect(green.previousConnection);
-              const w2 = workspace.newBlock('control_wait');
-              w2.initSvg(); w2.render(); attachNumberBlock(w2, 'SECONDS', 0.6);
-              green.nextConnection.connect(w2.previousConnection);
-              w2.select();
-              tutorialBlocks.w2 = w2; tutorialBlocks.lastPlaced = green;
-              playSound('pop');
+              if (!tutorialBlocks.c1) return;
+              const res = snapRgbBlock(tutorialBlocks.c1, 'ALL', 255, 120, 0, 0.5, false);
+              tutorialBlocks.c2 = res.tailBlock;
             }
           },
           {
             target: 'current_block',
-            title: '第 5 步：加入海洋藍 (R=0, G=0, B=255)',
-            text: '接上第 3 個顏色：【🎨 RGB 全彩 - 海洋藍】並等待 0.6 秒！',
+            title: '第 5 步：混色魔法 - 明亮小鴨黃！(紅+綠)',
+            text: '光學經典：【紅光255 + 綠光255】疊加會誕生出燦爛無比的黃色！',
+            colorChip: { r: 255, g: 255, b: 0, name: '明亮小鴨黃 (紅+綠)', targetText: '雙燈' },
             action: () => {
-              if (!tutorialBlocks.w2) return;
-              const blue = workspace.newBlock('arduino_rgb_color');
-              blue.setFieldValue('ALL', 'TARGET');
-              attachNumberBlock(blue, 'R', 0); attachNumberBlock(blue, 'G', 0); attachNumberBlock(blue, 'B', 255);
-              blue.initSvg(); blue.render();
-              tutorialBlocks.w2.nextConnection.connect(blue.previousConnection);
-              const w3 = workspace.newBlock('control_wait');
-              w3.initSvg(); w3.render(); attachNumberBlock(w3, 'SECONDS', 0.6);
-              blue.nextConnection.connect(w3.previousConnection);
-              w3.select();
-              tutorialBlocks.w3 = w3; tutorialBlocks.lastPlaced = blue;
-              playSound('pop');
+              if (!tutorialBlocks.c2) return;
+              const res = snapRgbBlock(tutorialBlocks.c2, 'ALL', 255, 255, 0, 0.5, false);
+              tutorialBlocks.c3 = res.tailBlock;
             }
           },
           {
             target: 'current_block',
-            title: '第 6 步：混色魔法 - 溫暖小鴨黃！',
-            text: '最後施展混色魔法：【紅光255 + 綠光255 = 明亮小鴨黃】！三原色積木完整拼好囉！',
+            title: '第 6 步：加入翠綠森林光 (G=255)',
+            text: '關閉紅光，只保留綠光！純淨大自然的大地生機！',
+            colorChip: { r: 0, g: 255, b: 0, name: '翡翠森林綠', targetText: '雙燈' },
             action: () => {
-              if (!tutorialBlocks.w3) return;
-              const yel = workspace.newBlock('arduino_rgb_color');
-              yel.setFieldValue('ALL', 'TARGET');
-              attachNumberBlock(yel, 'R', 255); attachNumberBlock(yel, 'G', 255); attachNumberBlock(yel, 'B', 0);
-              yel.initSvg(); yel.render();
-              tutorialBlocks.w3.nextConnection.connect(yel.previousConnection);
-              const w4 = workspace.newBlock('control_wait');
-              w4.initSvg(); w4.render(); attachNumberBlock(w4, 'SECONDS', 0.6);
-              yel.nextConnection.connect(w4.previousConnection);
-              w4.select();
-              tutorialBlocks.w4 = w4; tutorialBlocks.lastPlaced = yel;
+              if (!tutorialBlocks.c3) return;
+              const res = snapRgbBlock(tutorialBlocks.c3, 'ALL', 0, 255, 0, 0.5, false);
+              tutorialBlocks.c4 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 7 步：混色魔法 - 冰晶極光青！(綠+藍)',
+            text: '【綠光255 + 藍光255】！在極地冰原上才會看見的夢幻青綠色！',
+            colorChip: { r: 0, g: 255, b: 255, name: '冰晶極光青 (綠+藍)', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.c4) return;
+              const res = snapRgbBlock(tutorialBlocks.c4, 'ALL', 0, 255, 255, 0.5, false);
+              tutorialBlocks.c5 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 8 步：加入靜謐深海藍 (B=255)',
+            text: '關閉綠光，換上深邃清澈的海洋藍色！',
+            colorChip: { r: 0, g: 0, b: 255, name: '靜謐深海藍', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.c5) return;
+              const res = snapRgbBlock(tutorialBlocks.c5, 'ALL', 0, 0, 255, 0.5, false);
+              tutorialBlocks.c6 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 9 步：混色魔法 - 夢幻激光紫！(紅+藍)',
+            text: '【紅光200 + 藍光255】！神祕優雅的電光紫羅蘭！',
+            colorChip: { r: 200, g: 0, b: 255, name: '夢幻激光紫 (紅+藍)', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.c6) return;
+              const res = snapRgbBlock(tutorialBlocks.c6, 'ALL', 200, 0, 255, 0.5, false);
+              tutorialBlocks.c7 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 10 步：三原色全滿 - 耀眼純白光！',
+            text: '神奇的一刻：【紅255 + 綠255 + 藍255】全部拉到最高！竟然合體變成了耀眼的太陽白光！',
+            colorChip: { r: 255, g: 255, b: 255, name: '耀眼純白光 (三原色合體)', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.c7) return;
+              const res = snapRgbBlock(tutorialBlocks.c7, 'ALL', 255, 255, 255, 0.5, false);
+              tutorialBlocks.c8 = res.tailBlock;
               playSound('magic');
             }
           },
           {
             target: '#codeViewContainer',
-            title: '第 7 步：啟動彩虹極光燈光秀！',
-            text: '點擊綠旗！看 RGB LED 開始輪流綻放紅、綠、藍、黃色彩虹燈光秀！',
+            title: '第 11 步：啟動七彩光譜漫遊燈光秀！',
+            text: '點擊綠旗！看你的 Arduino 板開始輪流漫遊七色彩虹與純白光芒！',
             action: () => {
               const bar = document.getElementById('rightSidebar');
               if (bar && bar.classList.contains('collapsed')) toggleSidebar();
@@ -4491,9 +4555,473 @@ void loop() {
           }
         ]
       },
+
       {
-        id: 3,
-        title: '👾 第 3 課：點矩陣像素動畫師 (8x8 LED 動態點陣)',
+        id: 102,
+        category: 'rgb',
+        title: '🚨 RGB 2 課：波麗士出任務！警車雙燈爆閃',
+        tag: '雙燈獨立控制',
+        badge: '🚔 城市守護者',
+        concept: '獨立控制雙燈通道 (燈1: Pin 6,3,5 vs 燈2: Pin 11,9,10)，打造交替爆閃的警車震撼燈光！',
+        exampleKey: null,
+        steps: [
+          {
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '小小警察出任務囉！先放上【🚩 當綠旗被點擊時】！',
+            action: () => {
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '接上【♾️ 重複無限次】迴圈，讓警車巡邏燈不停交替爆閃！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 3 步：燈1爆閃警紅 + 燈2熄滅 (0.15秒)',
+            text: '左邊【燈 1】點亮亮紅 (255,0,0)，同時右邊【燈 2】熄滅 (0,0,0)，急促等待 0.15 秒！',
+            colorChip: { r: 255, g: 0, b: 0, name: '燈1 警紅爆閃', targetText: '燈1紅 / 燈2滅' },
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const res = snapDualRgbBlock(tutorialBlocks.loop, '1', 255, 0, 0, '2', 0, 0, 0, 0.15, true);
+              tutorialBlocks.p1 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：燈1熄滅 + 燈2爆閃警藍 (0.15秒)',
+            text: '左右切換！左邊【燈 1】熄滅，右邊【燈 2】爆閃警藍 (0,0,255)，等待 0.15 秒！',
+            colorChip: { r: 0, g: 0, b: 255, name: '燈2 警藍爆閃', targetText: '燈1滅 / 燈2藍' },
+            action: () => {
+              if (!tutorialBlocks.p1) return;
+              const res = snapDualRgbBlock(tutorialBlocks.p1, '1', 0, 0, 0, '2', 0, 0, 255, 0.15, false);
+              tutorialBlocks.p2 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：雙燈同時白光急促警示！',
+            text: '緊要關頭！雙燈同時爆出刺眼白光 (255,255,255) 提醒路人注意！',
+            colorChip: { r: 255, g: 255, b: 255, name: '雙燈急促白閃', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.p2) return;
+              const res = snapRgbBlock(tutorialBlocks.p2, 'ALL', 255, 255, 255, 0.08, false);
+              tutorialBlocks.p3 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：瞬間熄滅完成一輪節奏',
+            text: '瞬間斷電 0.08 秒，形成極具威懾力的斷奏節拍感！',
+            colorChip: { r: 0, g: 0, b: 0, name: '瞬間斷電', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.p3) return;
+              const res = snapRgbBlock(tutorialBlocks.p3, 'ALL', 0, 0, 0, 0.08, false);
+              tutorialBlocks.p4 = res.tailBlock;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 7 步：警車出動！紅藍急促爆閃！',
+            text: '點擊綠旗！看你的雙通道 RGB 燈如同帥氣的警車在夜幕中出任務！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
+          }
+        ]
+      },
+
+      {
+        id: 103,
+        category: 'rgb',
+        title: '💓 RGB 3 課：心跳脈衝呼吸燈 (光學漸層)',
+        tag: '亮度漸變',
+        badge: '💓 心跳調音師',
+        concept: '利用 PWM 類比數值微調 (40 ➔ 120 ➔ 255)，模擬心臟收縮舒張的溫暖生命律動！',
+        exampleKey: null,
+        steps: [
+          {
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '來為小板子注入溫暖生命！先放上【🚩 當綠旗被點擊時】！',
+            action: () => {
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '扣上【♾️ 重複無限次】迴圈，讓心跳一輩子規律跳動！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 3 步：第一拍 - 微光起搏 (R=60)',
+            text: '心房微弱起搏：微弱的柔粉光 (60, 15, 25)，輕輕跳動 0.1 秒！',
+            colorChip: { r: 60, g: 15, b: 25, name: '第一拍: 微光起搏', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const res = snapRgbBlock(tutorialBlocks.loop, 'ALL', 60, 15, 25, 0.1, true);
+              tutorialBlocks.h1 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：第二拍 - 強勁心動！(R=255)',
+            text: '心室強力收縮！全力迸發出耀眼玫紅 (255, 45, 95)，熱情持續 0.3 秒！',
+            colorChip: { r: 255, g: 45, b: 95, name: '第二拍: 強勁心跳', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.h1) return;
+              const res = snapRgbBlock(tutorialBlocks.h1, 'ALL', 255, 45, 95, 0.3, false);
+              tutorialBlocks.h2 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：第三拍 - 舒張迴盪 (R=120)',
+            text: '心跳舒張：柔和玫瑰光 (120, 20, 50) 緩緩褪去，維持 0.15 秒！',
+            colorChip: { r: 120, g: 20, b: 50, name: '第三拍: 舒張迴盪', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.h2) return;
+              const res = snapRgbBlock(tutorialBlocks.h2, 'ALL', 120, 20, 50, 0.15, false);
+              tutorialBlocks.h3 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：平靜休止等待 (0.5秒)',
+            text: '全部熄滅平靜休息 0.5 秒，準備迎接下一次心跳！',
+            colorChip: { r: 0, g: 0, b: 0, name: '平靜休止', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.h3) return;
+              const res = snapRgbBlock(tutorialBlocks.h3, 'ALL', 0, 0, 0, 0.5, false);
+              tutorialBlocks.h4 = res.tailBlock;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 7 步：聆聽溫暖心跳律動！',
+            text: '點擊綠旗！看你的 RGB LED 彷彿有心跳一樣，展現生動的呼吸光效！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
+          }
+        ]
+      },
+
+      {
+        id: 104,
+        category: 'rgb',
+        title: '⚡ RGB 4 課：賽博龐克電光霓虹 (冷暖互補對撞)',
+        tag: '色彩美學',
+        badge: '⚡ 電光造夢師',
+        concept: '利用互補色強烈視覺對比：超飽和霓虹粉紅 (255, 20, 147) vs 電光冰河青 (0, 255, 240)！',
+        exampleKey: null,
+        steps: [
+          {
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '進入未來科幻世界！先放上【🚩 當綠旗被點擊時】！',
+            action: () => {
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '接上【♾️ 重複無限次】迴圈，讓電光霓虹永遠律動！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 3 步：左霓虹粉 + 右電光青 (互補對撞)',
+            text: '【燈 1】高飽和霓虹粉 (255, 20, 147)，【燈 2】極光電冰青 (0, 255, 240)，對比長達 0.4 秒！',
+            colorChip: { r: 255, g: 20, b: 147, name: '左粉紅 + 右青藍', targetText: '冷暖對撞' },
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const res = snapDualRgbBlock(tutorialBlocks.loop, '1', 255, 20, 147, '2', 0, 255, 240, 0.4, true);
+              tutorialBlocks.cp1 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：空間對調！左電光青 + 右霓虹粉',
+            text: '瞬間左右互換！【燈 1】變電光青，【燈 2】變霓虹粉，產生震撼的視覺律動！',
+            colorChip: { r: 0, g: 255, b: 240, name: '左青藍 + 右粉紅', targetText: '空間互換' },
+            action: () => {
+              if (!tutorialBlocks.cp1) return;
+              const res = snapDualRgbBlock(tutorialBlocks.cp1, '1', 0, 255, 240, '2', 255, 20, 147, 0.4, false);
+              tutorialBlocks.cp2 = res.tailBlock;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 5 步：啟動賽博龐克電光秀！',
+            text: '點擊綠旗！冷暖對撞的超強視覺衝擊即刻在你的桌面上綻放！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
+          }
+        ]
+      },
+
+      {
+        id: 105,
+        category: 'rgb',
+        title: '⛈️ RGB 5 課：雷雨暴風閃電秀 (電影級舞台特效)',
+        tag: '音畫特效',
+        badge: '⛈️ 風暴召喚師',
+        concept: '舞台燈光氛圍營造：幽暗冷酷深海藍 ➔ 瞬間極速連續雷暴白光閃電！',
+        exampleKey: null,
+        steps: [
+          {
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '準備召喚狂風暴雨！先放上【🚩 當綠旗被點擊時】！',
+            action: () => {
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '接上【♾️ 重複無限次】迴圈！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 3 步：沉寂暴風雨前夕 (深海幽藍 1.2秒)',
+            text: '營造電影氛圍：暗黑深邃的暴風雨前夕 (0, 15, 60)，沉靜等待 1.2 秒！',
+            colorChip: { r: 0, g: 15, b: 60, name: '幽暗暴風雲', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const res = snapRgbBlock(tutorialBlocks.loop, 'ALL', 0, 15, 60, 1.2, true);
+              tutorialBlocks.th1 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：轟！第一道刺眼白光閃電！(0.05秒)',
+            text: '突然撕裂夜空！雙燈以 255 純白極速爆閃 0.05 秒！',
+            colorChip: { r: 255, g: 255, b: 255, name: '轟！第一道雷電', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.th1) return;
+              const res = snapRgbBlock(tutorialBlocks.th1, 'ALL', 255, 255, 255, 0.05, false);
+              tutorialBlocks.th2 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：烏雲驟暗 (0.06秒)',
+            text: '閃電短暫消失，夜空瞬間漆黑 0.06 秒！',
+            colorChip: { r: 0, g: 0, b: 0, name: '烏雲驟暗', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.th2) return;
+              const res = snapRgbBlock(tutorialBlocks.th2, 'ALL', 0, 0, 0, 0.06, false);
+              tutorialBlocks.th3 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：連環第二發大閃電！(0.08秒)',
+            text: '緊接著第二道更強烈的雷電劈落 (255,255,255)，持續 0.08 秒！',
+            colorChip: { r: 255, g: 255, b: 255, name: '連環大爆閃', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.th3) return;
+              const res = snapRgbBlock(tutorialBlocks.th3, 'ALL', 255, 255, 255, 0.08, false);
+              tutorialBlocks.th4 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 7 步：雷聲遠去，重回幽暗 (0.3秒)',
+            text: '雷暴漸漸平息，光芒緩緩回到深海暗藍 (0, 15, 60) 維持 0.3 秒！',
+            colorChip: { r: 0, g: 15, b: 60, name: '風暴漸息', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.th4) return;
+              const res = snapRgbBlock(tutorialBlocks.th4, 'ALL', 0, 15, 60, 0.3, false);
+              tutorialBlocks.th5 = res.tailBlock;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 8 步：震撼召喚雷雨暴風秀！',
+            text: '點擊綠旗！在小板子上看見電影等級的暴風雨雷電舞台燈光秀！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
+          }
+        ]
+      },
+
+      {
+        id: 106,
+        category: 'rgb',
+        title: '🪩 RGB 6 課：迪斯可熱舞狂歡派對 (節奏頻閃)',
+        tag: '派對律動',
+        badge: '🪩 DJ 派對之王',
+        concept: '快節奏 0.2 秒高能換色，配合電音派對四種最強烈色彩！',
+        exampleKey: null,
+        steps: [
+          {
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: 'DJ 準備下歌！先放上【🚩 當綠旗被點擊時】！',
+            action: () => {
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 30); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '接上【♾️ 重複無限次】迴圈，讓派對永不落幕！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 3 步：節拍 1 - 熾熱烈陽金！(0.2秒)',
+            text: '第 1 拍重低音：極光烈陽金 (255, 190, 0)，律動 0.2 秒！',
+            colorChip: { r: 255, g: 190, b: 0, name: '節拍1: 烈陽金', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const res = snapRgbBlock(tutorialBlocks.loop, 'ALL', 255, 190, 0, 0.2, true);
+              tutorialBlocks.d1 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：節拍 2 - 酸橙電光綠！(0.2秒)',
+            text: '第 2 拍強節奏：高能酸橙綠 (40, 255, 30)，律動 0.2 秒！',
+            colorChip: { r: 40, g: 255, b: 30, name: '節拍2: 酸橙綠', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.d1) return;
+              const res = snapRgbBlock(tutorialBlocks.d1, 'ALL', 40, 255, 30, 0.2, false);
+              tutorialBlocks.d2 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：節拍 3 - 迷幻激光紫！(0.2秒)',
+            text: '第 3 拍電子音：迷幻激光紫 (230, 0, 255)，律動 0.2 秒！',
+            colorChip: { r: 230, g: 0, b: 255, name: '節拍3: 激光紫', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.d2) return;
+              const res = snapRgbBlock(tutorialBlocks.d2, 'ALL', 230, 0, 255, 0.2, false);
+              tutorialBlocks.d3 = res.tailBlock;
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：節拍 4 - 湛藍電音浪！(0.2秒)',
+            text: '第 4 拍副歌爆發：湛藍電音浪 (0, 160, 255)，律動 0.2 秒！四拍節奏完成！',
+            colorChip: { r: 0, g: 160, b: 255, name: '節拍4: 電音藍', targetText: '雙燈' },
+            action: () => {
+              if (!tutorialBlocks.d3) return;
+              const res = snapRgbBlock(tutorialBlocks.d3, 'ALL', 0, 160, 255, 0.2, false);
+              tutorialBlocks.d4 = res.tailBlock;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 7 步：啟動迪斯可狂歡派對！',
+            text: '點擊綠旗！戴上墨鏡，享受四種高頻色彩帶來的熱舞派對狂歡！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
+          }
+        ]
+      },
+
+      // ========================================================
+      // 🚀 創客綜合實戰課程
+      // ========================================================
+      {
+        id: 2,
+        category: 'general',
+        title: '👾 第 2 課：點矩陣像素動畫師 (8x8 LED 動態點陣)',
         tag: '像素動畫',
         badge: '🚀 像素動畫家',
         concept: '像素座標 (8x8=64點) 與連續畫面動畫 (Frames)。',
@@ -4573,8 +5101,9 @@ void loop() {
         ]
       },
       {
-        id: 4,
-        title: '🧠 第 4 課：請 AI 小幫手排程 (Google OR-Tools CP-SAT)',
+        id: 3,
+        category: 'general',
+        title: '🧠 第 3 課：請 AI 小幫手排程 (Google OR-Tools CP-SAT)',
         tag: '人工智慧',
         badge: '🧠 未來 AI 總監',
         concept: '人工智慧數學模型：約束滿足求解 (CP-SAT) 與多目標最佳化。',
@@ -4601,6 +5130,29 @@ void loop() {
         ]
       }
     ];
+
+    let currentGuideTab = 'all';
+
+    function switchGuideTab(tab) {
+      currentGuideTab = tab;
+      ['all', 'rgb', 'general'].forEach(t => {
+        const btn = document.getElementById('tabGuide_' + t);
+        if (btn) {
+          if (t === tab) {
+            btn.style.background = 'linear-gradient(135deg, #EC4899, #F43F5E)';
+            btn.style.color = '#FFFFFF';
+            btn.style.borderColor = 'transparent';
+            btn.style.boxShadow = '0 2px 8px rgba(244,63,94,0.35)';
+          } else {
+            btn.style.background = '#181825';
+            btn.style.color = '#BAC2DE';
+            btn.style.borderColor = '#313244';
+            btn.style.boxShadow = 'none';
+          }
+        }
+      });
+      renderGuideModal();
+    }
 
     let currentTutLesson = null;
     let currentTutStepIdx = 0;
@@ -4649,10 +5201,10 @@ void loop() {
 
       if (starsDiv) {
         let starsHtml = '';
-        for (let i = 1; i <= LESSONS_DATA.length; i++) {
-          starsHtml += done.includes(i) ? '⭐ ' : '☆ ';
-        }
-        starsDiv.innerHTML = `<span style="font-size: 20px; color: #F59E0B;">${starsHtml}</span> <span style="font-size: 13px; color: #A6ADC8;">(${done.length} / ${LESSONS_DATA.length} 關卡已過關)</span>`;
+        LESSONS_DATA.forEach(lesson => {
+          starsHtml += done.includes(lesson.id) ? '⭐ ' : '☆ ';
+        });
+        starsDiv.innerHTML = `<span style="font-size: 18px; color: #F59E0B;">${starsHtml}</span> <span style="font-size: 13px; color: #A6ADC8;">(${done.length} / ${LESSONS_DATA.length} 關卡已過關)</span>`;
       }
 
       if (badgeDiv) {
@@ -4665,7 +5217,13 @@ void loop() {
       }
 
       if (listDiv) {
-        listDiv.innerHTML = LESSONS_DATA.map(lesson => {
+        const filtered = LESSONS_DATA.filter(lesson => {
+          if (currentGuideTab === 'rgb') return lesson.category === 'rgb';
+          if (currentGuideTab === 'general') return lesson.category !== 'rgb';
+          return true;
+        });
+
+        listDiv.innerHTML = filtered.map(lesson => {
           const isDone = done.includes(lesson.id);
           return `
             <div style="background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
@@ -4736,9 +5294,22 @@ void loop() {
       if (cardHeader) cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step.title}`;
       if (cardStep) cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${isTutAutoPlaying ? '• 🎬 自動示範中' : '• 👣 互動中'}`;
       if (cardMsg) {
+        let chipHtml = '';
+        if (step.colorChip) {
+          const c = step.colorChip;
+          chipHtml = `
+            <div style="display:inline-flex; align-items:center; gap:8px; margin-top:8px; padding:4px 12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2); border-radius:20px; box-shadow:0 2px 8px rgba(0,0,0,0.35);">
+              <span style="display:inline-block; width:16px; height:16px; border-radius:50%; background:rgb(${c.r},${c.g},${c.b}); box-shadow:0 0 10px rgb(${c.r},${c.g},${c.b}); border:1.5px solid #fff;"></span>
+              <b style="color:#F9E2AF; font-size:12px;">${c.name}</b>
+              <span style="color:#A6ADC8; font-size:11px; font-family:monospace;">(R:${c.r} G:${c.g} B:${c.b})</span>
+              ${c.targetText ? `<span style="background:#313244; color:#A6E3A1; font-size:10px; font-weight:bold; padding:2px 6px; border-radius:6px;">${c.targetText}</span>` : ''}
+            </div>
+          `;
+        }
         cardMsg.innerHTML = `
-          <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px;">${step.title}</div>
-          <div style="color:#CDD6F4;">${step.text}</div>
+          <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px; font-size:13.5px;">${step.title}</div>
+          <div style="color:#CDD6F4; font-size:12px; line-height:1.45;">${step.text}</div>
+          ${chipHtml}
         `;
       }
       if (btnAuto) {
@@ -5745,6 +6316,19 @@ void loop() {
 
       <div style="font-size:12px; color:#A6ADC8; margin-bottom:10px; line-height:1.4;">
         歡迎來到魔法程式教室！點擊 <b>【🎬 自動示範】</b> 系統會自動操作教你看懂，或點擊 <b>【👣 帶我操作】</b> 由昕蓉小老師手把手帶你一步一步點亮硬體！
+      </div>
+
+      <!-- 🌈 學院分類標籤切換 -->
+      <div style="display:flex; gap:8px; margin-bottom:12px; border-bottom:1px solid #313244; padding-bottom:10px;">
+        <button id="tabGuide_all" onclick="switchGuideTab('all')" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:#FFFFFF; border:none; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(244,63,94,0.35); transition:all 0.2s;">
+          <span>🌟</span> 全部課程
+        </button>
+        <button id="tabGuide_rgb" onclick="switchGuideTab('rgb')" style="background:#181825; color:#BAC2DE; border:1px solid #313244; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
+          <span>🌈</span> RGB 炫彩光學學院
+        </button>
+        <button id="tabGuide_general" onclick="switchGuideTab('general')" style="background:#181825; color:#BAC2DE; border:1px solid #313244; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:all 0.2s;">
+          <span>🚀</span> 創客實戰
+        </button>
       </div>
 
       <!-- 任務清單 -->
