@@ -49,20 +49,16 @@ WIFI_FIRMWARE_INO = os.path.join(WIFI_FIRMWARE_DIR, "wifi_firmware.ino")
 
 
 class WiFiArduinoClient:
-    """Wi-Fi 通訊客戶端核心 (Webduino 二進位 WebSocket 高速直通引擎)"""
-    def __init__(self, ip: str = "192.168.1.134", port: int = 80):
+    """Wi-Fi HTTP 通訊客戶端核心"""
+    def __init__(self, ip: str = "192.168.1.100", port: int = 80):
         self.ip = ip.strip()
         self.port = port
         self.is_connected = False
         self.latency_ms = 0
         self.cmd_queue = queue.Queue(maxsize=100)
         self.worker_thread = None
-        self.rx_thread = None
         self.running = False
         self.on_log = None
-        self.ws_sock = None
-        self.is_websocket = False
-        self._lock = threading.Lock()
 
     def log(self, msg: str):
         if self.on_log:
@@ -70,117 +66,39 @@ class WiFiArduinoClient:
         else:
             print(f"[WiFiClient] {msg}")
 
-    def connect(self) -> bool:
-        """主動連線至 Webduino Fly WebSocket 伺服器"""
-        with self._lock:
-            if self.ws_sock:
-                try:
-                    self.ws_sock.close()
-                except Exception:
-                    pass
-                self.ws_sock = None
-
-            start = time.time()
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(2.0)
-                sock.connect((self.ip, self.port))
-                handshake = (
-                    f"GET / HTTP/1.1\r\n"
-                    f"Host: {self.ip}\r\n"
-                    f"Upgrade: websocket\r\n"
-                    f"Connection: Upgrade\r\n"
-                    f"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-                    f"Sec-WebSocket-Version: 13\r\n\r\n"
-                )
-                sock.sendall(handshake.encode())
-                resp = sock.recv(512)
-                if b"101 Switching" in resp or b"WebSockets" in resp or b"Webduino" in resp:
-                    sock.settimeout(None)  # 設為長連線暢通模式
-                    self.ws_sock = sock
-                    self.is_websocket = True
-                    self.is_connected = True
-                    self.latency_ms = max(1, int((time.time() - start) * 1000))
-                    
-                    # 立即回應 Handshake 夾帶的 PING (Webduino-Server 特性)
-                    if b"\x89" in resp:
-                        try:
-                            pong = bytearray([0x8A, 0x80, 0, 0, 0, 0])
-                            sock.sendall(pong)
-                        except Exception:
-                            pass
-
-                    # 啟動非阻塞背景排空與心跳接收執行緒
-                    self.rx_thread = threading.Thread(target=self._rx_loop, daemon=True)
-                    self.rx_thread.start()
-                    return True
-                sock.close()
-            except Exception as e:
-                self.log(f"連線失敗: {e}")
-            self.is_connected = False
-            return False
-
-    def _rx_loop(self):
-        """背景接收執行緒：持續清空接收緩衝區，杜絕 TCP 阻塞黏包並自動回應 PONG 心跳"""
-        sock = self.ws_sock
-        while self.running and sock and self.is_connected:
-            try:
-                data = sock.recv(512)
-                if not data:
-                    break
-                # 若收到 Webduino Fly 的 WebSocket PING (\x89)，自動回應 PONG (\x8A)
-                if b"\x89" in data:
-                    with self._lock:
-                        if self.ws_sock:
-                            self.ws_sock.sendall(bytearray([0x8A, 0x80, 0, 0, 0, 0]))
-            except Exception:
-                break
-        if self.ws_sock == sock:
-            self.is_connected = False
-
     def ping(self) -> bool:
-        if not self.is_connected or not self.ws_sock:
-            return self.connect()
-
-        # 透過現有連線發送輕量探測
-        start = time.time()
         try:
-            payload = b"PING\n"
-            frame = bytearray([0x82, 0x80 | len(payload), 0, 0, 0, 0]) + payload
-            with self._lock:
-                if self.ws_sock:
-                    self.ws_sock.sendall(frame)
-            self.latency_ms = max(1, int((time.time() - start) * 1000))
-            return True
+            start = time.time()
+            url = f"http://{self.ip}:{self.port}/status"
+            req = urllib.request.Request(url, headers={"User-Agent": "WiFiArduinoHub/1.0"})
+            with urllib.request.urlopen(req, timeout=1.2) as resp:
+                if resp.status == 200:
+                    self.latency_ms = int((time.time() - start) * 1000)
+                    self.is_connected = True
+                    return True
         except Exception:
-            self.is_connected = False
-            return False
+            pass
+        self.is_connected = False
+        return False
 
-    def send_cmd_sync(self, cmd: str) -> dict:
-        """即時發送指令至 Arduino Uno 晶片 (二進位高速轉發)"""
-        if not self.is_connected or not self.ws_sock:
-            if not self.connect():
-                return {"ok": False, "error": "not_connected"}
-
+    def send_cmd_sync(self, cmd: str, timeout: float = 0.8) -> dict:
+        """同步發送指令至 Arduino Wi-Fi 伺服器"""
         try:
-            payload = (cmd.strip() + "\n").encode("utf-8")
-            length = len(payload)
-            if length < 126:
-                header = bytearray([0x82, 0x80 | length, 0, 0, 0, 0])
-            else:
-                header = bytearray([0x82, 0x80 | 126, (length >> 8) & 0xFF, length & 0xFF, 0, 0, 0, 0])
-            frame = header + payload
-            with self._lock:
-                if self.ws_sock:
-                    self.ws_sock.sendall(frame)
-                    return {"ok": True, "res": "sent"}
+            encoded_cmd = urllib.parse.quote(cmd)
+            url = f"http://{self.ip}:{self.port}/cmd?c={encoded_cmd}"
+            req = urllib.request.Request(url, headers={"User-Agent": "WiFiArduinoHub/1.0"})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                if resp.status == 200:
+                    data = resp.read().decode("utf-8")
+                    return json.loads(data)
         except Exception as e:
-            self.is_connected = False
             return {"ok": False, "error": str(e)}
-        return {"ok": False, "error": "send_failed"}
+        return {"ok": False, "error": "timeout"}
 
     def send_cmd(self, cmd: str):
+        """異步發送指令（放入佇列，不阻塞 UI）"""
         try:
+            # 若佇列已滿，丟棄舊的頻繁連續指令 (如 PWM/RGB 滑桿) 以免積壓
             if self.cmd_queue.full():
                 try:
                     self.cmd_queue.get_nowait()
@@ -197,18 +115,11 @@ class WiFiArduinoClient:
 
     def stop_worker(self):
         self.running = False
-        with self._lock:
-            if self.ws_sock:
-                try:
-                    self.ws_sock.close()
-                except Exception:
-                    pass
-                self.ws_sock = None
 
     def _worker_loop(self):
         while self.running:
             try:
-                cmd = self.cmd_queue.get(timeout=0.08)
+                cmd = self.cmd_queue.get(timeout=0.1)
                 self.send_cmd_sync(cmd)
                 self.cmd_queue.task_done()
             except queue.Empty:
@@ -216,330 +127,6 @@ class WiFiArduinoClient:
             except Exception:
                 pass
 
-PIN_CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'wifi_pins_config.json')
-
-def load_pin_config() -> dict:
-    defaults = {
-        'switch_pin': 13,
-        'pwm_pin': 3,
-        'servo_pin': 4,
-        'rgb_r_pin': 9,
-        'rgb_g_pin': 10,
-        'rgb_b_pin': 11,
-        'anode': True,
-        'matrix_din': 12,
-        'matrix_cs': 8,
-        'matrix_clk': 7
-    }
-    if os.path.exists(PIN_CONFIG_FILE):
-        try:
-            with open(PIN_CONFIG_FILE, 'r', encoding='utf-8') as f:
-                defaults.update(json.load(f))
-        except Exception:
-            pass
-    return defaults
-
-def save_pin_config(cfg: dict):
-    try:
-        with open(PIN_CONFIG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(cfg, f, indent=2, ensure_ascii=False)
-    except Exception:
-        pass
-
-
-# ==========================
-# 內嵌式超輕量 Web 遙控伺服器 (供 Cloudflare Tunnel 外網穿透直連)
-# ==========================
-import http.server
-import urllib.parse
-
-WEB_REMOTE_HTML = """<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>⚡ Arduino Wi-Fi 雙向即時同步遙控</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: #1E1E2E; color: #CDD6F4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 14px; text-align: center; }
-    .header { margin-bottom: 14px; }
-    .header h1 { font-size: 1.35rem; color: #89B4FA; margin-bottom: 4px; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: bold; background: #313244; color: #A6E3A1; border: 1px solid #45475A; }
-    .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #A6E3A1; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    .card { background: #313244; border-radius: 12px; padding: 14px; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border: 1px solid #45475A; text-align: left; }
-    .card-title { font-size: 0.95rem; font-weight: bold; color: #89B4FA; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; border: none; border-radius: 8px; font-size: 0.92rem; font-weight: bold; padding: 12px 16px; cursor: pointer; transition: transform 0.1s, opacity 0.2s, background 0.2s; user-select: none; }
-    .btn:active { transform: scale(0.96); }
-    .btn-toggle { width: 100%; font-size: 1.05rem; padding: 14px; border-radius: 10px; }
-    .btn-on { background: #A6E3A1; color: #11111B; }
-    .btn-off { background: #45475A; color: #CDD6F4; }
-    .btn-danger { background: #F38BA8; color: #11111B; }
-    .btn-dark { background: #181825; color: #CDD6F4; border: 1px solid #45475A; }
-    .btn-active-fx { background: #FAB387 !important; color: #11111B !important; font-weight: bold; border-color: #FAB387 !important; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-    .palette-btn { height: 38px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; border: none; cursor: pointer; }
-    .color-preview { width: 38px; height: 38px; border-radius: 8px; border: 2px solid #CDD6F4; box-shadow: 0 2px 6px rgba(0,0,0,0.4); display: inline-block; vertical-align: middle; }
-    .sync-hint { font-size: 0.72rem; color: #A6ADC8; text-align: right; }
-    .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #181825; color: #89B4FA; border: 1px solid #89B4FA; padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 9999; }
-    .toast.show { opacity: 1; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>⚡ Arduino Wi-Fi 雙向同步中樞</h1>
-    <div class="badge" id="stBadge">
-      <div class="badge-dot" id="stDot"></div>
-      <span id="stText">● 雙向連線同步中 (10ms)</span>
-    </div>
-  </div>
-
-  <!-- 1. 數位開關卡片 (即時同步) -->
-  <div class="card">
-    <div class="card-title">
-      <span>💡 數位開關 (Pin <span id="lblSwPin">13</span>)</span>
-      <span class="sync-hint">電腦與手機 100% 同步</span>
-    </div>
-    <button class="btn btn-toggle btn-off" id="btnSw" onclick="toggleSwitch()">⚪ 目前狀態：關閉 (點擊開啟)</button>
-  </div>
-
-  <!-- 2. RGB 全彩燈光卡片 (即時同步) -->
-  <div class="card">
-    <div class="card-title">
-      <span>🎨 RGB 全彩調光 (Pin <span id="lblRgbPins">9, 11, 10</span>)</span>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span id="rgbHexText" style="font-family:monospace; font-size:0.8rem; color:#A6ADC8;">#000000</span>
-        <div class="color-preview" id="colorBox" style="background:#000000;"></div>
-      </div>
-    </div>
-    <div class="grid-4" style="margin-bottom: 10px;">
-      <button class="palette-btn" style="background:#F38BA8; color:#111;" onclick="setRgb(255,0,0)">🔴 紅</button>
-      <button class="palette-btn" style="background:#A6E3A1; color:#111;" onclick="setRgb(0,255,0)">🟢 綠</button>
-      <button class="palette-btn" style="background:#89B4FA; color:#111;" onclick="setRgb(0,0,255)">🔵 藍</button>
-      <button class="palette-btn" style="background:#F9E2AF; color:#111;" onclick="setRgb(255,255,0)">🟡 黃</button>
-      <button class="palette-btn" style="background:#CBA6F7; color:#111;" onclick="setRgb(255,0,255)">🟣 紫</button>
-      <button class="palette-btn" style="background:#94E2D5; color:#111;" onclick="setRgb(0,255,255)">🩵 青</button>
-      <button class="palette-btn" style="background:#FFFFFF; color:#111;" onclick="setRgb(255,255,255)">⚪ 白光</button>
-      <button class="palette-btn" style="background:#181825; color:#A6ADC8; border:1px solid #45475A;" onclick="setRgb(0,0,0)">⚫ 關閉</button>
-    </div>
-    <div style="display:flex; align-items:center; gap:10px; justify-content:space-between;">
-      <span style="font-size:0.85rem; color:#A6ADC8;">調色盤自選色彩:</span>
-      <input type="color" id="picker" value="#000000" onchange="onColorPick(this.value)" style="width:60px; height:34px; border:none; border-radius:6px; cursor:pointer; background:transparent;">
-    </div>
-  </div>
-
-  <!-- 3. 炫彩即時特效卡片 -->
-  <div class="card">
-    <div class="card-title">
-      <span>✨ 炫彩即時特效</span>
-      <span id="activeFxText" style="font-size:0.8rem; color:#FAB387;">未運行</span>
-    </div>
-    <div class="grid-2" style="margin-bottom: 8px;">
-      <button class="btn btn-dark fx-btn" id="fx_sync_rainbow" onclick="startFx('sync_rainbow')">🌈 同步彩虹</button>
-      <button class="btn btn-dark fx-btn" id="fx_police_strobe" onclick="startFx('police_strobe')">🚨 警車爆閃</button>
-    </div>
-    <div class="grid-2">
-      <button class="btn btn-dark fx-btn" id="fx_alt_breathing" onclick="startFx('alt_breathing')">🫁 呼吸漸變</button>
-      <button class="btn btn-danger" onclick="stopFx()">⏹️ 停止特效</button>
-    </div>
-  </div>
-
-  <button class="btn btn-danger" style="width:100%; padding:14px; font-size:1.05rem;" onclick="sendStop()">🛑 全體急停 (STOP)</button>
-
-  <div class="toast" id="toastMsg">已同步</div>
-
-  <script>
-    let appState = {
-      switch: false,
-      switch_pin: 13,
-      rgb_hex: '#000000',
-      rgb_pins: [9, 10, 11],
-      anode: true,
-      effect: ''
-    };
-
-    function showToast(msg) {
-      const t = document.getElementById('toastMsg');
-      t.innerText = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 1000);
-    }
-
-    // 渲染 UI 狀態
-    function renderState(s) {
-      appState = s;
-      document.getElementById('lblSwPin').innerText = s.switch_pin || 13;
-      if (s.rgb_pins) {
-        document.getElementById('lblRgbPins').innerText = s.rgb_pins.join(', ');
-      }
-
-      // 開關狀態
-      const btnSw = document.getElementById('btnSw');
-      if (s.switch) {
-        btnSw.className = 'btn btn-toggle btn-on';
-        btnSw.innerText = '🟢 目前狀態：已開啟 (點擊關閉)';
-      } else {
-        btnSw.className = 'btn btn-toggle btn-off';
-        btnSw.innerText = '⚪ 目前狀態：已關閉 (點擊開啟)';
-      }
-
-      // RGB 狀態
-      const hex = s.rgb_hex || '#000000';
-      document.getElementById('colorBox').style.background = hex;
-      document.getElementById('rgbHexText').innerText = hex;
-      if (document.activeElement !== document.getElementById('picker')) {
-        document.getElementById('picker').value = hex;
-      }
-
-      // 特效狀態
-      const fxMap = { 'sync_rainbow': '🌈 同步彩虹', 'police_strobe': '🚨 警車爆閃', 'alt_breathing': '🫁 呼吸漸變' };
-      document.querySelectorAll('.fx-btn').forEach(b => b.classList.remove('btn-active-fx'));
-      if (s.effect) {
-        document.getElementById('activeFxText').innerText = '🔥 ' + (fxMap[s.effect] || s.effect);
-        const activeBtn = document.getElementById('fx_' + s.effect);
-        if (activeBtn) activeBtn.classList.add('btn-active-fx');
-      } else {
-        document.getElementById('activeFxText').innerText = '未運行';
-      }
-
-      // 連線資訊
-      const dot = document.getElementById('stDot');
-      const txt = document.getElementById('stText');
-      if (s.connected) {
-        dot.style.background = '#A6E3A1';
-        txt.innerText = '● 已連線 Arduino (' + (s.latency || 10) + 'ms)';
-      } else {
-        dot.style.background = '#F38BA8';
-        txt.innerText = '● Arduino 離線中';
-      }
-    }
-
-    // 快速輪詢與即時拉取 (300ms 超即時感)
-    function pollSync() {
-      fetch('/api/sync')
-        .then(r => r.json())
-        .then(s => renderState(s))
-        .catch(e => {})
-        .finally(() => setTimeout(pollSync, 300));
-    }
-    pollSync();
-
-    function sendCmd(cmd) {
-      fetch('/api/cmd?c=' + encodeURIComponent(cmd))
-        .then(r => r.json())
-        .then(s => {
-          if (s && s.state) renderState(s.state);
-        });
-    }
-
-    function toggleSwitch() {
-      const nextVal = appState.switch ? 0 : 1;
-      sendCmd('DWRITE,' + appState.switch_pin + ',' + nextVal);
-    }
-
-    function setRgb(r, g, b) {
-      const anodeVal = appState.anode ? 1 : 0;
-      const pins = appState.rgb_pins || [9, 10, 11];
-      sendCmd('RGB,' + pins[0] + ',' + pins[1] + ',' + pins[2] + ',' + anodeVal + ',' + r + ',' + g + ',' + b);
-    }
-
-    function onColorPick(hex) {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      setRgb(r, g, b);
-    }
-
-    function startFx(name) {
-      sendCmd('FX,' + name);
-    }
-
-    function stopFx() {
-      sendCmd('FX,stop');
-    }
-
-    function sendStop() {
-      sendCmd('STOP');
-      showToast('🛑 全體急停');
-    }
-  </script>
-</body>
-</html>
-"""
-
-class WiFiWebRemoteHandler(http.server.BaseHTTPRequestHandler):
-    def log_message(self, format, *args):
-        pass  # 壓制終端存取洗版
-
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        app = getattr(self.server, "app", None)
-
-        if parsed.path == "/" or parsed.path == "/index.html":
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache")
-            self.end_headers()
-            self.wfile.write(WEB_REMOTE_HTML.encode("utf-8"))
-
-        elif parsed.path == "/api/sync" or parsed.path == "/api/status":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Cache-Control", "no-cache")
-            self.end_headers()
-            st = app.get_sync_state() if app else {}
-            self.wfile.write(json.dumps(st, ensure_ascii=False).encode("utf-8"))
-
-        elif parsed.path == "/api/cmd":
-            query = urllib.parse.parse_qs(parsed.query)
-            cmd = query.get("c", [""])[0]
-            if app and cmd:
-                app.handle_remote_cmd(cmd)
-
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Access-Control-Allow-Origin", "*")
-            self.end_headers()
-            st = app.get_sync_state() if app else {}
-            self.wfile.write(json.dumps({"ok": True, "state": st}, ensure_ascii=False).encode("utf-8"))
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-class EmbeddedWebServer:
-    def __init__(self, app, port=5000):
-        self.app = app
-        self.port = port
-        self.httpd = None
-        self.thread = None
-
-    def start(self, port=5000):
-        if self.httpd:
-            return True
-        self.port = port
-        try:
-            self.httpd = http.server.ThreadingHTTPServer(("0.0.0.0", self.port), WiFiWebRemoteHandler)
-            self.httpd.app = self.app
-            self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
-            self.thread.start()
-            self.app.log(f"🌐 內嵌式 Web 遙控伺服器已在 Port {self.port} 啟動！")
-            return True
-        except Exception as e:
-            self.app.log(f"❌ 啟動 Web 伺服器失敗: {e}")
-            return False
-
-    def stop(self):
-        if self.httpd:
-            try:
-                self.httpd.shutdown()
-                self.httpd.server_close()
-            except Exception:
-                pass
-            self.httpd = None
-            self.thread = None
-            self.app.log("⏹️ 內嵌式 Web 遙控伺服器已停止")
 
 class WiFiControllerApp:
     # 現代深色系主題配色
@@ -562,7 +149,6 @@ class WiFiControllerApp:
         self.root.configure(bg=self.BG_MAIN)
 
         self.client = WiFiArduinoClient()
-        self.web_server = EmbeddedWebServer(self, port=5000)
         self.client.on_log = self.log
 
         # 雙燈即時特效執行緒控制
@@ -574,23 +160,8 @@ class WiFiControllerApp:
         self.matrix_state = [0] * 8
         self.matrix_btns = []
 
-        # 手動自訂腳位配置 (支援記憶存檔)
-        self.pin_cfg = load_pin_config()
-        self.sw_pin_var = tk.IntVar(value=self.pin_cfg.get("switch_pin", 13))
-        self.pwm_pin_var = tk.IntVar(value=self.pin_cfg.get("pwm_pin", 9))
-        self.srv_pin_var = tk.IntVar(value=self.pin_cfg.get("servo_pin", 10))
-        self.rgb_r_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_r_pin", 6))
-        self.rgb_g_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_g_pin", 3))
-        self.rgb_b_pin_var = tk.IntVar(value=self.pin_cfg.get("rgb_b_pin", 5))
-        self.matrix_din_var = tk.IntVar(value=self.pin_cfg.get("matrix_din", 12))
-        self.matrix_cs_var = tk.IntVar(value=self.pin_cfg.get("matrix_cs", 8))
-        self.matrix_clk_var = tk.IntVar(value=self.pin_cfg.get("matrix_clk", 7))
-
         self._build_ui()
         self.client.start_worker()
-
-        # 啟動時自動嘗試無線連線 (200ms 後無感接入)
-        self.root.after(200, self.toggle_connection)
 
         # 背景定時延遲更新
         self._start_ping_timer()
@@ -605,7 +176,7 @@ class WiFiControllerApp:
 
         tk.Label(top_frame, text="🌐 設備 IP:", bg=self.BG_TOP, fg=self.TEXT_MUTED, font=("Segoe UI", 9)).pack(side=tk.LEFT)
         self.ip_entry = tk.Entry(top_frame, bg="#11111B", fg=self.TEXT_MAIN, insertbackground=self.TEXT_MAIN, relief=tk.FLAT, font=("Consolas", 10), width=15)
-        self.ip_entry.insert(0, "192.168.1.134")
+        self.ip_entry.insert(0, "192.168.1.100")
         self.ip_entry.pack(side=tk.LEFT, padx=6)
 
         self.btn_connect = tk.Button(top_frame, text="📶 連線 Wi-Fi", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=10, pady=3, cursor="hand2", command=self.toggle_connection)
@@ -616,10 +187,6 @@ class WiFiControllerApp:
 
         btn_flash = tk.Button(top_frame, text="🛠️ 一鍵燒錄 Wi-Fi 韌體", bg="#F5C2E7", fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.open_flash_dialog)
         btn_flash.pack(side=tk.LEFT, padx=4)
-
-        btn_tunnel = tk.Button(top_frame, text="🌐 外網穿透", bg="#89B4FA", fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.open_tunnel_dialog)
-        btn_tunnel.pack(side=tk.LEFT, padx=4)
-        self.btn_tunnel = btn_tunnel
 
         self.lbl_status = tk.Label(top_frame, text="● 未連線", bg=self.BG_TOP, fg=self.ACCENT_RED, font=("Segoe UI", 9, "bold"))
         self.lbl_status.pack(side=tk.LEFT, padx=12)
@@ -645,135 +212,35 @@ class WiFiControllerApp:
         self._build_matrix_card()
         self._build_log_console()
 
-    def _save_pins(self, *args):
-        self.pin_cfg["switch_pin"] = self.sw_pin_var.get()
-        self.pin_cfg["pwm_pin"] = self.pwm_pin_var.get()
-        self.pin_cfg["servo_pin"] = self.srv_pin_var.get()
-        self.pin_cfg["rgb_r_pin"] = self.rgb_r_pin_var.get()
-        self.pin_cfg["rgb_g_pin"] = self.rgb_g_pin_var.get()
-        self.pin_cfg["rgb_b_pin"] = self.rgb_b_pin_var.get()
-        self.pin_cfg["anode"] = self.anode_var.get()
-        self.pin_cfg["matrix_din"] = self.matrix_din_var.get()
-        self.pin_cfg["matrix_cs"] = self.matrix_cs_var.get()
-        self.pin_cfg["matrix_clk"] = self.matrix_clk_var.get()
-        save_pin_config(self.pin_cfg)
-        self.log(f"⚙️ 腳位設定已自動保存！")
-
-    def get_sync_state(self) -> dict:
-        """取得目前硬體與 UI 狀態，供手機/網頁即時雙向同步"""
-        cur_rgb = getattr(self, "current_rgb", [0, 0, 0])
-        hex_c = f"#{cur_rgb[0]:02x}{cur_rgb[1]:02x}{cur_rgb[2]:02x}"
-        return {
-            "connected": self.client.is_connected,
-            "ip": self.client.ip,
-            "latency": self.client.latency_ms,
-            "switch": getattr(self, "sw_state", False),
-            "switch_pin": self.sw_pin_var.get() if hasattr(self, "sw_pin_var") else 13,
-            "rgb": cur_rgb,
-            "rgb_hex": hex_c,
-            "rgb_pins": [
-                self.rgb_r_pin_var.get() if hasattr(self, "rgb_r_pin_var") else 9,
-                self.rgb_g_pin_var.get() if hasattr(self, "rgb_g_pin_var") else 10,
-                self.rgb_b_pin_var.get() if hasattr(self, "rgb_b_pin_var") else 11,
-            ],
-            "anode": bool(self.anode_var.get()) if hasattr(self, "anode_var") else True,
-            "effect": self.current_effect_name or ""
-        }
-
-    def handle_remote_cmd(self, cmd: str):
-        """處理來自手機/網頁的外網指令，並即時更新電腦桌面 UI 與硬體"""
-        self.log(f"📱 [外網同步遙控] {cmd}")
-        if cmd.startswith("DWRITE,"):
-            parts = cmd.split(",")
-            if len(parts) >= 3:
-                val = int(parts[2]) > 0
-                self.root.after(0, lambda: self.apply_switch_ui(val))
-        elif cmd.startswith("RGB,"):
-            parts = cmd.split(",")
-            if len(parts) >= 8:
-                r, g, b = int(parts[5]), int(parts[6]), int(parts[7])
-                self.root.after(0, lambda: self.apply_rgb_ui(r, g, b))
-        elif cmd.startswith("FX,"):
-            fx = cmd.split(",")[1]
-            if fx == "stop":
-                self.root.after(0, self.stop_dual_effect)
-            else:
-                self.root.after(0, lambda: self.start_dual_effect(fx))
-        elif cmd == "STOP":
-            self.root.after(0, self.emergency_stop)
-        else:
-            self.client.send_cmd(cmd)
-
-    def apply_switch_ui(self, val: bool):
-        """同步更新桌面端開關狀態與外觀"""
-        self.sw_state = val
-        if hasattr(self, "btn_sw") and self.btn_sw.winfo_exists():
-            if self.sw_state:
-                self.btn_sw.configure(text="🟢 目前：開啟 (點擊關閉)", bg=self.ACCENT_GREEN, fg="#11111B")
-            else:
-                self.btn_sw.configure(text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN)
-        self.client.send_cmd(f"DWRITE,{self.sw_pin_var.get()},{1 if val else 0}")
-
-    def apply_rgb_ui(self, r: int, g: int, b: int):
-        """同步更新桌面端 RGB 預覽色塊與硬體"""
-        self.stop_dual_effect()
-        self.current_rgb = [r, g, b]
-        hex_c = f"#{r:02x}{g:02x}{b:02x}"
-        if hasattr(self, "rgb_preview") and self.rgb_preview.winfo_exists():
-            self.rgb_preview.configure(bg=hex_c)
-        anode = 1 if self.anode_var.get() else 0
-        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
-
     def _build_switch_servo_card(self):
         row = tk.Frame(self.cards_frame, bg=self.BG_MAIN)
         row.pack(fill=tk.X, pady=(0, 12))
 
-        # 1. 數位開關卡片 (附腳位自訂)
-        f_sw = tk.LabelFrame(row, text="💡 數位開關 (LED / 繼電器)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
+        # 開關卡片
+        f_sw = tk.LabelFrame(row, text="💡 數位開關 (Pin 13 LED / 繼電器)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
         f_sw.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
-
-        top_sw = tk.Frame(f_sw, bg=self.BG_CARD)
-        top_sw.pack(fill=tk.X, pady=(0, 6))
-        tk.Label(top_sw, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        cb_sw = ttk.Combobox(top_sw, textvariable=self.sw_pin_var, values=list(range(2, 14)), width=4, state="readonly")
-        cb_sw.pack(side=tk.LEFT, padx=4)
-        cb_sw.bind("<<ComboboxSelected>>", self._save_pins)
 
         self.sw_state = False
         self.btn_sw = tk.Button(f_sw, text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 10, "bold"), bd=0, pady=8, cursor="hand2", command=self.toggle_switch)
         self.btn_sw.pack(fill=tk.X, pady=4)
 
-        # 2. PWM 滑桿卡片 (附腳位自訂)
-        f_pwm = tk.LabelFrame(row, text="⚡ PWM 功率/馬達", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
+        # PWM 滑桿卡片
+        f_pwm = tk.LabelFrame(row, text="⚡ PWM 功率/馬達 (Pin 9)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
         f_pwm.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8))
 
-        top_pwm = tk.Frame(f_pwm, bg=self.BG_CARD)
-        top_pwm.pack(fill=tk.X, pady=(0, 4))
-        tk.Label(top_pwm, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        cb_pwm = ttk.Combobox(top_pwm, textvariable=self.pwm_pin_var, values=[3, 5, 6, 9, 10, 11], width=4, state="readonly")
-        cb_pwm.pack(side=tk.LEFT, padx=4)
-        cb_pwm.bind("<<ComboboxSelected>>", self._save_pins)
-
         self.pwm_val = tk.IntVar(value=0)
-        self.pwm_lbl = tk.Label(top_pwm, text="0 (0%)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
-        self.pwm_lbl.pack(side=tk.RIGHT)
+        self.pwm_lbl = tk.Label(f_pwm, text="0 (0%)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
+        self.pwm_lbl.pack(anchor="e")
         scale_pwm = tk.Scale(f_pwm, from_=0, to=255, orient=tk.HORIZONTAL, variable=self.pwm_val, bg=self.BG_CARD, fg=self.TEXT_MAIN, highlightthickness=0, bd=0, command=self._on_pwm_change)
         scale_pwm.pack(fill=tk.X)
 
-        # 3. 伺服舵機卡片 (附腳位自訂)
-        f_srv = tk.LabelFrame(row, text="🎯 伺服舵機 (0°~180°)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=8)
+        # 伺服舵機卡片
+        f_srv = tk.LabelFrame(row, text="🎯 伺服舵機 (Pin 10 / 0°~180°)", bg=self.BG_CARD, fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=14, pady=10)
         f_srv.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        top_srv = tk.Frame(f_srv, bg=self.BG_CARD)
-        top_srv.pack(fill=tk.X, pady=(0, 4))
-        tk.Label(top_srv, text="📌 腳位: Pin", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        cb_srv = ttk.Combobox(top_srv, textvariable=self.srv_pin_var, values=list(range(2, 14)), width=4, state="readonly")
-        cb_srv.pack(side=tk.LEFT, padx=4)
-        cb_srv.bind("<<ComboboxSelected>>", self._save_pins)
-
         self.srv_val = tk.IntVar(value=90)
-        self.srv_lbl = tk.Label(top_srv, text="90° (中間歸位)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
-        self.srv_lbl.pack(side=tk.RIGHT)
+        self.srv_lbl = tk.Label(f_srv, text="90° (中間歸位)", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Consolas", 10))
+        self.srv_lbl.pack(anchor="e")
         scale_srv = tk.Scale(f_srv, from_=0, to=180, orient=tk.HORIZONTAL, variable=self.srv_val, bg=self.BG_CARD, fg=self.TEXT_MAIN, highlightthickness=0, bd=0, command=self._on_servo_change)
         scale_srv.pack(fill=tk.X)
 
@@ -785,54 +252,18 @@ class WiFiControllerApp:
         top_r.pack(fill=tk.X, pady=(0, 8))
 
         # 色塊預覽
-        self.rgb_preview = tk.Canvas(top_r, width=44, height=44, bg="#000000", highlightthickness=1, highlightbackground=self.BORDER_COLOR)
-        self.rgb_preview.pack(side=tk.LEFT, padx=(0, 10))
+        self.rgb_preview = tk.Canvas(top_r, width=50, height=50, bg="#000000", highlightthickness=1, highlightbackground=self.BORDER_COLOR)
+        self.rgb_preview.pack(side=tk.LEFT, padx=(0, 12))
 
         btn_color = tk.Button(top_r, text="🎨 選擇色彩", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 9), bd=0, padx=10, pady=4, cursor="hand2", command=self.pick_color)
         btn_color.pack(side=tk.LEFT, padx=4)
 
         self.anode_var = tk.BooleanVar(value=True)
-        chk_anode = tk.Checkbutton(top_r, text="共陽 (V接5V)", variable=self.anode_var, command=self._save_pins, bg=self.BG_CARD, fg=self.ACCENT_YELLOW, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8, "bold"))
-        chk_anode.pack(side=tk.LEFT, padx=6)
-
-        # RGB 腳位自訂
-        pin_box = tk.Frame(top_r, bg="#252538", padx=6, pady=3, bd=1, relief=tk.SOLID)
-        pin_box.pack(side=tk.LEFT, padx=8)
-        tk.Label(pin_box, text="📌 腳位 R:", bg="#252538", fg=self.ACCENT_RED, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT)
-        cb_r = ttk.Combobox(pin_box, textvariable=self.rgb_r_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
-        cb_r.pack(side=tk.LEFT, padx=2)
-        cb_r.bind("<<ComboboxSelected>>", self._save_pins)
-
-        tk.Label(pin_box, text="G:", bg="#252538", fg=self.ACCENT_GREEN, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(4, 0))
-        cb_g = ttk.Combobox(pin_box, textvariable=self.rgb_g_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
-        cb_g.pack(side=tk.LEFT, padx=2)
-        cb_g.bind("<<ComboboxSelected>>", self._save_pins)
-
-        tk.Label(pin_box, text="B:", bg="#252538", fg=self.ACCENT, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(4, 0))
-        cb_b = ttk.Combobox(pin_box, textvariable=self.rgb_b_pin_var, values=[3, 5, 6, 9, 10, 11], width=3, state="readonly")
-        cb_b.pack(side=tk.LEFT, padx=2)
-        cb_b.bind("<<ComboboxSelected>>", self._save_pins)
+        chk_anode = tk.Checkbutton(top_r, text="共陽 (Common Anode)", variable=self.anode_var, bg=self.BG_CARD, fg=self.TEXT_MUTED, selectcolor="#11111B", activebackground=self.BG_CARD, font=("Segoe UI", 8))
+        chk_anode.pack(side=tk.LEFT, padx=10)
 
         btn_stop_fx = tk.Button(top_r, text="⏹️ 停止特效", bg=self.ACCENT_RED, fg="#11111B", font=("Segoe UI", 8, "bold"), bd=0, padx=8, pady=3, cursor="hand2", command=self.stop_dual_effect)
         btn_stop_fx.pack(side=tk.RIGHT)
-
-        # 即時快捷單鍵調色盤
-        quick_frame = tk.Frame(f, bg=self.BG_CARD)
-        quick_frame.pack(fill=tk.X, pady=(0, 8))
-        tk.Label(quick_frame, text="⚡ 即時單鍵變色:", bg=self.BG_CARD, fg=self.TEXT_MUTED, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(0, 6))
-
-        palette = [
-            ("🔴 紅", 255, 0, 0, "#F38BA8"),
-            ("🟢 綠", 0, 255, 0, "#A6E3A1"),
-            ("🔵 藍", 0, 0, 255, "#89B4FA"),
-            ("🟡 黃", 255, 255, 0, "#F9E2AF"),
-            ("🟣 紫", 255, 0, 255, "#CBA6F7"),
-            ("⚪ 白光", 255, 255, 255, "#CDD6F4"),
-            ("⚫ 全滅", 0, 0, 0, "#A6ADC8")
-        ]
-        for lbl, r, g, b, fg_c in palette:
-            btn = tk.Button(quick_frame, text=lbl, bg="#181825", fg=fg_c, font=("Segoe UI", 8, "bold"), bd=1, relief=tk.SOLID, padx=6, pady=2, cursor="hand2", command=lambda r=r, g=g, b=b: self.set_rgb_color(r, g, b))
-            btn.pack(side=tk.LEFT, padx=3)
 
         # 18 款炫彩特效按鈕網格
         fx_grid = tk.Frame(f, bg=self.BG_CARD)
@@ -891,24 +322,6 @@ class WiFiControllerApp:
         ctrl_frame = tk.Frame(body, bg=self.BG_CARD)
         ctrl_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # 點陣腳位自訂
-        m_pin_row = tk.Frame(ctrl_frame, bg="#252538", padx=6, pady=4, bd=1, relief=tk.SOLID)
-        m_pin_row.pack(fill=tk.X, pady=(0, 8))
-        tk.Label(m_pin_row, text="📌 點陣腳位 DIN: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        cb_din = ttk.Combobox(m_pin_row, textvariable=self.matrix_din_var, values=list(range(2, 14)), width=3, state="readonly")
-        cb_din.pack(side=tk.LEFT, padx=2)
-        cb_din.bind("<<ComboboxSelected>>", self._save_pins)
-
-        tk.Label(m_pin_row, text="CS: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT, padx=(6, 0))
-        cb_cs = ttk.Combobox(m_pin_row, textvariable=self.matrix_cs_var, values=list(range(2, 14)), width=3, state="readonly")
-        cb_cs.pack(side=tk.LEFT, padx=2)
-        cb_cs.bind("<<ComboboxSelected>>", self._save_pins)
-
-        tk.Label(m_pin_row, text="CLK: Pin", bg="#252538", fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(side=tk.LEFT, padx=(6, 0))
-        cb_clk = ttk.Combobox(m_pin_row, textvariable=self.matrix_clk_var, values=list(range(2, 14)), width=3, state="readonly")
-        cb_clk.pack(side=tk.LEFT, padx=2)
-        cb_clk.bind("<<ComboboxSelected>>", self._save_pins)
-
         # 經典預設圖形
         pre_row = tk.Frame(ctrl_frame, bg=self.BG_CARD)
         pre_row.pack(fill=tk.X, pady=(0, 6))
@@ -947,18 +360,11 @@ class WiFiControllerApp:
     def log(self, msg: str):
         t = time.strftime("%H:%M:%S")
         line = f"[{t}] {msg}\n"
-        print(f"[WiFiLog] {msg}", flush=True)
         def _append():
-            try:
-                if hasattr(self, "log_text"):
-                    self.log_text.insert(tk.END, line)
-                    self.log_text.see(tk.END)
-            except Exception:
-                pass
-        try:
-            self.root.after(0, _append)
-        except Exception:
-            pass
+            if hasattr(self, "log_text"):
+                self.log_text.insert(tk.END, line)
+                self.log_text.see(tk.END)
+        self.root.after(0, _append)
 
     # ==========================
     # 連線與通訊邏輯
@@ -966,12 +372,6 @@ class WiFiControllerApp:
     def toggle_connection(self):
         if self.client.is_connected:
             self.client.is_connected = False
-            if self.client.ws_sock:
-                try:
-                    self.client.ws_sock.close()
-                except Exception:
-                    pass
-                self.client.ws_sock = None
             self.lbl_status.configure(text="● 未連線", fg=self.ACCENT_RED)
             self.btn_connect.configure(text="📶 連線 Wi-Fi", bg=self.ACCENT)
             self.log("已中斷 Wi-Fi 連線")
@@ -997,9 +397,6 @@ class WiFiControllerApp:
         self.lbl_status.configure(text=f"● Wi-Fi 已連線 ({ip}, {self.client.latency_ms}ms)", fg=self.ACCENT_GREEN)
         self.btn_connect.configure(text="❌ 中斷連線", bg="#45475A")
         self.log(f"🎉 成功連線至 Arduino Wi-Fi！(延遲: {self.client.latency_ms}ms)")
-        # 連線就緒後主動發送初始 RGB 指令，確保硬體燈號即時受控
-        anode = 1 if self.anode_var.get() else 0
-        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},0,0,0")
 
     def _on_connect_fail(self):
         self.lbl_status.configure(text="● 連線失敗", fg=self.ACCENT_RED)
@@ -1019,7 +416,7 @@ class WiFiControllerApp:
     def scan_lan_devices(self):
         """自動多執行緒掃描區域網路內開放 Port 80 的 Arduino Wi-Fi 設備"""
         self.log("🔍 正在快速掃描區域網路內的 Arduino Wi-Fi 設備...")
-
+        
         def worker():
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
@@ -1040,16 +437,7 @@ class WiFiControllerApp:
                     res = sock.connect_ex((ip, 80))
                     sock.close()
                     if res == 0:
-                        # 驗證是否為 Arduino / Webduino
-                        try:
-                            req = urllib.request.Request(f"http://{ip}/", headers={"User-Agent": "WiFiArduinoHub/1.0"})
-                            with urllib.request.urlopen(req, timeout=0.6) as r:
-                                s_hdr = r.headers.get("Server", "").lower()
-                                if "webduino" in s_hdr or "websocket" in s_hdr or "arduino" in s_hdr:
-                                    found_ips.append(ip)
-                                    return
-                        except Exception:
-                            pass
+                        # 驗證是否為 Arduino
                         try:
                             url = f"http://{ip}/status"
                             with urllib.request.urlopen(url, timeout=0.6) as r:
@@ -1096,35 +484,30 @@ class WiFiControllerApp:
             self.btn_sw.configure(text="🟢 目前：開啟 (點擊關閉)", bg=self.ACCENT_GREEN, fg="#11111B")
         else:
             self.btn_sw.configure(text="⚪ 目前：關閉 (點擊開啟)", bg="#45475A", fg=self.TEXT_MAIN)
-        self.client.send_cmd(f"DWRITE,{self.sw_pin_var.get()},{val}")
+        self.client.send_cmd(f"DWRITE,13,{val}")
         self.log(f"💡 [Wi-Fi] 數位開關 (Pin 13): {'開啟' if self.sw_state else '關閉'}")
 
     def _on_pwm_change(self, val):
         v = int(val)
         pct = int(v / 255.0 * 100)
         self.pwm_lbl.configure(text=f"{v} ({pct}%)")
-        self.client.send_cmd(f"PWM,{self.pwm_pin_var.get()},{v}")
+        self.client.send_cmd(f"PWM,9,{v}")
 
     def _on_servo_change(self, val):
         ang = int(val)
         self.srv_lbl.configure(text=f"{ang}°")
-        self.client.send_cmd(f"SERVO,{self.srv_pin_var.get()},{ang}")
-
-    def set_rgb_color(self, r: int, g: int, b: int):
-        self.stop_dual_effect()
-        self.current_rgb = [r, g, b]
-        hex_c = f"#{r:02x}{g:02x}{b:02x}"
-        self.rgb_preview.configure(bg=hex_c)
-        anode = 1 if self.anode_var.get() else 0
-        self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r},{g},{b}")
-        self.log(f"🎨 [Wi-Fi] 設定 RGB 色彩: R={r}, G={g}, B={b}")
+        self.client.send_cmd(f"SERVO,10,{ang}")
 
     def pick_color(self):
         self.stop_dual_effect()
         clr = colorchooser.askcolor(title="選取 RGB 色彩")
         if clr and clr[0]:
             r, g, b = int(clr[0][0]), int(clr[0][1]), int(clr[0][2])
-            self.set_rgb_color(r, g, b)
+            hex_c = f"#{r:02x}{g:02x}{b:02x}"
+            self.rgb_preview.configure(bg=hex_c)
+            anode = 1 if self.anode_var.get() else 0
+            self.client.send_cmd(f"RGB,6,5,3,{anode},{r},{g},{b}")
+            self.log(f"🎨 [Wi-Fi] 設定 RGB 色彩: R={r}, G={g}, B={b}")
 
     def start_dual_effect(self, effect_name: str):
         self.stop_dual_effect()
@@ -1158,7 +541,7 @@ class WiFiControllerApp:
                     r1, g1, b1 = v, int(v * 0.6), 255 - v
                     delay_s = 0.06
 
-                self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},{r1},{g1},{b1}")
+                self.client.send_cmd(f"RGB,6,5,3,{anode},{r1},{g1},{b1}")
                 step += 1
                 time.sleep(delay_s)
 
@@ -1171,7 +554,7 @@ class WiFiControllerApp:
             self.effect_thread.join(timeout=0.3)
             self.effect_thread = None
             anode = 1 if self.anode_var.get() else 0
-            self.client.send_cmd(f"RGB,{self.rgb_r_pin_var.get()},{self.rgb_g_pin_var.get()},{self.rgb_b_pin_var.get()},{anode},0,0,0")
+            self.client.send_cmd(f"RGB,6,5,3,{anode},0,0,0")
             self.log("⏹️ [Wi-Fi] 特效已停止")
 
     # ==========================
@@ -1187,7 +570,7 @@ class WiFiControllerApp:
     def _sync_matrix_to_hardware(self):
         bytes_str = ",".join(str(b) for b in self.matrix_state)
         # 預設點陣 Pin: DIN=12, CS=8, CLK=7
-        self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
+        self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
 
     def _apply_matrix_preset(self, bmp):
         self.matrix_state = list(bmp)
@@ -1202,7 +585,7 @@ class WiFiControllerApp:
         for r in range(8):
             for c in range(8):
                 self.matrix_btns[r][c].configure(bg="#313244")
-        self.client.send_cmd(f"MATRIX_CLEAR,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()}")
+        self.client.send_cmd("MATRIX_CLEAR,12,8,7")
         self.log("🧹 [Wi-Fi] 已清空 8x8 點陣")
 
     def play_marquee(self):
@@ -1213,7 +596,7 @@ class WiFiControllerApp:
         def worker():
             for f in frames:
                 bytes_str = ",".join(str(b) for b in f)
-                self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
+                self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
                 time.sleep(0.08)
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1225,7 +608,7 @@ class WiFiControllerApp:
             for _ in range(3):
                 for f in frames:
                     bytes_str = ",".join(str(b) for b in f)
-                    self.client.send_cmd(f"MATRIX_ALL,{self.matrix_din_var.get()},{self.matrix_cs_var.get()},{self.matrix_clk_var.get()},{bytes_str}")
+                    self.client.send_cmd(f"MATRIX_ALL,12,8,7,{bytes_str}")
                     time.sleep(0.09)
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1240,114 +623,6 @@ class WiFiControllerApp:
     # ==========================
     # 一鍵燒錄 Wi-Fi 韌體對話框
     # ==========================
-    def open_tunnel_dialog(self):
-        """開啟 Cloudflare Tunnel 內網穿透控制視窗"""
-        dlg = tk.Toplevel(self.root)
-        dlg.title("🌐 Cloudflare Tunnel 外網穿透控制台")
-        dlg.geometry("580x430")
-        dlg.configure(bg=self.BG_TOP)
-        dlg.transient(self.root)
-
-        tk.Label(dlg, text="🌐 Cloudflare Tunnel 內網穿透 (外網遠端操控)", bg=self.BG_TOP, fg=self.ACCENT, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
-        tk.Label(dlg, text="自動產生 trycloudflare.com 加密外網通道，手機 (4G/5G) 或任何遠端電腦點擊即可直接連線！", bg=self.BG_TOP, fg=self.TEXT_MUTED, font=("Segoe UI", 8)).pack(anchor="w", padx=16, pady=(0, 10))
-
-        body = tk.Frame(dlg, bg=self.BG_CARD, padx=16, pady=14, bd=1, relief=tk.SOLID)
-        body.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 12))
-
-        # Port 設定
-        row_p = tk.Frame(body, bg=self.BG_CARD)
-        row_p.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(row_p, text="目標本地通訊埠 (Port):", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=20, anchor="w").pack(side=tk.LEFT)
-        port_ent = tk.Entry(row_p, bg="#11111B", fg=self.TEXT_MAIN, insertbackground=self.TEXT_MAIN, font=("Consolas", 10), width=10, relief=tk.FLAT)
-        port_ent.insert(0, str(getattr(self, "tunnel_port", 5000)))
-        port_ent.pack(side=tk.LEFT, padx=6)
-
-        # 狀態顯示
-        row_s = tk.Frame(body, bg=self.BG_CARD)
-        row_s.pack(fill=tk.X, pady=(0, 10))
-        tk.Label(row_s, text="目前連線狀態:", bg=self.BG_CARD, fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), width=20, anchor="w").pack(side=tk.LEFT)
-        from cloudflare_tunnel import tunnel_manager, copy_to_clipboard
-        cur_url = tunnel_manager.get_url()
-        lbl_st = tk.Label(row_s, text="🟢 已連線" if cur_url else "⚪ 尚未啟動", bg=self.BG_CARD, fg=self.ACCENT_GREEN if cur_url else self.TEXT_MUTED, font=("Segoe UI", 9, "bold"))
-        lbl_st.pack(side=tk.LEFT, padx=6)
-
-        # 網址卡片
-        box = tk.LabelFrame(body, text="🔗 trycloudflare.com 外網存取網址", bg="#181825", fg=self.ACCENT, font=("Segoe UI", 9, "bold"), bd=1, relief=tk.SOLID, padx=12, pady=10)
-        box.pack(fill=tk.X, pady=(0, 12))
-
-        lbl_url = tk.Label(box, text=cur_url or "尚未啟動，請點擊下方「🚀 啟動外網穿透」按鈕", bg="#181825", fg="#A6E3A1" if cur_url else "#F9E2AF", font=("Consolas", 10, "bold"), wraplength=500, justify="left")
-        lbl_url.pack(anchor="w", pady=(0, 4))
-
-        # 操作按鈕列
-        act_row = tk.Frame(body, bg=self.BG_CARD)
-        act_row.pack(fill=tk.X, pady=(6, 0))
-
-        def do_copy():
-            u = tunnel_manager.get_url()
-            if u:
-                copy_to_clipboard(u)
-                messagebox.showinfo("已複製", "外網網址已複製至剪貼簿：\n" + str(u) + "\n\n請在手機或遠端瀏覽器開啟！")
-            else:
-                messagebox.showwarning("提示", "尚未建立外網連線，請先啟動穿透！")
-
-        def do_open():
-            u = tunnel_manager.get_url()
-            if u:
-                import webbrowser
-                webbrowser.open(u)
-            else:
-                messagebox.showwarning("提示", "尚未建立外網連線，請先啟動穿透！")
-
-        def do_start():
-            try:
-                p = int(port_ent.get().strip())
-            except ValueError:
-                messagebox.showwarning("錯誤", "通訊埠必須為數字 (如 5000)！")
-                return
-            self.tunnel_port = p
-            lbl_st.configure(text="🟡 正在啟動並捕獲網址...", fg=self.ACCENT_YELLOW)
-            lbl_url.configure(text="正在透過 Cloudflare 建立通道，約需 3~5 秒...", fg=self.ACCENT_YELLOW)
-
-            def _bg():
-                # 啟動內嵌 Web 遙控伺服器以接收外網請求
-                self.web_server.start(port=p)
-                ok = tunnel_manager.start(local_port=p)
-                if ok:
-                    u = tunnel_manager.wait_for_url(timeout=25.0)
-                    if u and dlg.winfo_exists():
-                        self.root.after(0, lambda: (
-                            lbl_st.configure(text="🟢 穿透中", fg=self.ACCENT_GREEN),
-                            lbl_url.configure(text=u, fg="#A6E3A1"),
-                            self.btn_tunnel.configure(text="🌐 外網就緒", bg=self.ACCENT_GREEN)
-                        ))
-                    elif dlg.winfo_exists():
-                        self.root.after(0, lambda: (
-                            lbl_st.configure(text="❌ 逾時", fg=self.ACCENT_RED),
-                            lbl_url.configure(text="獲取外網網址逾時，請檢查連線後重試", fg=self.ACCENT_RED)
-                        ))
-
-            threading.Thread(target=_bg, daemon=True).start()
-
-        def do_stop():
-            tunnel_manager.stop()
-            self.web_server.stop()
-            if dlg.winfo_exists():
-                lbl_st.configure(text="⚪ 已停止", fg=self.TEXT_MUTED)
-                lbl_url.configure(text="外網穿透已停止", fg=self.TEXT_MUTED)
-                self.btn_tunnel.configure(text="🌐 外網穿透", bg="#89B4FA")
-
-        btn_run = tk.Button(act_row, text="🚀 啟動外網穿透", bg=self.ACCENT, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=10, pady=4, cursor="hand2", command=do_start)
-        btn_run.pack(side=tk.LEFT, padx=(0, 6))
-
-        btn_copy = tk.Button(act_row, text="📋 複製外網網址", bg="#45475A", fg=self.TEXT_MAIN, font=("Segoe UI", 9, "bold"), bd=0, padx=8, pady=4, cursor="hand2", command=do_copy)
-        btn_copy.pack(side=tk.LEFT, padx=4)
-
-        btn_browser = tk.Button(act_row, text="↗️ 在瀏覽器中開啟", bg="#313244", fg=self.TEXT_MAIN, font=("Segoe UI", 9), bd=0, padx=8, pady=4, cursor="hand2", command=do_open)
-        btn_browser.pack(side=tk.LEFT, padx=4)
-
-        btn_kill = tk.Button(act_row, text="⏹️ 停止", bg=self.ACCENT_RED, fg="#11111B", font=("Segoe UI", 9, "bold"), bd=0, padx=8, pady=4, cursor="hand2", command=do_stop)
-        btn_kill.pack(side=tk.RIGHT)
-
     def open_flash_dialog(self):
         dlg = tk.Toplevel(self.root)
         dlg.title("🛠️ 一鍵燒錄 Wi-Fi 韌體至 Arduino Uno")
@@ -1512,7 +787,7 @@ class WiFiControllerApp:
                         def on_fail(msg=err_text):
                             safe_status("❌ 燒錄失敗，擴充板訊號可能干擾序列埠", self.ACCENT_RED)
                             messagebox.showerror(
-                                "燒錄未成功",
+                                "燒錄未成功", 
                                 f"Arduino-CLI 燒錄未成功。\n\n"
                                 f"若為通訊逾時（stk500），這是 Webduino Fly 擴充板的 ESP8266 佔用 Pin 0/1 所致。\n"
                                 f"請嘗試：\n"
@@ -1557,3 +832,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

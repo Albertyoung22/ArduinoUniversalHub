@@ -719,12 +719,27 @@ class ArduinoGUI:
             self.ser.reset_input_buffer()
             self.ser.write(b"PING\n")
             time.sleep(0.2)
-            resp = self.ser.readline().decode("utf-8", errors="ignore").strip()
-            if "PONG" in resp:
+
+            # 讀取回應：Arduino 重啟後會先送出 READY 訊息，隨後回應 PONG
+            found_handshake = False
+            first_resp = ""
+            start_t = time.time()
+            while time.time() - start_t < 1.5:
+                line = self.ser.readline().decode("utf-8", errors="ignore").strip()
+                if line:
+                    if not first_resp:
+                        first_resp = line
+                    if "PONG" in line or "READY" in line:
+                        found_handshake = True
+                        time.sleep(0.05)
+                        self.ser.reset_input_buffer()
+                        break
+
+            if found_handshake:
                 self.is_connected = True
                 self.lbl_status.config(text=f"🟢 已連線 ({port})", foreground="#00aa00")
                 self.btn_connect.config(text="🔌 斷開連線")
-                self.log(f"✅ 成功與 Arduino Uno ({port}) 建立即時連線 (PING -> PONG)！")
+                self.log(f"✅ 成功與 Arduino Uno ({port}) 建立即時連線 (回應: {first_resp})！")
                 self.stop_worker = False
                 self.worker_thread = threading.Thread(target=self._serial_worker, daemon=True)
                 self.worker_thread.start()
@@ -732,7 +747,7 @@ class ArduinoGUI:
             else:
                 self.ser.close()
                 self.lbl_status.config(text="❌ 連線無回應", foreground="red")
-                self.log(f"⚠️ {port} 無法回應 PING (回應: '{resp}')")
+                self.log(f"⚠️ {port} 無法回應 PING (回應: '{first_resp}')")
         except Exception as e:
             self.lbl_status.config(text="❌ 連線失敗", foreground="red")
             self.log(f"❌ 無法連接 {port}: {e}")

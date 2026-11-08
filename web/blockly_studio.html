@@ -1,0 +1,2642 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <title>🐼 Arduino Block Studio - 兒童視覺化積木程式 (mBlock 5 風格)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- 引入 Google Blockly 核心與語言包 (已本地快取，支援 100% 離線) -->
+  <script src="/static/blockly/blockly.min.js"></script>
+  <script src="/static/blockly/python.min.js"></script>
+  <script src="/static/blockly/zh-hant.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      user-select: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      min-width: 960px;
+      background: #EBF0F8;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    /* 頂部 mBlock 5 風格導航欄 */
+    header {
+      height: 52px;
+      min-height: 52px;
+      background: #4C97FF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      color: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 100;
+      white-space: nowrap;
+      flex-shrink: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      min-width: 960px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      opacity: 0.85;
+      font-weight: normal;
+      margin-left: 4px;
+    }
+
+    @media (max-width: 1250px) {
+      .brand-subtitle {
+        display: none;
+      }
+    }
+
+    .brand-icon {
+      font-size: 22px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* 綠旗與停止按鈕 */
+    .btn-flag {
+      background: #00D166;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 3px 0 #009E4D;
+      transition: all 0.1s ease;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      height: 32px;
+      line-height: 1;
+    }
+
+    .btn-flag:hover {
+      background: #00E670;
+      transform: translateY(-1px);
+    }
+
+    .btn-flag:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #009E4D;
+    }
+
+    .btn-stop {
+      background: #FF4D4D;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 3px 0 #CC0000;
+      transition: all 0.1s ease;
+      white-space: nowrap !important;
+      flex-shrink: 0 !important;
+      height: 32px;
+      line-height: 1;
+    }
+
+    .btn-stop:hover {
+      background: #FF6666;
+      transform: translateY(-1px);
+    }
+
+    .btn-stop:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #CC0000;
+    }
+
+    .status-badge {
+      font-size: 12px;
+      background: rgba(0,0,0,0.2);
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #00D166;
+      box-shadow: 0 0 6px #00D166;
+      flex-shrink: 0;
+    }
+
+    .btn-tool {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-tool:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* 主要工作區佈局 */
+    .main-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 52px);
+      position: relative;
+    }
+
+    /* Blockly 畫布區域 */
+    #blocklyDiv {
+      flex: 1;
+      height: 100%;
+      position: relative;
+    }
+
+    .blocklySvg {
+      will-change: transform;
+    }
+
+    /* 右側代碼預覽與終端機側欄 */
+    .right-sidebar {
+      width: 310px;
+      flex-shrink: 0;
+      background: #1E1E2E;
+      display: flex;
+      flex-direction: column;
+      border-left: 2px solid #313244;
+      transition: width 0.3s ease;
+    }
+
+    .right-sidebar.collapsed {
+      width: 0;
+      display: none;
+    }
+
+    .sidebar-header {
+      background: #181825;
+      padding: 10px 14px;
+      color: #CDD6F4;
+      font-size: 13px;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #313244;
+    }
+
+    .tab-group {
+      display: flex;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #A6ADC8;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #4C97FF;
+      color: white;
+      font-weight: bold;
+    }
+
+    .code-container {
+      flex: 1;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: auto;
+      background: #11111B;
+      padding: 6px 0;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 22px;
+    }
+
+    /* 透明流光光棒 (Glowing Light Bar) - 絲滑標示當前執行的程式行 */
+    .glow-light-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 22px;
+      top: 0;
+      /* 乾淨半透明翠綠與青藍漸層光芒，小光暈不暈染 */
+      background: linear-gradient(90deg, rgba(0, 209, 102, 0.22) 0%, rgba(76, 151, 255, 0.10) 65%, transparent 100%);
+      border-left: 3.5px solid #00D166;
+      box-shadow: 0 0 6px rgba(0, 209, 102, 0.35);
+      border-radius: 0 4px 4px 0;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(0);
+      transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.25, 1), opacity 0.2s ease;
+      z-index: 5;
+    }
+
+    .glow-light-bar.active {
+      opacity: 1;
+      animation: lightBarPulse 1.2s infinite ease-in-out;
+    }
+
+    @keyframes lightBarPulse {
+      0% { box-shadow: 0 0 4px rgba(0, 209, 102, 0.3); }
+      50% { box-shadow: 0 0 8px rgba(0, 209, 102, 0.55); }
+      100% { box-shadow: 0 0 4px rgba(0, 209, 102, 0.3); }
+    }
+
+    .code-line {
+      display: flex;
+      min-height: 22px;
+      align-items: center;
+      padding: 0 6px;
+      white-space: pre;
+      position: relative;
+      z-index: 6;
+      transition: background 0.12s;
+    }
+
+    .code-line .line-num {
+      width: 32px;
+      text-align: right;
+      padding-right: 12px;
+      color: #585B70;
+      font-size: 11px;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .code-line .line-text {
+      color: #CDD6F4;
+      user-select: text;
+    }
+
+    .code-line.current-executing .line-num {
+      color: #00D166;
+      font-weight: bold;
+      text-shadow: 0 0 4px rgba(0, 209, 102, 0.6);
+    }
+
+    .code-line.current-executing .line-text {
+      color: #FFFFFF !important;
+      font-weight: bold;
+      text-shadow: 0 0 4px rgba(0, 209, 102, 0.5);
+    }
+
+    /* Blockly 工作區：緊湊精緻的積木流光描邊 (精確只鎖定自體輪廓，絕不擴散成一大片) */
+    path.block-executing-glow {
+      stroke: #00FF88 !important;
+      stroke-width: 3.5px !important;
+      stroke-linejoin: round !important;
+      stroke-linecap: round !important;
+      filter: drop-shadow(0 0 4px #00FF88) drop-shadow(0 0 7px rgba(0, 255, 136, 0.5)) !important;
+      animation: cleanGlowPulse 0.75s infinite alternate ease-in-out !important;
+    }
+
+    @keyframes cleanGlowPulse {
+      0% {
+        stroke: #00E676;
+        stroke-width: 3px;
+        filter: drop-shadow(0 0 3px rgba(0, 230, 118, 0.8)) drop-shadow(0 0 5px rgba(0, 230, 118, 0.4));
+      }
+      100% {
+        stroke: #00FF88;
+        stroke-width: 4px;
+        filter: drop-shadow(0 0 5px rgba(0, 255, 136, 1)) drop-shadow(0 0 9px rgba(0, 255, 136, 0.6));
+      }
+    }
+
+    .log-container {
+      height: 180px;
+      background: #181825;
+      border-top: 1px solid #313244;
+      padding: 10px;
+      overflow-y: auto;
+      font-family: "Consolas", monospace;
+      font-size: 11px;
+      color: #A6ADC8;
+      user-select: text;
+    }
+
+    .log-title {
+      font-size: 11px;
+      font-weight: bold;
+      color: #F9E2AF;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* 執行指示高亮條 */
+    .running-banner {
+      display: none;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #00D166;
+      color: white;
+      padding: 6px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 50;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(0, 209, 102, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(0, 209, 102, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(0, 209, 102, 0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 頂部導航欄 (mBlock 5 Style) -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">🐼</div>
+      <span>Arduino Block Studio</span>
+      <span class="brand-subtitle">兒童積木程式設計環境</span>
+    </div>
+
+    <div class="nav-controls">
+      <!-- 綠旗與停止按鈕 -->
+      <button class="btn-flag" id="btnRun" onclick="runProgram()">
+        <span style="font-size: 15px;">🚩</span> 執行程式
+      </button>
+
+      <button class="btn-stop" id="btnStop" onclick="stopProgram()">
+        <span style="font-size: 13px;">🛑</span> 停止
+      </button>
+
+      <!-- USB 序列埠選單與連線 -->
+      <div style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.25); padding:3px 6px; border-radius:8px; flex-shrink:0;">
+        <span style="font-size:12px;">🔌</span>
+        <select id="comPortSelect" style="background:#1E3A8A; color:white; border:none; border-radius:4px; padding:3px 6px; font-size:11px; outline:none; max-width:140px;">
+          <option value="">搜尋 COM 埠中...</option>
+        </select>
+        <button id="btnConnectUSB" onclick="toggleUSBConnection()" style="background:#00D166; color:#111; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer;">連線</button>
+      </div>
+
+      <!-- 雙狀態指示 -->
+      <div class="status-badge" id="usbBadge" title="Arduino USB 串列埠狀態">
+        <div class="status-dot" id="usbDot" style="background:#888; box-shadow:none;"></div>
+        <span id="usbStatusText">USB: 未連線</span>
+      </div>
+
+      <div class="status-badge" id="wifiBadge" title="ESP-01 Wi-Fi 雙路繼電器">
+        <div class="status-dot" style="background:#00D166;"></div>
+        <span>Wi-Fi: 192.168.4.1</span>
+      </div>
+
+      <!-- 範例積木選單 (多款 RGB 特效，直接展開原始積木) -->
+      <select id="exampleSelect" onchange="loadExample(this.value)" class="btn-tool" style="background:#3377DE; outline:none; max-width:250px;">
+        <option value="">📂 選擇特效範例 (直接展開原始積木)...</option>
+        <optgroup label="🌈 雙 RGB LED 炫彩特效 (展開原始積木)">
+          <option value="ex_rgb_rainbow">🌈 雙燈七彩虹霓流光 (紅橙黃綠青藍紫)</option>
+          <option value="ex_rgb_police">🚨 警車雙燈爆閃警笛 (燈1紅閃 ➔ 燈2藍閃)</option>
+          <option value="ex_rgb_complementary">☯ 雙燈互補強烈對撞 (紅青 ➔ 綠紫 ➔ 黃藍)</option>
+          <option value="ex_rgb_heartbeat">💓 雙燈深情心跳脈衝 (強心跳 ➔ 收縮 ➔ 舒張)</option>
+          <option value="ex_rgb_cyberpunk">🛸 賽博龐克霓虹 (電光粉與電子青交替)</option>
+          <option value="ex_rgb_thunder">⚡ 雷雨暴風閃電 (微弱幽藍 ➔ 極限白光爆閃)</option>
+          <option value="ex_rgb_aurora">🌌 歐若拉極光流轉 (幽綠 ➔ 冰川藍 ➔ 幻紫)</option>
+          <option value="ex_rgb_disco">🪩 迪斯可狂歡舞會 (快節奏三原色跳動)</option>
+          <option value="ex_rgb_amber">🚑 救護車琥珀警示 (金黃雙擊爆閃)</option>
+          <option value="ex_rgb_fire">🔥 壁爐跳火燭光 (暖橙與烈火金光搖曳)</option>
+        </optgroup>
+        <optgroup label="💡 基礎與硬體控制">
+          <option value="ex_arduino_blink">💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)</option>
+          <option value="ex_arduino_servo">🦾 動作：伺服舵機擺動 (Pin 4: 0° ➔ 90° ➔ 180°)</option>
+          <option value="ex_relay_blink">⚡ 繼電器：雙路交替開關循環</option>
+          <option value="ex_pulse_gate">🚪 繼電器：鐵捲門點動 (吸合 2 秒後斷開)</option>
+          <option value="ex_smart_light">🌟 繼電器：智慧夜燈 (開啟 3 秒後熄滅)</option>
+        </optgroup>
+      </select>
+
+      <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
+      <button class="btn-tool" onclick="openCpsatModal()" style="background: linear-gradient(135deg, #7928CA, #4C97FF); border:none; font-weight:bold; box-shadow:0 2px 6px rgba(121,40,202,0.4); padding: 5px 12px;">
+        🧠 OR-Tools CP-SAT 智慧排程
+      </button>
+
+      <!-- ⚙️ 硬體腳位設定 (M1/M2/極性) -->
+      <button class="btn-tool" onclick="openHwConfigModal()" style="background: linear-gradient(135deg, #11998e, #38ef7d); color:#0c2b18; border:none; font-weight:bold; box-shadow:0 2px 6px rgba(56,239,125,0.4); padding: 5px 12px;">
+        ⚙️ 腳位設定 (M1/M2)
+      </button>
+
+      <button class="btn-tool" onclick="toggleSidebar()">
+        💻 <span id="toggleSidebarText">隱藏代碼視窗</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主畫面 -->
+  <div class="main-container">
+    <div class="running-banner" id="runningBanner">▶️ 程式正在執行中...</div>
+
+    <!-- Blockly 畫布 -->
+    <div id="blocklyDiv"></div>
+
+    <!-- 右側 Python 代碼預覽與終端機日誌 -->
+    <div class="right-sidebar" id="rightSidebar">
+      <div class="sidebar-header">
+        <div class="tab-group">
+          <button class="tab-btn active" id="tabPython" onclick="switchCodeTab('python')">🐍 Python 代碼</button>
+          <button class="tab-btn" id="tabCpp" onclick="switchCodeTab('cpp')">⚙️ Arduino C++</button>
+        </div>
+        <span style="font-size: 10px; color: #6C7086;">即時生成</span>
+      </div>
+
+      <!-- 代碼預覽 (含透明發光流光光棒) -->
+      <div class="code-container" id="codeContainer">
+        <div id="glowLightBar" class="glow-light-bar"></div>
+        <div id="codeLinesList"></div>
+      </div>
+
+      <!-- 實體硬體終端輸出 -->
+      <div class="log-container">
+        <div class="log-title">
+          <span>📜 硬體執行與除錯紀錄 (Terminal)</span>
+          <span style="cursor: pointer; color: #89B4FA;" onclick="clearLog()">清除</span>
+        </div>
+        <div id="logContent">系統已就緒。點擊上方 🚩 綠旗開始執行積木！</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Blockly 工具箱 (Toolbox) 定義 -->
+  <xml xmlns="https://developers.google.com/blockly/xml" id="toolbox" style="display: none">
+    
+    <!-- ⚡ 繼電器類別 (專門控制 Bestep 雙路繼電器) -->
+    <category name="⚡ 繼電器開關" colour="#9966FF">
+      <block type="relay_turn">
+        <field name="CHANNEL">1</field>
+        <field name="STATE">ON</field>
+      </block>
+      <block type="relay_pulse">
+        <field name="CHANNEL">1</field>
+        <value name="DURATION">
+          <shadow type="math_number"><field name="NUM">1</field></shadow>
+        </value>
+      </block>
+      <block type="relay_all">
+        <field name="STATE">ON</field>
+      </block>
+      <block type="relay_invert"></block>
+    </category>
+
+    <!-- 💡 Arduino 硬體配件 (LED / PWM / 伺服馬達 / RGB) -->
+    <category name="💡 燈光與硬體" colour="#4C97FF">
+      <block type="arduino_digital_write">
+        <field name="PIN">13</field>
+        <field name="VAL">1</field>
+      </block>
+      <block type="arduino_pwm_write">
+        <field name="PIN">13</field>
+        <value name="VAL">
+          <shadow type="math_number"><field name="NUM">255</field></shadow>
+        </value>
+      </block>
+      <block type="arduino_rgb_color">
+        <field name="TARGET">ALL</field>
+        <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+        <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+      </block>
+      <block type="arduino_rgb_custom_pins">
+        <field name="R_PIN">6</field>
+        <field name="G_PIN">3</field>
+        <field name="B_PIN">5</field>
+        <field name="ANODE">1</field>
+        <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+        <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+      </block>
+      <block type="arduino_servo">
+        <field name="PIN">4</field>
+        <value name="ANGLE">
+          <shadow type="math_number"><field name="NUM">90</field></shadow>
+        </value>
+      </block>
+      <block type="arduino_rgb_fx">
+        <field name="EFFECT">police_strobe</field>
+      </block>
+    </category>
+
+    <!-- ⏱️ 控制與時間 -->
+    <category name="⏱️ 控制與時間" colour="#FFAB19">
+      <block type="control_wait">
+        <value name="SECONDS">
+          <shadow type="math_number"><field name="NUM">1</field></shadow>
+        </value>
+      </block>
+      <block type="controls_repeat_ext">
+        <value name="TIMES">
+          <shadow type="math_number"><field name="NUM">10</field></shadow>
+        </value>
+      </block>
+      <block type="control_forever"></block>
+      <block type="controls_if"></block>
+      <block type="controls_if"><mutation else="1"></mutation></block>
+    </category>
+
+    <!-- 🔂 事件類別 -->
+    <category name="🔂 事件" colour="#FFD500">
+      <block type="event_when_flag_clicked"></block>
+    </category>
+
+    <!-- 🧮 運算與比較 -->
+    <category name="🧮 運算" colour="#59C059">
+      <block type="logic_compare"></block>
+      <block type="logic_operation"></block>
+      <block type="logic_boolean"></block>
+      <block type="math_number"><field name="NUM">0</field></block>
+      <block type="math_arithmetic"></block>
+    </category>
+
+    <!-- 📊 變數 -->
+    <category name="📊 變數" colour="#FF8C1A" custom="VARIABLE"></category>
+  </xml>
+
+  <script>
+    let workspace = null;
+    let currentCodeTab = 'python';
+    let isRunning = false;
+
+    // ==========================================
+    // 自訂硬體積木定義 (Custom Hardware Blocks)
+    // ==========================================
+    
+    // 1. 當綠旗被點擊
+    Blockly.Blocks['event_when_flag_clicked'] = {
+      init: function() {
+        this.appendDummyInput().appendField("🚩 當綠旗被點擊時");
+        this.setNextStatement(true, null);
+        this.setColour("#FFD500");
+        this.setTooltip("當按下上方綠旗時開始執行以下程式");
+      }
+    };
+    const Order = (window.python && window.python.Order) || (Blockly.Python && Blockly.Python.Order) || { ATOMIC: 0, NONE: 99 };
+
+    function definePyBlock(name, fn) {
+      if (Blockly.Python && Blockly.Python.forBlock) {
+        Blockly.Python.forBlock[name] = fn;
+      }
+      if (Blockly.Python) {
+        Blockly.Python[name] = fn;
+      }
+      if (window.python && window.python.pythonGenerator && window.python.pythonGenerator.forBlock) {
+        window.python.pythonGenerator.forBlock[name] = fn;
+      }
+    }
+
+    definePyBlock('event_when_flag_clicked', function(block) {
+      return "# --- 程式啟動 ---\n";
+    });
+
+    // 2. 繼電器單路開關
+    Blockly.Blocks['relay_turn'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("⚡ 設定 第")
+            .appendField(new Blockly.FieldDropdown([["1", "1"], ["2", "2"]]), "CHANNEL")
+            .appendField("路繼電器 為")
+            .appendField(new Blockly.FieldDropdown([["開啟 (ON)", "ON"], ["關閉 (OFF)", "OFF"]]), "STATE");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#9966FF");
+        this.setTooltip("開關指定的實體繼電器");
+      }
+    };
+    definePyBlock('relay_turn', function(block) {
+      const ch = block.getFieldValue('CHANNEL');
+      const state = block.getFieldValue('STATE');
+      return `set_relay(${ch}, "${state}")\n`;
+    });
+
+    // 3. 繼電器點動
+    Blockly.Blocks['relay_pulse'] = {
+      init: function() {
+        this.appendValueInput("DURATION")
+            .setCheck("Number")
+            .appendField("⏱️ 點動 第")
+            .appendField(new Blockly.FieldDropdown([["1", "1"], ["2", "2"]]), "CHANNEL")
+            .appendField("路繼電器 吸合");
+        this.appendDummyInput().appendField("秒後自動關閉");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#9966FF");
+      }
+    };
+    definePyBlock('relay_pulse', function(block) {
+      const ch = block.getFieldValue('CHANNEL');
+      const dur = Blockly.Python.valueToCode(block, 'DURATION', Order.ATOMIC) || '1';
+      return `pulse_relay(${ch}, ${dur})\n`;
+    });
+
+    // 4. 全部繼電器控制
+    Blockly.Blocks['relay_all'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("⚡ 設定 兩路繼電器 全部")
+            .appendField(new Blockly.FieldDropdown([["開啟 (ALL ON)", "ON"], ["關閉 (ALL OFF)", "OFF"]]), "STATE");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#9966FF");
+      }
+    };
+    definePyBlock('relay_all', function(block) {
+      const state = block.getFieldValue('STATE');
+      return `set_all_relays("${state}")\n`;
+    });
+
+    // 5. 狀態反轉
+    Blockly.Blocks['relay_invert'] = {
+      init: function() {
+        this.appendDummyInput().appendField("🔄 反轉 兩路繼電器 當前狀態");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#9966FF");
+      }
+    };
+    definePyBlock('relay_invert', function(block) {
+      return `invert_relays()\n`;
+    });
+
+    // 6. 控制：等待幾秒
+    Blockly.Blocks['control_wait'] = {
+      init: function() {
+        this.appendValueInput("SECONDS")
+            .setCheck("Number")
+            .appendField("⏱️ 等待");
+        this.appendDummyInput().appendField("秒");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#FFAB19");
+      }
+    };
+    definePyBlock('control_wait', function(block) {
+      const sec = Blockly.Python.valueToCode(block, 'SECONDS', Order.ATOMIC) || '1';
+      return `sleep(${sec})\n`;
+    });
+
+    // 7. 重複無限次 (forever)
+    Blockly.Blocks['control_forever'] = {
+      init: function() {
+        this.appendDummyInput().appendField("♾️ 重複無限次 (Forever)");
+        this.appendStatementInput("DO").appendField("執行");
+        this.setPreviousStatement(true, null);
+        this.setColour("#FFAB19");
+      }
+    };
+    definePyBlock('control_forever', function(block) {
+      const branch = Blockly.Python.statementToCode(block, 'DO') || '    pass\n';
+      return `while True:\n${branch}`;
+    });
+
+    // 8. Arduino 數位腳位
+    Blockly.Blocks['arduino_digital_write'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("💡 設定 Arduino 數位腳位")
+            .appendField(new Blockly.FieldDropdown([["13", "13"], ["12", "12"], ["11", "11"], ["10", "10"], ["9", "9"], ["8", "8"], ["7", "7"], ["6", "6"], ["5", "5"], ["4", "4"], ["3", "3"], ["2", "2"]]), "PIN")
+            .appendField("為")
+            .appendField(new Blockly.FieldDropdown([["高電位 (HIGH/開)", "1"], ["低電位 (LOW/關)", "0"]]), "VAL");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+      }
+    };
+    definePyBlock('arduino_digital_write', function(block) {
+      const pin = block.getFieldValue('PIN');
+      const val = block.getFieldValue('VAL');
+      return `arduino_write_digital(${pin}, ${val})\n`;
+    });
+
+    // 9. Arduino PWM 調光
+    Blockly.Blocks['arduino_pwm_write'] = {
+      init: function() {
+        this.appendValueInput("VAL")
+            .setCheck("Number")
+            .appendField("💡 設定 Arduino PWM 腳位")
+            .appendField(new Blockly.FieldDropdown([["9", "9"], ["10", "10"], ["11", "11"], ["6", "6"], ["5", "5"], ["3", "3"]]), "PIN")
+            .appendField("亮度/速度 (0~255):");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+      }
+    };
+    definePyBlock('arduino_pwm_write', function(block) {
+      const pin = block.getFieldValue('PIN');
+      const val = Blockly.Python.valueToCode(block, 'VAL', Order.ATOMIC) || '255';
+      return `arduino_write_pwm(${pin}, ${val})\n`;
+    });
+
+    // 10. 伺服馬達 (Servo)
+    Blockly.Blocks['arduino_servo'] = {
+      init: function() {
+        this.appendValueInput("ANGLE")
+            .setCheck("Number")
+            .appendField("🦾 旋轉 伺服舵機 腳位")
+            .appendField(new Blockly.FieldDropdown([["4", "4"], ["10", "10"], ["9", "9"], ["6", "6"], ["5", "5"]]), "PIN")
+            .appendField("角度 (0~180°):");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+      }
+    };
+    definePyBlock('arduino_servo', function(block) {
+      const pin = block.getFieldValue('PIN');
+      const angle = Blockly.Python.valueToCode(block, 'ANGLE', Order.ATOMIC) || '90';
+      return `arduino_set_servo(${pin}, ${angle})\n`;
+    });
+
+    // 11. Arduino RGB 三原色調光控制
+    Blockly.Blocks['arduino_rgb_color'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("🎨 設定 RGB 燈")
+            .appendField(new Blockly.FieldDropdown([
+              ["全部雙燈 (M1+M2)", "ALL"],
+              ["燈 1 (M1: Pin 6,3,5)", "1"],
+              ["燈 2 (M2: Pin 11,9,10)", "2"]
+            ]), "TARGET");
+        this.appendValueInput("R")
+            .setCheck("Number")
+            .appendField("紅(0~255):");
+        this.appendValueInput("G")
+            .setCheck("Number")
+            .appendField("綠(0~255):");
+        this.appendValueInput("B")
+            .setCheck("Number")
+            .appendField("藍(0~255):");
+        this.setInputsInline(true);
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+        this.setTooltip("精準設定 RGB 模組的紅、綠、藍數值 (0~255)");
+      }
+    };
+    definePyBlock('arduino_rgb_color', function(block) {
+      const target = block.getFieldValue('TARGET');
+      const r = Blockly.Python.valueToCode(block, 'R', Order.ATOMIC) || '0';
+      const g = Blockly.Python.valueToCode(block, 'G', Order.ATOMIC) || '0';
+      const b = Blockly.Python.valueToCode(block, 'B', Order.ATOMIC) || '0';
+      return `set_rgb_color("${target}", ${r}, ${g}, ${b})\n`;
+    });
+
+    // 11-2. 自訂腳位 RGB 燈
+    Blockly.Blocks['arduino_rgb_custom_pins'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("🎨 自訂 RGB 腳位")
+            .appendField("紅:")
+            .appendField(new Blockly.FieldDropdown([
+              ["Pin 6 (~PWM)", "6"], ["Pin 3 (~PWM)", "3"], ["Pin 5 (~PWM)", "5"],
+              ["Pin 11 (~PWM)", "11"], ["Pin 9 (~PWM)", "9"], ["Pin 10 (~PWM)", "10"],
+              ["Pin 2", "2"], ["Pin 4", "4"], ["Pin 7", "7"], ["Pin 8", "8"], ["Pin 12", "12"], ["Pin 13", "13"]
+            ]), "R_PIN")
+            .appendField("綠:")
+            .appendField(new Blockly.FieldDropdown([
+              ["Pin 3 (~PWM)", "3"], ["Pin 5 (~PWM)", "5"], ["Pin 6 (~PWM)", "6"],
+              ["Pin 9 (~PWM)", "9"], ["Pin 10 (~PWM)", "10"], ["Pin 11 (~PWM)", "11"],
+              ["Pin 2", "2"], ["Pin 4", "4"], ["Pin 7", "7"], ["Pin 8", "8"], ["Pin 12", "12"], ["Pin 13", "13"]
+            ]), "G_PIN")
+            .appendField("藍:")
+            .appendField(new Blockly.FieldDropdown([
+              ["Pin 5 (~PWM)", "5"], ["Pin 3 (~PWM)", "3"], ["Pin 6 (~PWM)", "6"],
+              ["Pin 10 (~PWM)", "10"], ["Pin 9 (~PWM)", "9"], ["Pin 11 (~PWM)", "11"],
+              ["Pin 2", "2"], ["Pin 4", "4"], ["Pin 7", "7"], ["Pin 8", "8"], ["Pin 12", "12"], ["Pin 13", "13"]
+            ]), "B_PIN")
+            .appendField(new Blockly.FieldDropdown([
+              ["共陽極 (+5V)", "1"],
+              ["共陰極 (GND)", "0"]
+            ]), "ANODE");
+        this.appendValueInput("R")
+            .setCheck("Number")
+            .appendField("紅(0~255):");
+        this.appendValueInput("G")
+            .setCheck("Number")
+            .appendField("綠(0~255):");
+        this.appendValueInput("B")
+            .setCheck("Number")
+            .appendField("藍(0~255):");
+        this.setInputsInline(true);
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+        this.setTooltip("自由指定紅、綠、藍腳位與極性進行 RGB 調光");
+      }
+    };
+    definePyBlock('arduino_rgb_custom_pins', function(block) {
+      const rPin = block.getFieldValue('R_PIN');
+      const gPin = block.getFieldValue('G_PIN');
+      const bPin = block.getFieldValue('B_PIN');
+      const anode = block.getFieldValue('ANODE');
+      const r = Blockly.Python.valueToCode(block, 'R', Order.ATOMIC) || '0';
+      const g = Blockly.Python.valueToCode(block, 'G', Order.ATOMIC) || '0';
+      const b = Blockly.Python.valueToCode(block, 'B', Order.ATOMIC) || '0';
+      return `set_custom_rgb(${rPin}, ${gPin}, ${bPin}, ${anode}, ${r}, ${g}, ${b})\n`;
+    });
+
+    // 12. 雙 RGB 燈效快捷
+    Blockly.Blocks['arduino_rgb_fx'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("✨ 播放 雙RGB炫彩燈效:")
+            .appendField(new Blockly.FieldDropdown([
+              ["🌈 同步彩虹", "sync_rainbow"],
+              ["🚨 警車雙閃", "police_strobe"],
+              ["🌌 極光呼吸", "aurora_breathing"],
+              ["🔥 壁爐跳火", "fire_flicker"],
+              ["⚡ 暴風雷電", "thunder_storm"],
+              ["🛸 賽博霓虹", "cyberpunk_neon"],
+              ["💓 心跳搏動", "heartbeat"]
+            ]), "EFFECT");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#4C97FF");
+      }
+    };
+    definePyBlock('arduino_rgb_fx', function(block) {
+      const fx = block.getFieldValue('EFFECT');
+      return `play_rgb_effect("${fx}")\n`;
+    });
+
+    // ==========================================
+    // 初始化 Blockly 畫布
+    // ==========================================
+    window.addEventListener('load', function() {
+      workspace = Blockly.inject('blocklyDiv', {
+        toolbox: document.getElementById('toolbox'),
+        collapse: true,
+        comments: true,
+        disable: true,
+        maxBlocks: Infinity,
+        trashcan: true,
+        scrollbars: true,
+        sounds: false,
+        grid: {
+          spacing: 25,
+          length: 3,
+          colour: '#D0D8E8',
+          snap: true
+        },
+        zoom: {
+          controls: true,
+          wheel: true,
+          startScale: 1.0,
+          maxScale: 2.5,
+          minScale: 0.4,
+          scaleSpeed: 1.2
+        }
+      });
+
+      // 監聽積木變化，使用防抖 (Debounce)，放開積木或操作停頓 120ms 後才生成代碼，徹底解決拖曳卡頓
+      let codeDebounceTimer = null;
+      workspace.addChangeListener(function(event) {
+        // 忽略單純的 UI 事件 (選取、滾動視角、無關拖曳)
+        if (event.isUiEvent) return;
+        // 拖曳積木過程中不觸發代碼重算
+        if (event.type === Blockly.Events.BLOCK_DRAG) return;
+
+        if (codeDebounceTimer) {
+          clearTimeout(codeDebounceTimer);
+        }
+        codeDebounceTimer = setTimeout(updateCodeView, 120);
+      });
+
+      // 自動確保視窗尺寸寬敞（避免先前 Chrome 殘留的微小視窗狀態）
+      if (window.outerWidth < 1200 || window.outerHeight < 720) {
+        try {
+          window.resizeTo(Math.min(1360, screen.availWidth), Math.min(880, screen.availHeight));
+        } catch (e) {}
+      }
+
+      // 預設載入範例：Arduino 板載 LED 閃爍 (Pin 13)
+      document.getElementById('exampleSelect').value = 'ex_arduino_blink';
+      loadExample('ex_arduino_blink');
+    });
+
+    let rawPythonCode = '';
+    let currentActiveLine = 0;
+    let blockLineMap = {};
+
+    function updateCodeView() {
+      if (!workspace) return;
+
+      // 1. 生成純淨 Python 代碼供右側面板與 Arduino C++ 顯示
+      Blockly.Python.STATEMENT_PREFIX = null;
+      let cleanCode = '';
+      try {
+        cleanCode = Blockly.Python.workspaceToCode(workspace);
+      } catch (e) {
+        cleanCode = '# 正在組合積木...';
+      }
+      rawPythonCode = cleanCode || '# 尚未組合積木';
+
+      // 2. 建立 block_id -> 純淨代碼行號 的即時映射表 (供雙光棒同步連動)
+      blockLineMap = {};
+      try {
+        Blockly.Python.STATEMENT_PREFIX = '###ID:%1###\n';
+        const tagged = Blockly.Python.workspaceToCode(workspace) || '';
+        Blockly.Python.STATEMENT_PREFIX = null;
+
+        let curCleanLine = 1;
+        let curBlockId = null;
+        tagged.split('\n').forEach(l => {
+          const m = l.match(/###ID:(?:'|")?([^#'"\s]+)(?:'|")?###/);
+          if (m) {
+            curBlockId = m[1].replace(/^['"]|['"]$/g, '').trim();
+          } else {
+            if (curBlockId && !blockLineMap[curBlockId]) {
+              blockLineMap[curBlockId] = curCleanLine;
+            }
+            curCleanLine++;
+          }
+        });
+      } catch (e) {
+        Blockly.Python.STATEMENT_PREFIX = null;
+      }
+
+      renderLines(currentCodeTab === 'python' ? rawPythonCode : convertToCpp(rawPythonCode));
+    }
+
+    function renderLines(text) {
+      const list = document.getElementById('codeLinesList');
+      if (!list) return;
+      const lines = text.split('\n');
+      let html = '';
+      for (let i = 0; i < lines.length; i++) {
+        const lineNum = i + 1;
+        const lineText = lines[i];
+        const escaped = lineText.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        html += `<div class="code-line" id="code-line-${lineNum}"><span class="line-num">${lineNum}</span><span class="line-text">${escaped}</span></div>`;
+      }
+      list.innerHTML = html;
+      if (isRunning && currentActiveLine > 0) {
+        setGlowBar(currentActiveLine);
+      }
+    }
+
+    // 🌟 透明光棒核心標示函式 (Glowing Light Bar Follower)
+    function setGlowBar(lineNum) {
+      currentActiveLine = lineNum;
+      const bar = document.getElementById('glowLightBar');
+      if (!bar) return;
+
+      if (!isRunning || lineNum <= 0) {
+        bar.classList.remove('active');
+        document.querySelectorAll('.code-line.current-executing').forEach(el => el.classList.remove('current-executing'));
+        return;
+      }
+
+      const targetRow = document.getElementById(`code-line-${lineNum}`);
+      if (!targetRow) return;
+
+      document.querySelectorAll('.code-line.current-executing').forEach(el => el.classList.remove('current-executing'));
+      targetRow.classList.add('current-executing');
+
+      const topPos = targetRow.offsetTop;
+      const height = targetRow.offsetHeight || 22;
+
+      bar.style.transform = `translateY(${topPos}px)`;
+      bar.style.height = `${height}px`;
+      bar.classList.add('active');
+
+      // 平滑捲動至視野中央
+      const container = document.getElementById('codeContainer');
+      if (container) {
+        const sTop = container.scrollTop;
+        const sHeight = container.clientHeight;
+        if (topPos < sTop || topPos > (sTop + sHeight - height - 10)) {
+          container.scrollTo({ top: Math.max(0, topPos - sHeight / 2 + height / 2), behavior: 'smooth' });
+        }
+      }
+    }
+
+    function convertToCpp(pyCode) {
+      if (!pyCode) return '// 尚無代碼';
+      let cpp = '// === Arduino C++ 自動生成代碼 ===\n#include <Arduino.h>\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n';
+      const lines = pyCode.split('\n');
+      for (let l of lines) {
+        if (l.includes('set_relay(1, "ON")')) cpp += '  // 繼電器 1 ON\n  Serial.write(byte(0xA0)); Serial.write(byte(0x01)); Serial.write(byte(0x01)); Serial.write(byte(0xA2));\n';
+        else if (l.includes('set_relay(1, "OFF")')) cpp += '  // 繼電器 1 OFF\n  Serial.write(byte(0xA0)); Serial.write(byte(0x01)); Serial.write(byte(0x00)); Serial.write(byte(0xA1));\n';
+        else if (l.includes('set_relay(2, "ON")')) cpp += '  // 繼電器 2 ON\n  Serial.write(byte(0xA0)); Serial.write(byte(0x02)); Serial.write(byte(0x01)); Serial.write(byte(0xA3));\n';
+        else if (l.includes('set_relay(2, "OFF")')) cpp += '  // 繼電器 2 OFF\n  Serial.write(byte(0xA0)); Serial.write(byte(0x02)); Serial.write(byte(0x00)); Serial.write(byte(0xA2));\n';
+        else if (l.includes('arduino_write_digital(')) {
+          let m = l.match(/arduino_write_digital\((\d+),\s*([01])\)/);
+          if (m) cpp += `  pinMode(${m[1]}, OUTPUT);\n  digitalWrite(${m[1]}, ${m[2] == 1 ? 'HIGH' : 'LOW'});\n`;
+        }
+        else if (l.includes('arduino_write_pwm(')) {
+          let m = l.match(/arduino_write_pwm\((\d+),\s*(\d+)\)/);
+          if (m) cpp += `  pinMode(${m[1]}, OUTPUT);\n  analogWrite(${m[1]}, ${m[2]});\n`;
+        }
+        else if (l.includes('arduino_set_servo(')) {
+          let m = l.match(/arduino_set_servo\((\d+),\s*(\d+)\)/);
+          if (m) cpp += `  // 伺服馬達 Pin ${m[1]} -> ${m[2]} 度\n  servo.write(${m[2]});\n`;
+        }
+        else if (l.includes('set_rgb_color(')) {
+          let m = l.match(/set_rgb_color\("([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)/);
+          if (m) cpp += `  // RGB 模組 ${m[1]} -> R:${m[2]} G:${m[3]} B:${m[4]}\n  analogWrite(11, 255 - ${m[2]}); analogWrite(9, 255 - ${m[3]}); analogWrite(10, 255 - ${m[4]});\n`;
+        }
+        else if (l.includes('set_custom_rgb(')) {
+          let m = l.match(/set_custom_rgb\((\d+),\s*(\d+),\s*(\d+),\s*([01]),\s*(\d+),\s*(\d+),\s*(\d+)\)/);
+          if (m) {
+            let isAn = m[4] == '1';
+            cpp += `  // 自訂 RGB Pin R:${m[1]} G:${m[2]} B:${m[3]} (${isAn ? '共陽' : '共陰'})\n  analogWrite(${m[1]}, ${isAn ? 255 - parseInt(m[5]) : m[5]});\n  analogWrite(${m[2]}, ${isAn ? 255 - parseInt(m[6]) : m[6]});\n  analogWrite(${m[3]}, ${isAn ? 255 - parseInt(m[7]) : m[7]});\n`;
+          }
+        }
+        else if (l.includes('sleep(')) {
+          let s = l.match(/sleep\((.*)\)/);
+          if (s) cpp += `  delay(${parseFloat(s[1])*1000});\n`;
+        }
+      }
+      cpp += '}\n';
+      return cpp;
+    }
+
+    function switchCodeTab(tab) {
+      currentCodeTab = tab;
+      document.getElementById('tabPython').classList.toggle('active', tab === 'python');
+      document.getElementById('tabCpp').classList.toggle('active', tab === 'cpp');
+      updateCodeView();
+    }
+
+    function toggleSidebar() {
+      const sb = document.getElementById('rightSidebar');
+      sb.classList.toggle('collapsed');
+      const isCol = sb.classList.contains('collapsed');
+      document.getElementById('toggleSidebarText').textContent = isCol ? '展開代碼視窗' : '隱藏代碼視窗';
+      Blockly.svgResize(workspace);
+    }
+
+    function log(msg) {
+      const box = document.getElementById('logContent');
+      const ts = new Date().toLocaleTimeString();
+      box.innerHTML += `<div><span style="color:#6C7086;">[${ts}]</span> ${msg}</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function clearLog() {
+      document.getElementById('logContent').innerHTML = '';
+    }
+
+    let currentHighlightedPath = null;
+
+    // 🌟 核心：左側 Blockly 積木精確流光描邊 (精確只鎖定自體輪廓，絕不擴散到子積木)
+    function highlightBlockVisual(rawBlockId) {
+      if (!workspace) return;
+
+      // 清除上一個積木自體路徑的流光
+      if (currentHighlightedPath) {
+        currentHighlightedPath.classList.remove('block-executing-glow');
+        currentHighlightedPath = null;
+      }
+
+      if (!rawBlockId) {
+        return;
+      }
+
+      const cleanId = String(rawBlockId).replace(/^['"]|['"]$/g, '').trim();
+      if (!cleanId) return;
+
+      const block = workspace.getBlockById(cleanId);
+      if (!block) return;
+
+      // 精準鎖定該積木自體的主外框 Path (排除所有子積木與外層容器)
+      let mainPath = null;
+      if (block.pathObject && block.pathObject.svgPath) {
+        mainPath = block.pathObject.svgPath;
+      } else if (typeof block.getSvgRoot === 'function') {
+        const root = block.getSvgRoot();
+        if (root) {
+          mainPath = root.querySelector(':scope > path.blocklyPath') || root.querySelector('path.blocklyPath');
+        }
+      }
+
+      if (mainPath) {
+        mainPath.classList.add('block-executing-glow');
+        currentHighlightedPath = mainPath;
+      }
+    }
+
+    // ==========================================
+    // 執行與停止控制 (Run & Stop)
+    // ==========================================
+    function runProgram() {
+      if (!workspace) return;
+
+      // 產生帶有步驟標記的回傳執行代碼 (注意：%1 前後不加引號，Blockly 會自動格式化)
+      Blockly.Python.STATEMENT_PREFIX = '__step__(%1)\n';
+      let execCode = '';
+      try {
+        execCode = Blockly.Python.workspaceToCode(workspace) || '';
+      } catch (e) {
+        log('❌ 積木代碼生成錯誤: ' + e.message);
+        alert('積木代碼生成錯誤: ' + e.message);
+        Blockly.Python.STATEMENT_PREFIX = null;
+        return;
+      }
+      Blockly.Python.STATEMENT_PREFIX = null;
+
+      if (!execCode.trim()) {
+        alert('請先拼出積木再按綠旗執行喔！');
+        return;
+      }
+
+      isRunning = true;
+      document.getElementById('runningBanner').style.display = 'block';
+      log('🚩 【綠旗啟動】開始執行積木程式...');
+
+      fetch('/api/run_blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: execCode })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          log('✅ 程式已成功在背景中執行！');
+        } else {
+          log('❌ 執行失敗: ' + (data.error || '未知錯誤'));
+          stopProgram();
+        }
+      })
+      .catch(err => {
+        log('❌ 連線伺服器失敗: ' + err);
+        stopProgram();
+      });
+    }
+
+    function stopProgram() {
+      isRunning = false;
+      document.getElementById('runningBanner').style.display = 'none';
+      highlightBlockVisual(null);
+      setGlowBar(0);
+      log('🛑 【程式停止】已發送全域停止訊號，硬體安全歸位。');
+
+      fetch('/api/stop_blocks', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        log('⏹️ 所有硬體動作已停止。');
+      });
+    }
+
+    // ==========================================
+    // USB 串列埠即時監控與控制 (USB Serial Manager)
+    // ==========================================
+    let isUsbConnected = false;
+
+    function updateUsbUI(connected, current_port, ports) {
+      const sel = document.getElementById('comPortSelect');
+      const btn = document.getElementById('btnConnectUSB');
+      const dot = document.getElementById('usbDot');
+      const txt = document.getElementById('usbStatusText');
+
+      isUsbConnected = connected;
+
+      if (isUsbConnected) {
+        btn.textContent = '中斷';
+        btn.style.background = '#FF4D4D';
+        btn.style.color = 'white';
+        dot.style.background = '#00D166';
+        dot.style.boxShadow = '0 0 6px #00D166';
+        txt.textContent = 'USB: ' + (current_port || '已連線');
+      } else {
+        btn.textContent = '連線';
+        btn.style.background = '#00D166';
+        btn.style.color = '#111';
+        dot.style.background = '#888';
+        dot.style.boxShadow = 'none';
+        txt.textContent = 'USB: 未連線';
+      }
+
+      if (!isUsbConnected && ports && ports.length > 0) {
+        const curVal = sel.value;
+        sel.innerHTML = '';
+        ports.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.port;
+          opt.textContent = p.desc;
+          if (p.is_arduino) opt.textContent += ' 🌟 (推薦)';
+          sel.appendChild(opt);
+        });
+        if (curVal) sel.value = curVal;
+      }
+    }
+
+    function toggleUSBConnection() {
+      const sel = document.getElementById('comPortSelect');
+      const port = sel.value;
+
+      if (isUsbConnected) {
+        fetch('/api/serial/disconnect', { method: 'POST' })
+          .then(r => r.json())
+          .then(res => {
+            log('🔌 已中斷 USB 串列埠連線');
+          });
+      } else {
+        if (!port) {
+          alert('請先選擇一個 COM 埠！');
+          return;
+        }
+        log('🔌 正在連線 ' + port + ' ...');
+        fetch('/api/serial/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ port: port })
+        })
+        .then(r => r.json())
+        .then(res => {
+          if (res.ok) {
+            log('✅ ' + res.message);
+          } else {
+            log('❌ 連線失敗: ' + (res.error || res.message));
+          }
+        });
+      }
+    }
+
+    // 智能輪詢：執行中每 70ms 絲滑追蹤積木與代碼光棒；平日每 1000ms
+    function pollStatusLoop() {
+      fetch('/api/status')
+        .then(r => r.json())
+        .then(data => {
+          if (data.running) {
+            if (!isRunning) {
+              isRunning = true;
+              document.getElementById('runningBanner').style.display = 'block';
+            }
+            // 🌟 1. 左側工作區：正在執行的積木發光光棒高亮 (Block Highlight)
+            if (data.block_id) {
+              highlightBlockVisual(data.block_id);
+              // 🌟 2. 右側代碼面板：自動對應至該積木的 Python 程式行 (Line Highlight)
+              const cleanId = String(data.block_id).replace(/^['"]|['"]$/g, '').trim();
+              const mappedLine = blockLineMap[cleanId];
+              if (mappedLine) {
+                setGlowBar(mappedLine);
+              } else if (data.line && data.line > 0) {
+                setGlowBar(data.line);
+              }
+            } else if (data.line && data.line > 0) {
+              setGlowBar(data.line);
+            }
+          } else {
+            if (isRunning) {
+              isRunning = false;
+              document.getElementById('runningBanner').style.display = 'none';
+              highlightBlockVisual(null);
+              setGlowBar(0);
+            }
+          }
+
+          if (data.logs && data.logs.length > 0) {
+            data.logs.forEach(msg => log(msg));
+          }
+
+          updateUsbUI(data.connected, data.current_port, data.ports);
+        })
+        .catch(() => {})
+        .finally(() => {
+          setTimeout(pollStatusLoop, isRunning ? 70 : 1000);
+        });
+    }
+    setTimeout(pollStatusLoop, 300);
+    setTimeout(loadHwConfig, 200);
+
+    function loadExample(key) {
+      if (!workspace) return;
+      workspace.clear();
+
+      let xmlText = '';
+      if (key === 'ex_arduino_blink') {
+        // 💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_digital_write">
+                    <field name="PIN">13</field>
+                    <field name="VAL">1</field>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                        <next>
+                          <block type="arduino_digital_write">
+                            <field name="PIN">13</field>
+                            <field name="VAL">0</field>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_rainbow') {
+        // 🌈 雙燈七彩虹霓流光 (紅➔橙➔黃➔綠➔青➔藍➔紫)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">ALL</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">ALL</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">128</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">230</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                                <next>
+                                                  <block type="arduino_rgb_color">
+                                                    <field name="TARGET">ALL</field>
+                                                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                    <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                                    <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                                    <next>
+                                                      <block type="control_wait">
+                                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                                        <next>
+                                                          <block type="arduino_rgb_color">
+                                                            <field name="TARGET">ALL</field>
+                                                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                                            <next>
+                                                              <block type="control_wait">
+                                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                                                <next>
+                                                                  <block type="arduino_rgb_color">
+                                                                    <field name="TARGET">ALL</field>
+                                                                    <value name="R"><shadow type="math_number"><field name="NUM">180</field></shadow></value>
+                                                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                                    <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                                                    <next>
+                                                                      <block type="control_wait">
+                                                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                                                      </block>
+                                                                    </next>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_police') {
+        // 🚨 警車雙燈爆閃警笛 (燈1紅光三連閃 ➔ 燈2藍光三連閃)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="controls_repeat_ext">
+                    <value name="TIMES"><shadow type="math_number"><field name="NUM">3</field></shadow></value>
+                    <statement name="DO">
+                      <block type="arduino_rgb_color">
+                        <field name="TARGET">1</field>
+                        <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">2</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_repeat_ext">
+                        <value name="TIMES"><shadow type="math_number"><field name="NUM">3</field></shadow></value>
+                        <statement name="DO">
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">1</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">2</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <next>
+                                  <block type="control_wait">
+                                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                    <next>
+                                      <block type="arduino_rgb_color">
+                                        <field name="TARGET">ALL</field>
+                                        <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                        <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                        <next>
+                                          <block type="control_wait">
+                                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_complementary') {
+        // ☯ 雙燈互補強烈對撞 (紅青 ➔ 綠紫 ➔ 黃藍)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">1</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <next>
+                      <block type="arduino_rgb_color">
+                        <field name="TARGET">2</field>
+                        <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <next>
+                          <block type="control_wait">
+                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.8</field></shadow></value>
+                            <next>
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">1</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">2</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.8</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">1</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">220</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <next>
+                                              <block type="arduino_rgb_color">
+                                                <field name="TARGET">2</field>
+                                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                                <next>
+                                                  <block type="control_wait">
+                                                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.8</field></shadow></value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_heartbeat') {
+        // 💓 雙燈深情心跳脈衝 (強心跳 ➔ 收縮 ➔ 回彈 ➔ 舒張休止)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">ALL</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.1</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">ALL</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">80</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.12</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">200</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.15</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.65</field></shadow></value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_cyberpunk') {
+        // 🛸 賽博龐克霓虹 (電光粉與電子青交替閃爍)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">1</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">20</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">147</field></shadow></value>
+                    <next>
+                      <block type="arduino_rgb_color">
+                        <field name="TARGET">2</field>
+                        <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <value name="G"><shadow type="math_number"><field name="NUM">240</field></shadow></value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <next>
+                          <block type="control_wait">
+                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                            <next>
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">1</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">240</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">2</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">20</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">147</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.5</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">160</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.25</field></shadow></value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_thunder') {
+        // ⚡ 雷雨暴風閃電 (微弱幽藍 ➔ 極限白光爆閃)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">ALL</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1.5</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">ALL</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.04</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.06</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                                <next>
+                                                  <block type="arduino_rgb_color">
+                                                    <field name="TARGET">ALL</field>
+                                                    <value name="R"><shadow type="math_number"><field name="NUM">40</field></shadow></value>
+                                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                                    <value name="B"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                                    <next>
+                                                      <block type="control_wait">
+                                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.2</field></shadow></value>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_aurora') {
+        // 🌌 歐若拉極光呼吸流轉 (幽綠 ➔ 冰川藍 ➔ 幻紫)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">ALL</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">120</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1.0</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">ALL</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">160</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">1.0</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">140</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1.0</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">230</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">180</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">1.0</field></shadow></value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_disco') {
+        // 🪩 迪斯可狂歡舞會 (明快節奏三原色跳動)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="controls_repeat_ext">
+                    <value name="TIMES"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+                    <statement name="DO">
+                      <block type="arduino_rgb_color">
+                        <field name="TARGET">1</field>
+                        <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">2</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.15</field></shadow></value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="controls_repeat_ext">
+                        <value name="TIMES"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+                        <statement name="DO">
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">1</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">2</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <next>
+                                  <block type="control_wait">
+                                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.15</field></shadow></value>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="controls_repeat_ext">
+                            <value name="TIMES"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+                            <statement name="DO">
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">1</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">2</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.15</field></shadow></value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_amber') {
+        // 🚑 救護車琥珀警示 (金黃雙擊爆閃)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="controls_repeat_ext">
+                    <value name="TIMES"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+                    <statement name="DO">
+                      <block type="arduino_rgb_color">
+                        <field name="TARGET">ALL</field>
+                        <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                        <value name="G"><shadow type="math_number"><field name="NUM">160</field></shadow></value>
+                        <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                        <next>
+                          <block type="control_wait">
+                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                            <next>
+                              <block type="arduino_rgb_color">
+                                <field name="TARGET">ALL</field>
+                                <value name="R"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="G"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                <next>
+                                  <block type="control_wait">
+                                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.4</field></shadow></value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_rgb_fire') {
+        // 🔥 壁爐跳火燭光 (暖橙與烈火金光搖曳)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_rgb_color">
+                    <field name="TARGET">ALL</field>
+                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                    <value name="G"><shadow type="math_number"><field name="NUM">100</field></shadow></value>
+                    <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.1</field></shadow></value>
+                        <next>
+                          <block type="arduino_rgb_color">
+                            <field name="TARGET">ALL</field>
+                            <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                            <value name="G"><shadow type="math_number"><field name="NUM">30</field></shadow></value>
+                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+                                <next>
+                                  <block type="arduino_rgb_color">
+                                    <field name="TARGET">ALL</field>
+                                    <value name="R"><shadow type="math_number"><field name="NUM">255</field></shadow></value>
+                                    <value name="G"><shadow type="math_number"><field name="NUM">180</field></shadow></value>
+                                    <value name="B"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.12</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_rgb_color">
+                                            <field name="TARGET">ALL</field>
+                                            <value name="R"><shadow type="math_number"><field name="NUM">150</field></shadow></value>
+                                            <value name="G"><shadow type="math_number"><field name="NUM">20</field></shadow></value>
+                                            <value name="B"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.1</field></shadow></value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_arduino_servo') {
+        // 🦾 伺服舵機擺動 (Pin 4: 0° ➔ 90° ➔ 180°)
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="arduino_servo">
+                    <field name="PIN">4</field>
+                    <value name="ANGLE"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+                    <next>
+                      <block type="control_wait">
+                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                        <next>
+                          <block type="arduino_servo">
+                            <field name="PIN">4</field>
+                            <value name="ANGLE"><shadow type="math_number"><field name="NUM">90</field></shadow></value>
+                            <next>
+                              <block type="control_wait">
+                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                                <next>
+                                  <block type="arduino_servo">
+                                    <field name="PIN">4</field>
+                                    <value name="ANGLE"><shadow type="math_number"><field name="NUM">180</field></shadow></value>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                                        <next>
+                                          <block type="arduino_servo">
+                                            <field name="PIN">4</field>
+                                            <value name="ANGLE"><shadow type="math_number"><field name="NUM">90</field></shadow></value>
+                                            <next>
+                                              <block type="control_wait">
+                                                <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_relay_blink') {
+        // ⚡ 繼電器：雙路交替開關循環
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="relay_turn">
+                    <field name="CHANNEL">1</field>
+                    <field name="STATE">ON</field>
+                    <next>
+                      <block type="relay_turn">
+                        <field name="CHANNEL">2</field>
+                        <field name="STATE">OFF</field>
+                        <next>
+                          <block type="control_wait">
+                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                            <next>
+                              <block type="relay_turn">
+                                <field name="CHANNEL">1</field>
+                                <field name="STATE">OFF</field>
+                                <next>
+                                  <block type="relay_turn">
+                                    <field name="CHANNEL">2</field>
+                                    <field name="STATE">ON</field>
+                                    <next>
+                                      <block type="control_wait">
+                                        <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_pulse_gate') {
+        // 🚪 繼電器：鐵捲門點動
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="relay_pulse">
+                <field name="CHANNEL">1</field>
+                <value name="DURATION"><shadow type="math_number"><field name="NUM">2</field></shadow></value>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_smart_light') {
+        // 🌟 繼電器：智慧夜燈
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="relay_all">
+                <field name="STATE">ON</field>
+                <next>
+                  <block type="control_wait">
+                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">3</field></shadow></value>
+                    <next>
+                      <block type="relay_all">
+                        <field name="STATE">OFF</field>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      }
+
+      if (xmlText) {
+        const dom = Blockly.utils.xml.textToDom(xmlText);
+        Blockly.Xml.domToWorkspace(dom, workspace);
+        const sel = document.getElementById('exampleSelect');
+        const selText = sel.selectedOptions && sel.selectedOptions[0] ? sel.selectedOptions[0].text : key;
+        log(`📂 成功載入範例專案: [${selText}]`);
+      }
+    }
+
+    // ==========================================
+    // 🧠 Google OR-Tools CP-SAT 智慧排程彈窗控制
+    // ==========================================
+    function openCpsatModal() {
+      document.getElementById('cpsatModal').style.display = 'flex';
+    }
+
+    function closeCpsatModal() {
+      document.getElementById('cpsatModal').style.display = 'none';
+    }
+
+    function runCpsatSolve() {
+      const style = document.getElementById('cpsatStyle').value;
+      const totalSec = document.getElementById('cpsatDuration').value;
+
+      log(`🧠 [Google OR-Tools CP-SAT] 正在建立約束模型並求解 (風格: ${style}, 目標時長: ${totalSec} 秒)...`);
+      closeCpsatModal();
+
+      fetch('/api/cpsat/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ style: style, total_sec: parseInt(totalSec) })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok && data.solution && data.solution.xml) {
+          const sol = data.solution;
+          workspace.clear();
+          const dom = Blockly.utils.xml.textToDom(sol.xml);
+          Blockly.Xml.domToWorkspace(dom, workspace);
+
+          log(`🎯 [CP-SAT 求解完成] 狀態: ${sol.status} | 最優得分: ${sol.score}`);
+          let summary = sol.segments.map(s => `${s.name} (${s.duration}s)`).join(' ➔ ');
+          log(`📋 CP-SAT 最佳化時序: ${summary}`);
+          log(`✨ 已自動在工作區展開原始積木！點擊 🚩 綠旗即可帶光棒執行！`);
+        } else {
+          log('❌ CP-SAT 求解失敗: ' + (data.error || '無可行解'));
+          alert('CP-SAT 求解失敗: ' + (data.error || '無可行解'));
+        }
+      })
+      .catch(err => {
+        log('❌ 連線 CP-SAT 伺服器失敗: ' + err);
+      });
+    }
+
+    // ==========================================
+    // ⚙️ 硬體腳位與極性配置彈窗控制
+    // ==========================================
+    function openHwConfigModal() {
+      loadHwConfig();
+      document.getElementById('hwConfigModal').style.display = 'flex';
+    }
+
+    function closeHwConfigModal() {
+      document.getElementById('hwConfigModal').style.display = 'none';
+    }
+
+    function loadHwConfig() {
+      fetch('/api/hardware/config')
+        .then(r => r.json())
+        .then(cfg => {
+          if (!cfg) return;
+          if (document.getElementById('hw_m1_r')) document.getElementById('hw_m1_r').value = String(cfg.m1_r_pin || '6');
+          if (document.getElementById('hw_m1_g')) document.getElementById('hw_m1_g').value = String(cfg.m1_g_pin || '3');
+          if (document.getElementById('hw_m1_b')) document.getElementById('hw_m1_b').value = String(cfg.m1_b_pin || '5');
+          if (document.getElementById('hw_m2_r')) document.getElementById('hw_m2_r').value = String(cfg.m2_r_pin || '11');
+          if (document.getElementById('hw_m2_g')) document.getElementById('hw_m2_g').value = String(cfg.m2_g_pin || '9');
+          if (document.getElementById('hw_m2_b')) document.getElementById('hw_m2_b').value = String(cfg.m2_b_pin || '10');
+          if (document.getElementById('hw_common_anode')) {
+            document.getElementById('hw_common_anode').value = cfg.common_anode ? 'true' : 'false';
+          }
+          if (document.getElementById('hw_servo_pin')) document.getElementById('hw_servo_pin').value = String(cfg.servo_pin || '4');
+          if (document.getElementById('hw_relay1_pin')) document.getElementById('hw_relay1_pin').value = String(cfg.relay1_pin || '7');
+          if (document.getElementById('hw_relay2_pin')) document.getElementById('hw_relay2_pin').value = String(cfg.relay2_pin || '8');
+        })
+        .catch(e => console.error('載入硬體腳位失敗:', e));
+    }
+
+    function saveHwConfig() {
+      const payload = {
+        m1_r_pin: document.getElementById('hw_m1_r').value,
+        m1_g_pin: document.getElementById('hw_m1_g').value,
+        m1_b_pin: document.getElementById('hw_m1_b').value,
+        m2_r_pin: document.getElementById('hw_m2_r').value,
+        m2_g_pin: document.getElementById('hw_m2_g').value,
+        m2_b_pin: document.getElementById('hw_m2_b').value,
+        common_anode: document.getElementById('hw_common_anode').value === 'true',
+        servo_pin: document.getElementById('hw_servo_pin').value,
+        relay1_pin: document.getElementById('hw_relay1_pin').value,
+        relay2_pin: document.getElementById('hw_relay2_pin').value
+      };
+
+      fetch('/api/hardware/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          log(`⚙️ 硬體腳位已成功儲存！ M1(R:${payload.m1_r_pin}, G:${payload.m1_g_pin}, B:${payload.m1_b_pin}) | M2(R:${payload.m2_r_pin}, G:${payload.m2_g_pin}, B:${payload.m2_b_pin}) | 共陽=${payload.common_anode}`);
+          closeHwConfigModal();
+        } else {
+          alert('儲存失敗: ' + (data.error || '未知錯誤'));
+        }
+      })
+      .catch(err => alert('儲存失敗: ' + err));
+    }
+
+    function testHwRgbColor(target, r, g, b) {
+      const payload = {
+        m1_r_pin: document.getElementById('hw_m1_r').value,
+        m1_g_pin: document.getElementById('hw_m1_g').value,
+        m1_b_pin: document.getElementById('hw_m1_b').value,
+        m2_r_pin: document.getElementById('hw_m2_r').value,
+        m2_g_pin: document.getElementById('hw_m2_g').value,
+        m2_b_pin: document.getElementById('hw_m2_b').value,
+        common_anode: document.getElementById('hw_common_anode').value === 'true',
+      };
+      fetch('/api/hardware/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        fetch('/api/hardware/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target: target, r: r, g: g, b: b })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (!data.ok) {
+            log(`⚠️ 測試點燈提示: ${data.error || '尚未連線 USB 串列埠'}`);
+          }
+        })
+        .catch(err => log(`⚠️ 測試通訊錯誤: ${err}`));
+      });
+    }
+  </script>
+
+  <!-- ⚙️ 硬體腳位與極性配置對話框 -->
+  <div id="hwConfigModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:520px; max-width:92vw; padding:22px; box-shadow:0 12px 36px rgba(0,0,0,0.6); border:1px solid #313244; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #313244; padding-bottom:10px;">
+        <div style="font-size:16px; font-weight:bold; color:#38ef7d; display:flex; align-items:center; gap:8px;">
+          <span>⚙️ 硬體腳位與極性設定 (M1 / M2 / 舵機 / 繼電器)</span>
+        </div>
+        <span style="cursor:pointer; font-size:20px; color:#A6ADC8;" onclick="closeHwConfigModal()">✕</span>
+      </div>
+      
+      <div style="font-size:12px; color:#BAC2DE; line-height:1.5; margin-bottom:14px; background:#181825; padding:8px 12px; border-radius:6px; border-left:3px solid #38ef7d;">
+        💡 <b>設定說明</b>：所有積木（如「設定RGB LED 燈1/燈2」）皆自動套用此處腳位。<br>
+        UNO 的 RGB 類比調光（0~255）請使用具備 <code>~</code> 標記之 PWM 腳位 (3, 5, 6, 9, 10, 11)。
+      </div>
+
+      <!-- 雙燈 M1 與 M2 並排設定 -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+        <!-- M1 燈 -->
+        <div style="background:#181825; border:1px solid #313244; border-radius:8px; padding:12px;">
+          <div style="font-size:13px; font-weight:bold; color:#F38BA8; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>💡 第一組 RGB (M1)</span>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🔴 紅色 (R) 腳位:</label>
+            <select id="hw_m1_r" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3">Pin 3 (~PWM)</option>
+              <option value="5">Pin 5 (~PWM)</option>
+              <option value="6" selected>Pin 6 (~PWM)</option>
+              <option value="9">Pin 9 (~PWM)</option>
+              <option value="10">Pin 10 (~PWM)</option>
+              <option value="11">Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🟢 綠色 (G) 腳位:</label>
+            <select id="hw_m1_g" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3" selected>Pin 3 (~PWM)</option>
+              <option value="5">Pin 5 (~PWM)</option>
+              <option value="6">Pin 6 (~PWM)</option>
+              <option value="9">Pin 9 (~PWM)</option>
+              <option value="10">Pin 10 (~PWM)</option>
+              <option value="11">Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🔵 藍色 (B) 腳位:</label>
+            <select id="hw_m1_b" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3">Pin 3 (~PWM)</option>
+              <option value="5" selected>Pin 5 (~PWM)</option>
+              <option value="6">Pin 6 (~PWM)</option>
+              <option value="9">Pin 9 (~PWM)</option>
+              <option value="10">Pin 10 (~PWM)</option>
+              <option value="11">Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <!-- 快速測試按鈕 -->
+          <div style="font-size:11px; color:#A6ADC8; margin-bottom:4px;">即時測試點亮 M1:</div>
+          <div style="display:flex; gap:4px;">
+            <button onclick="testHwRgbColor(1, 255, 0, 0)" style="flex:1; background:#c0392b; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮紅燈">紅</button>
+            <button onclick="testHwRgbColor(1, 0, 255, 0)" style="flex:1; background:#27ae60; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮綠燈">綠</button>
+            <button onclick="testHwRgbColor(1, 0, 0, 255)" style="flex:1; background:#2980b9; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮藍燈">藍</button>
+            <button onclick="testHwRgbColor(1, 255, 255, 255)" style="flex:1; background:#ecf0f1; color:#333; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="全亮白光">白</button>
+            <button onclick="testHwRgbColor(1, 0, 0, 0)" style="flex:1; background:#34495e; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="熄滅">滅</button>
+          </div>
+        </div>
+
+        <!-- M2 燈 -->
+        <div style="background:#181825; border:1px solid #313244; border-radius:8px; padding:12px;">
+          <div style="font-size:13px; font-weight:bold; color:#89B4FA; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+            <span>💡 第二組 RGB (M2)</span>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🔴 紅色 (R) 腳位:</label>
+            <select id="hw_m2_r" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3">Pin 3 (~PWM)</option>
+              <option value="5">Pin 5 (~PWM)</option>
+              <option value="6">Pin 6 (~PWM)</option>
+              <option value="9">Pin 9 (~PWM)</option>
+              <option value="10">Pin 10 (~PWM)</option>
+              <option value="11" selected>Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:8px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🟢 綠色 (G) 腳位:</label>
+            <select id="hw_m2_g" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3">Pin 3 (~PWM)</option>
+              <option value="5">Pin 5 (~PWM)</option>
+              <option value="6">Pin 6 (~PWM)</option>
+              <option value="9" selected>Pin 9 (~PWM)</option>
+              <option value="10">Pin 10 (~PWM)</option>
+              <option value="11">Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🔵 藍色 (B) 腳位:</label>
+            <select id="hw_m2_b" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:5px 8px; border-radius:5px; font-size:12px;">
+              <option value="3">Pin 3 (~PWM)</option>
+              <option value="5">Pin 5 (~PWM)</option>
+              <option value="6">Pin 6 (~PWM)</option>
+              <option value="9">Pin 9 (~PWM)</option>
+              <option value="10" selected>Pin 10 (~PWM)</option>
+              <option value="11">Pin 11 (~PWM)</option>
+            </select>
+          </div>
+          <!-- 快速測試按鈕 -->
+          <div style="font-size:11px; color:#A6ADC8; margin-bottom:4px;">即時測試點亮 M2:</div>
+          <div style="display:flex; gap:4px;">
+            <button onclick="testHwRgbColor(2, 255, 0, 0)" style="flex:1; background:#c0392b; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮紅燈">紅</button>
+            <button onclick="testHwRgbColor(2, 0, 255, 0)" style="flex:1; background:#27ae60; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮綠燈">綠</button>
+            <button onclick="testHwRgbColor(2, 0, 0, 255)" style="flex:1; background:#2980b9; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="亮藍燈">藍</button>
+            <button onclick="testHwRgbColor(2, 255, 255, 255)" style="flex:1; background:#ecf0f1; color:#333; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="全亮白光">白</button>
+            <button onclick="testHwRgbColor(2, 0, 0, 0)" style="flex:1; background:#34495e; color:white; border:none; padding:4px 0; border-radius:4px; font-size:10px; cursor:pointer;" title="熄滅">滅</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 極性設定與其他腳位 -->
+      <div style="background:#181825; border:1px solid #313244; border-radius:8px; padding:12px; margin-bottom:16px;">
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px; color:#F9E2AF; font-weight:bold; display:block; margin-bottom:4px;">⚡ LED 極性模式 (Polarity):</label>
+          <select id="hw_common_anode" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:6px 8px; border-radius:5px; font-size:12px;">
+            <option value="false">共陰極 (Common Cathode) - 最長腳接 GND，輸出正向驅動 (255全亮)</option>
+            <option value="true">共陽極 (Common Anode) - 最長腳接 +5V，系統自動反向驅動</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🦾 舵機 (Servo):</label>
+            <select id="hw_servo_pin" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="3">Pin 3 (~)</option>
+              <option value="4" selected>Pin 4</option>
+              <option value="7">Pin 7</option>
+              <option value="8">Pin 8</option>
+              <option value="9">Pin 9 (~)</option>
+              <option value="12">Pin 12</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">⚡ 繼電器 1:</label>
+            <select id="hw_relay1_pin" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="4">Pin 4</option>
+              <option value="7" selected>Pin 7</option>
+              <option value="8">Pin 8</option>
+              <option value="12">Pin 12</option>
+              <option value="13">Pin 13</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">⚡ 繼電器 2:</label>
+            <select id="hw_relay2_pin" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="4">Pin 4</option>
+              <option value="7">Pin 7</option>
+              <option value="8" selected>Pin 8</option>
+              <option value="12">Pin 12</option>
+              <option value="13">Pin 13</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 操作按鈕 -->
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:11px; color:#6c7086;">變更將寫入 <code>config.json</code>，立即永久生效</span>
+        <div style="display:flex; gap:10px;">
+          <button onclick="closeHwConfigModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">取消</button>
+          <button onclick="saveHwConfig()" style="background:linear-gradient(135deg, #11998e, #38ef7d); color:#0c2b18; border:none; padding:8px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 8px rgba(56,239,125,0.4);">💾 儲存並套用腳位</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Google OR-Tools CP-SAT 智慧排程對話框 -->
+  <div id="cpsatModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:440px; padding:22px; box-shadow:0 12px 36px rgba(0,0,0,0.6); border:1px solid #313244;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="font-size:16px; font-weight:bold; color:#A6E3A1; display:flex; align-items:center; gap:8px;">
+          <span>🧠 Google OR-Tools CP-SAT 智慧排程</span>
+        </div>
+        <span style="cursor:pointer; font-size:18px; color:#A6ADC8;" onclick="closeCpsatModal()">✕</span>
+      </div>
+      <div style="font-size:12px; color:#BAC2DE; line-height:1.6; margin-bottom:14px;">
+        使用 <b>Google OR-Tools CP-SAT (ortools.sat.python.cp_model)</b> 求解器，結合時長守恆、護眼防爆閃、功率積分約束，自動為您計算出最完美的 RGB 燈效時序並展開為原始積木！
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">🎭 演出風格偏好 (Style):</label>
+        <select id="cpsatStyle" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
+          <option value="balanced">🌈 均衡全彩大秀 (動態多樣平衡)</option>
+          <option value="party">🪩 派對夜店狂歡 (快節奏與高興奮度)</option>
+          <option value="relax">🌌 寧靜極光療癒 (燭光跳火與極光深呼吸)</option>
+          <option value="cyberpunk">🛸 賽博龐克未來 (霓虹與互補強烈對撞)</option>
+          <option value="police">🚨 警車巡邏防衛 (紅藍爆閃與琥珀警示)</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">⏱️ 目標總時長 (Total Seconds):</label>
+        <select id="cpsatDuration" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
+          <option value="20">20 秒循環</option>
+          <option value="30" selected>30 秒循環 (推薦)</option>
+          <option value="45">45 秒循環</option>
+          <option value="60">60 秒完整大秀</option>
+        </select>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button onclick="closeCpsatModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">取消</button>
+        <button onclick="runCpsatSolve()" style="background:linear-gradient(135deg, #00D166, #4C97FF); color:white; border:none; padding:8px 18px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 8px rgba(0,209,102,0.4);">🚀 啟動 CP-SAT 求解並展開積木</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

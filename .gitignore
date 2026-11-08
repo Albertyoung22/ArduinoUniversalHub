@@ -12,6 +12,9 @@ venv/
 *.exe
 build/
 dist/
+build_firmware/
+*.o
+*.elf
 *.egg-info/
 cloudflared.exe
 ArduinoController.exe

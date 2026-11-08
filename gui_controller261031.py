@@ -27,11 +27,12 @@ from tkinter.scrolledtext import ScrolledText
 import serial
 import serial.tools.list_ports
 
-# 固定工作目錄
-WORKSPACE_DIR = r"D:\PythonTest\AduinoTest"
+# 工作目錄與 Python 直譯器動態偵測
+if getattr(sys, "frozen", False):
+    WORKSPACE_DIR = os.path.dirname(sys.executable)
+else:
+    WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
 ARDUINO_CLI_PATH = r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe"
-PYTHON312_PATH = r"C:\Users\ALBERT\AppData\Local\Programs\Python\Python312\python.exe"
-
 # 8x8 點陣預設像素圖案
 PRESET_PATTERNS = {
     "❤️ 愛心": [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18],
@@ -290,6 +291,54 @@ class ArduinoGUI:
             if show_log:
                 self.log(f"❌ 儲存 config.json 失敗: {e}")
 
+    def _on_anode_toggle(self):
+        self.save_config(False)
+        is_anode = self.common_anode.get()
+        self.log(f"⚙ 極性已切換為: {'共陽極 (Common Anode)' if is_anode else '共陰極 (Common Cathode)'}")
+        if self.is_connected and not self.current_effect_name:
+            self._send_both_rgb(
+                self.m1_r_val.get(), self.m1_g_val.get(), self.m1_b_val.get(),
+                self.m2_r_val.get(), self.m2_g_val.get(), self.m2_b_val.get(),
+                force=True
+            )
+
+    def quick_flash_firmware(self):
+        port = self.port_combobox.get()
+        if not port:
+            messagebox.showwarning("警告", "請選擇有效的 COM 埠！")
+            return
+
+        firmware_path = os.path.join(WORKSPACE_DIR, "all_in_one_firmware", "all_in_one_firmware.ino")
+        if not os.path.exists(firmware_path):
+            messagebox.showerror("錯誤", f"找不到韌體草稿: {firmware_path}")
+            return
+
+        if not messagebox.askyesno("確認重刷", f"確定要使用內建 AVR 工具鏈重刷萬能全功能雙模韌體至 {port} 嗎？\n(這將會自動覆蓋 Arduino Uno 現有韌體)"):
+            return
+
+        was_connected = self.is_connected
+        self.disconnect()
+
+        def _do_flash():
+            self.log(f"🚀 開始為 {port} 自動編譯並重刷萬能全功能韌體 (免裝 arduino-cli)...")
+            try:
+                import avr_flasher
+                success = avr_flasher.compile_and_upload(firmware_path, port=port, log_cb=self.log)
+                if success:
+                    self.log("🎉 萬能全功能雙模韌體重刷成功！已完整就緒。")
+                    messagebox.showinfo("成功", f"萬能全功能韌體已成功燒錄至 {port}！\n雙 RGB 燈與 8x8 點陣已就緒。")
+                else:
+                    self.log("❌ 韌體燒錄失敗，請檢視執行日誌！")
+                    messagebox.showerror("失敗", "韌體燒錄失敗，請確認 COM 埠未被其他程式佔用。")
+            except Exception as e:
+                self.log(f"❌ 燒錄發生異常: {e}")
+                messagebox.showerror("異常", str(e))
+            finally:
+                if was_connected:
+                    self.root.after(1000, lambda: self.connect(port))
+
+        threading.Thread(target=_do_flash, daemon=True).start()
+
     def _build_ui(self):
         # 頂部連接列
         top_frame = ttk.LabelFrame(self.root, text=" 🔌 USB 序列通訊與硬體設定 ", padding=6)
@@ -305,7 +354,7 @@ class ArduinoGUI:
 
         ttk.Checkbutton(top_frame, text="共陽極 (Common Anode)", variable=self.common_anode,
                         command=lambda: self.save_config(False)).pack(side="left", padx=10)
-
+        ttk.Button(top_frame, text="⚡ 重刷萬能韌體", command=self.quick_flash_firmware).pack(side="left", padx=3)
         ttk.Button(top_frame, text="💾 儲存腳位", command=lambda: self.save_config(True)).pack(side="right", padx=3)
 
         self.lbl_status = ttk.Label(top_frame, text="⚪ 未連線", font=("Arial", 9, "bold"), foreground="gray")
@@ -333,6 +382,8 @@ class ArduinoGUI:
         self.log_text.pack(fill="both", expand=True)
 
     def _build_rgb_tab(self, parent):
+        # 1. 即時連線特效
+        fx_frame = ttk.LabelFrame(parent, text=" 雙燈即時連線特效 (18 款炫彩即時特效) ", padding=4)
         fx_frame.pack(fill="x", pady=2)
 
         fx_row1 = ttk.Frame(fx_frame)
@@ -748,12 +799,27 @@ class ArduinoGUI:
             self.ser.reset_input_buffer()
             self.ser.write(b"PING\n")
             time.sleep(0.2)
-            resp = self.ser.readline().decode("utf-8", errors="ignore").strip()
-            if "PONG" in resp:
+
+            # 讀取回應：Arduino 重啟後會先送出 READY 訊息，隨後回應 PONG
+            found_handshake = False
+            first_resp = ""
+            start_t = time.time()
+            while time.time() - start_t < 1.5:
+                line = self.ser.readline().decode("utf-8", errors="ignore").strip()
+                if line:
+                    if not first_resp:
+                        first_resp = line
+                    if "PONG" in line or "READY" in line:
+                        found_handshake = True
+                        time.sleep(0.05)
+                        self.ser.reset_input_buffer()
+                        break
+
+            if found_handshake:
                 self.is_connected = True
                 self.lbl_status.config(text=f"🟢 已連線 ({port})", foreground="#00aa00")
                 self.btn_connect.config(text="🔌 斷開連線")
-                self.log(f"✅ 成功與 Arduino Uno ({port}) 建立即時連線 (PING -> PONG)！")
+                self.log(f"✅ 成功與 Arduino Uno ({port}) 建立即時連線 (回應: {first_resp})！")
                 self.stop_worker = False
                 self.worker_thread = threading.Thread(target=self._serial_worker, daemon=True)
                 self.worker_thread.start()
@@ -761,7 +827,7 @@ class ArduinoGUI:
             else:
                 self.ser.close()
                 self.lbl_status.config(text="❌ 連線無回應", foreground="red")
-                self.log(f"⚠️ {port} 無法回應 PING (回應: '{resp}')")
+                self.log(f"⚠️ {port} 無法回應 PING (回應: '{first_resp}')")
         except Exception as e:
             self.lbl_status.config(text="❌ 連線失敗", foreground="red")
             self.log(f"❌ 無法連接 {port}: {e}")
@@ -785,6 +851,8 @@ class ArduinoGUI:
             try:
                 cmd = self.cmd_queue.get(timeout=0.1)
                 if self.ser and self.ser.is_open:
+                    if self.ser.in_waiting > 0:
+                        self.ser.read(self.ser.in_waiting)
                     self.ser.write((cmd + "\n").encode("utf-8"))
             except queue.Empty:
                 pass
@@ -818,6 +886,7 @@ class ArduinoGUI:
     def all_off(self):
         self.stop_current_effect()
         self.stop_marquee_text()
+        self._last_rgb_state = None
         self.m1_r_val.set(0)
         self.m1_g_val.set(0)
         self.m1_b_val.set(0)
@@ -826,7 +895,6 @@ class ArduinoGUI:
         self.m2_b_val.set(0)
         self.send_module_color(1, 0, 0, 0)
         self.send_module_color(2, 0, 0, 0)
-        self.matrix_clear_all()
         self.log("💡 全部燈光與點陣關閉")
 
     # 即時連線特效引擎
@@ -999,11 +1067,16 @@ class ArduinoGUI:
 
         # 結束迴圈時熄滅燈光
         if self.is_connected:
-            self._send_both_rgb(0, 0, 0, 0, 0, 0)
+            self._send_both_rgb(0, 0, 0, 0, 0, 0, force=True)
 
-    def _send_both_rgb(self, r1, g1, b1, r2, g2, b2):
+    def _send_both_rgb(self, r1, g1, b1, r2, g2, b2, force=False):
         rp1, gp1, bp1 = int(self.m1_r_pin.get()), int(self.m1_g_pin.get()), int(self.m1_b_pin.get())
         rp2, gp2, bp2 = int(self.m2_r_pin.get()), int(self.m2_g_pin.get()), int(self.m2_b_pin.get())
+
+        curr_state = (r1, g1, b1, r2, g2, b2)
+        if not force and getattr(self, "_last_rgb_state", None) == curr_state:
+            return
+        self._last_rgb_state = curr_state
 
         if self.common_anode.get():
             r1, g1, b1 = 255 - r1, 255 - g1, 255 - b1
@@ -1107,7 +1180,13 @@ class ArduinoGUI:
 def main():
     root = tk.Tk()
     app = ArduinoGUI(root)
-    root.mainloop()
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        try:
+            app.on_close()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: arduino-block-studio
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python block_studio.py
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9

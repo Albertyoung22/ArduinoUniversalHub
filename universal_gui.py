@@ -33,6 +33,8 @@ try:
     from tkinter import filedialog, messagebox, ttk
     from tkinter.scrolledtext import ScrolledText
 except (ImportError, Exception):
+    class _DummyTk(type):
+        def __getattr__(self, name):
             return object
     class _DummyModule(metaclass=_DummyTk):
         def __getattr__(self, name):
@@ -449,6 +451,8 @@ class UniversalControllerApp:
         ttk.Button(row2, text="🔥 脫機燒錄流程", command=self.flash_standalone_workflow).pack(side=tk.LEFT, padx=(0, 6))
 
         # 右側核心功能捷徑
+        ttk.Button(row2, text="🐼 mBlock 積木工作室", style="Primary.TButton", command=self.open_block_studio).pack(side=tk.RIGHT, padx=4)
+        ttk.Button(row2, text="⚡ 雙路 Wi-Fi 繼電器", style="Primary.TButton", command=self.open_wifi_relay_dialog).pack(side=tk.RIGHT, padx=4)
         ttk.Button(row2, text="✨ 雙燈特效 (18款)", style="Primary.TButton", command=self.open_dual_effects_dialog).pack(side=tk.RIGHT, padx=4)
         ttk.Button(row2, text="🎭 自訂流程中樞", style="Primary.TButton", command=self.open_workflow_dialog).pack(side=tk.RIGHT, padx=4)
         ttk.Button(row2, text="🔍 系統巡檢", command=self.run_diagnostics).pack(side=tk.RIGHT, padx=4)
@@ -1197,6 +1201,26 @@ class UniversalControllerApp:
     def open_workflow_dialog(self):
         """開啟自訂流程與自動化編排管理視窗"""
         WorkflowDialog(self.root, self)
+
+    def open_block_studio(self):
+        """非同步啟動 mBlock 5 風格兒童視覺化積木程式工作室"""
+        if getattr(self, "ser", None):
+            self.log("⚠️ 啟動積木工作室，正在釋放序列埠以供積木工作室獨佔使用...")
+            try:
+                self.disconnect(manual=True)
+            except Exception:
+                pass
+
+        def launch():
+            import subprocess
+            import sys
+            script_path = os.path.join(WORKSPACE_DIR, "block_studio.py")
+            subprocess.Popen([sys.executable, script_path])
+        threading.Thread(target=launch, daemon=True).start()
+
+    def open_wifi_relay_dialog(self):
+        """開啟 ESP-01 雙路 Wi-Fi 繼電器控制中樞視窗"""
+        WiFiRelayDialog(self.root, self)
 
     def open_dual_effects_dialog(self):
         """開啟雙燈即時連線特效 (18 款炫彩即時特效) 控制視窗"""
@@ -2538,6 +2562,345 @@ class DualRGBEffectsDialog(tk.Toplevel):
         else:
             self.status_lbl.configure(text="狀態: 閒置 (已停止)", fg=self.hub.TEXT_MUTED)
 
+
+# ==============================================================================
+# ESP-01 雙路 Wi-Fi 繼電器控制視窗 (Bestep 2-CH Relay Hub Dialog)
+# ==============================================================================
+
+class WiFiRelayDialog(tk.Toplevel):
+    """ESP-01 雙路 Wi-Fi 繼電器模組控制視窗 (支援 Mode 1 AP 直連與 Mode 2 區網)"""
+
+    CMD_R1_ON  = bytes.fromhex("A0 01 01 A2")
+    CMD_R1_OFF = bytes.fromhex("A0 01 00 A1")
+    CMD_R2_ON  = bytes.fromhex("A0 02 01 A3")
+    CMD_R2_OFF = bytes.fromhex("A0 02 00 A2")
+
+    def __init__(self, parent, hub):
+        super().__init__(parent)
+        self.hub = hub
+        self.title("⚡ ESP-01 雙路 Wi-Fi 繼電器控制中樞")
+        self.geometry("820x680")
+        self.minsize(760, 600)
+        self.configure(bg=hub.BG_TOP)
+        self.transient(parent)
+
+        self.sock = None
+        self.is_connected = False
+        self._lock = threading.Lock()
+        self.r1_state = False
+        self.r2_state = False
+
+        self._build_ui()
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _on_close(self):
+        self.disconnect()
+        self.destroy()
+
+    def connect(self, host, port):
+        self.disconnect()
+        with self._lock:
+            try:
+                import socket
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(2.5)
+                # 智慧網卡綁定：若目標為 192.168.4.x，自動綁定至對應網卡的本機 IP
+                try:
+                    hostname = socket.gethostname()
+                    local_ips = socket.gethostbyname_ex(hostname)[2]
+                    prefix = ".".join(host.split(".")[:3])
+                    matched_ip = next((ip for ip in local_ips if ip.startswith(prefix)), None)
+                    if matched_ip:
+                        s.bind((matched_ip, 0))
+                except Exception:
+                    pass
+                s.connect((host, int(port)))
+                self.sock = s
+                self.is_connected = True
+                return True, f"成功連線至 {host}:{port}"
+            except Exception as e:
+                self.is_connected = False
+                if self.sock:
+                    try:
+                        self.sock.close()
+                    except Exception:
+                        pass
+                    self.sock = None
+                return False, str(e)
+
+    def disconnect(self):
+        with self._lock:
+            self.is_connected = False
+            if self.sock:
+                try:
+                    self.sock.close()
+                except Exception:
+                    pass
+                self.sock = None
+
+    def send_cmd(self, cmd_bytes):
+        with self._lock:
+            if not self.is_connected or not self.sock:
+                raise ConnectionError("尚未連線至繼電器模組")
+            self.sock.sendall(cmd_bytes)
+
+    def _build_ui(self):
+        top_bar = tk.Frame(self, bg=self.hub.BG_TOP, padx=16, pady=10)
+        top_bar.pack(fill=tk.X)
+        tk.Label(
+            top_bar,
+            text="⚡ Bestep ESP-01 雙路 Wi-Fi 繼電器控制中樞",
+            bg=self.hub.BG_TOP,
+            fg=self.hub.ACCENT,
+            font=("Segoe UI", 12, "bold"),
+        ).pack(side=tk.LEFT)
+        tk.Label(
+            top_bar,
+            text="預設 AP: 192.168.4.1:8080 (HEX Protocol)",
+            bg=self.hub.BG_TOP,
+            fg=self.hub.TEXT_MUTED,
+            font=("Segoe UI", 9),
+        ).pack(side=tk.RIGHT)
+
+        conn_frame = tk.Frame(self, bg=self.hub.BG_CARD, padx=14, pady=10, relief=tk.FLAT)
+        conn_frame.pack(fill=tk.X, padx=14, pady=(6, 6))
+
+        tk.Label(conn_frame, text="🌐 設備 IP:", bg=self.hub.BG_CARD, fg=self.hub.TEXT_MAIN, font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 4))
+        self.ip_entry = tk.Entry(conn_frame, bg="#11111B", fg=self.hub.TEXT_MAIN, insertbackground=self.hub.TEXT_MAIN, relief=tk.FLAT, font=("Consolas", 10), width=15)
+        self.ip_entry.insert(0, "192.168.4.1")
+        self.ip_entry.pack(side=tk.LEFT, padx=(0, 10))
+
+        tk.Label(conn_frame, text="埠號:", bg=self.hub.BG_CARD, fg=self.hub.TEXT_MAIN, font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 4))
+        self.port_entry = tk.Entry(conn_frame, bg="#11111B", fg=self.hub.TEXT_MAIN, insertbackground=self.hub.TEXT_MAIN, relief=tk.FLAT, font=("Consolas", 10), width=6)
+        self.port_entry.insert(0, "8080")
+        self.port_entry.pack(side=tk.LEFT, padx=(0, 12))
+
+        self.btn_conn = tk.Button(
+            conn_frame,
+            text="📶 連線繼電器",
+            bg=self.hub.ACCENT,
+            fg="#11111B",
+            font=("Segoe UI", 9, "bold"),
+            bd=0,
+            padx=12,
+            pady=3,
+            cursor="hand2",
+            command=self.toggle_connection,
+        )
+        self.btn_conn.pack(side=tk.LEFT, padx=4)
+
+        self.lbl_status = tk.Label(
+            conn_frame,
+            text="● 未連線",
+            bg=self.hub.BG_CARD,
+            fg=self.hub.ACCENT_RED,
+            font=("Segoe UI", 9, "bold"),
+        )
+        self.lbl_status.pack(side=tk.RIGHT, padx=4)
+
+        # 雙路卡片容器
+        cards_box = tk.Frame(self, bg=self.hub.BG_MAIN)
+        cards_box.pack(fill=tk.X, padx=14, pady=6)
+        cards_box.columnconfigure(0, weight=1)
+        cards_box.columnconfigure(1, weight=1)
+
+        # --- Relay 1 ---
+        card_r1 = tk.Frame(cards_box, bg=self.hub.BG_CARD, padx=14, pady=14, bd=1, relief=tk.RIDGE)
+        card_r1.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+
+        tk.Label(card_r1, text="⚡ 繼電器 1 (Relay 1)", font=("Segoe UI", 11, "bold"), bg=self.hub.BG_CARD, fg=self.hub.ACCENT_YELLOW).pack(anchor="w")
+        tk.Label(card_r1, text="端子: NO1 / COM1 / NC1", font=("Segoe UI", 8), bg=self.hub.BG_CARD, fg=self.hub.TEXT_MUTED).pack(anchor="w", pady=(0, 8))
+
+        self.r1_badge = tk.Label(card_r1, text="已關閉 [OFF]", font=("Segoe UI", 11, "bold"), bg="#363A4F", fg=self.hub.TEXT_MUTED, pady=8)
+        self.r1_badge.pack(fill=tk.X, pady=(0, 10))
+
+        btn_row_r1 = tk.Frame(card_r1, bg=self.hub.BG_CARD)
+        btn_row_r1.pack(fill=tk.X)
+        self.btn_r1_on = tk.Button(btn_row_r1, text="🟢 開啟 (ON)", font=("Segoe UI", 9, "bold"), bg="#363A4F", fg=self.hub.TEXT_MAIN, bd=0, pady=5, cursor="hand2", command=lambda: self.set_relay(1, True))
+        self.btn_r1_on.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
+        self.btn_r1_off = tk.Button(btn_row_r1, text="🔴 關閉 (OFF)", font=("Segoe UI", 9, "bold"), bg="#363A4F", fg=self.hub.TEXT_MAIN, bd=0, pady=5, cursor="hand2", command=lambda: self.set_relay(1, False))
+        self.btn_r1_off.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 0))
+
+        tk.Button(card_r1, text="⏱️ 點動觸發 (1 秒)", font=("Segoe UI", 8), bg="#313244", fg=self.hub.TEXT_MUTED, bd=0, pady=3, cursor="hand2", command=lambda: self.pulse_relay(1)).pack(fill=tk.X, pady=(8, 0))
+
+        # --- Relay 2 ---
+        card_r2 = tk.Frame(cards_box, bg=self.hub.BG_CARD, padx=14, pady=14, bd=1, relief=tk.RIDGE)
+        card_r2.grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+
+        tk.Label(card_r2, text="⚡ 繼電器 2 (Relay 2)", font=("Segoe UI", 11, "bold"), bg=self.hub.BG_CARD, fg=self.hub.ACCENT_YELLOW).pack(anchor="w")
+        tk.Label(card_r2, text="端子: NO2 / COM2 / NC2", font=("Segoe UI", 8), bg=self.hub.BG_CARD, fg=self.hub.TEXT_MUTED).pack(anchor="w", pady=(0, 8))
+
+        self.r2_badge = tk.Label(card_r2, text="已關閉 [OFF]", font=("Segoe UI", 11, "bold"), bg="#363A4F", fg=self.hub.TEXT_MUTED, pady=8)
+        self.r2_badge.pack(fill=tk.X, pady=(0, 10))
+
+        btn_row_r2 = tk.Frame(card_r2, bg=self.hub.BG_CARD)
+        btn_row_r2.pack(fill=tk.X)
+        self.btn_r2_on = tk.Button(btn_row_r2, text="🟢 開啟 (ON)", font=("Segoe UI", 9, "bold"), bg="#363A4F", fg=self.hub.TEXT_MAIN, bd=0, pady=5, cursor="hand2", command=lambda: self.set_relay(2, True))
+        self.btn_r2_on.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
+        self.btn_r2_off = tk.Button(btn_row_r2, text="🔴 關閉 (OFF)", font=("Segoe UI", 9, "bold"), bg="#363A4F", fg=self.hub.TEXT_MAIN, bd=0, pady=5, cursor="hand2", command=lambda: self.set_relay(2, False))
+        self.btn_r2_off.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(3, 0))
+
+        tk.Button(card_r2, text="⏱️ 點動觸發 (1 秒)", font=("Segoe UI", 8), bg="#313244", fg=self.hub.TEXT_MUTED, bd=0, pady=3, cursor="hand2", command=lambda: self.pulse_relay(2)).pack(fill=tk.X, pady=(8, 0))
+
+        # 全域快捷
+        batch_bar = tk.Frame(self, bg=self.hub.BG_CARD, padx=14, pady=8, bd=1, relief=tk.RIDGE)
+        batch_bar.pack(fill=tk.X, padx=14, pady=6)
+        tk.Label(batch_bar, text="🚀 全域快捷:", font=("Segoe UI", 9, "bold"), bg=self.hub.BG_CARD, fg=self.hub.TEXT_MAIN).pack(side=tk.LEFT, padx=(0, 8))
+
+        tk.Button(batch_bar, text="⚡ 全部開啟 (ALL ON)", font=("Segoe UI", 8, "bold"), bg="#2E7D32", fg="#FFFFFF", bd=0, padx=8, pady=3, cursor="hand2", command=self.all_on).pack(side=tk.LEFT, padx=3)
+        tk.Button(batch_bar, text="⏹️ 全部關閉 (ALL OFF)", font=("Segoe UI", 8, "bold"), bg="#C62828", fg="#FFFFFF", bd=0, padx=8, pady=3, cursor="hand2", command=self.all_off).pack(side=tk.LEFT, padx=3)
+        tk.Button(batch_bar, text="🔄 狀態反轉", font=("Segoe UI", 8), bg="#45475A", fg=self.hub.TEXT_MAIN, bd=0, padx=8, pady=3, cursor="hand2", command=self.invert_all).pack(side=tk.LEFT, padx=3)
+        tk.Button(batch_bar, text="🧪 輪流開關自檢", font=("Segoe UI", 8), bg="#313244", fg=self.hub.ACCENT, bd=0, padx=8, pady=3, cursor="hand2", command=self.run_self_test).pack(side=tk.RIGHT, padx=3)
+
+        # 日誌終端
+        log_frame = tk.Frame(self, bg=self.hub.BG_CARD, padx=14, pady=8, bd=1, relief=tk.RIDGE)
+        log_frame.pack(fill=tk.BOTH, expand=True, padx=14, pady=(6, 12))
+
+        log_head = tk.Frame(log_frame, bg=self.hub.BG_CARD)
+        log_head.pack(fill=tk.X, pady=(0, 4))
+        tk.Label(log_head, text="📜 HEX 通訊指令紀錄", font=("Segoe UI", 8, "bold"), bg=self.hub.BG_CARD, fg=self.hub.TEXT_MUTED).pack(side=tk.LEFT)
+        tk.Button(log_head, text="清除", font=("Segoe UI", 7), bg="#313244", fg=self.hub.TEXT_MUTED, bd=0, padx=6, pady=1, cursor="hand2", command=self.clear_log).pack(side=tk.RIGHT)
+
+        from tkinter.scrolledtext import ScrolledText
+        self.log_text = ScrolledText(log_frame, font=("Consolas", 9), bg="#11111B", fg="#A6ADC8", bd=0, height=6)
+        self.log_text.pack(fill=tk.BOTH, expand=True)
+
+        self.log("💡 提示：確認 Wi-Fi 連線後，點擊「📶 連線繼電器」即可開始控制！")
+
+    def log(self, msg):
+        import time
+        ts = time.strftime("%H:%M:%S")
+        self.log_text.insert(tk.END, f"[{ts}] {msg}\n")
+        self.log_text.see(tk.END)
+
+    def clear_log(self):
+        self.log_text.delete("1.0", tk.END)
+
+    def toggle_connection(self):
+        if self.is_connected:
+            self.disconnect()
+            self.lbl_status.config(text="● 已斷線", fg=self.hub.ACCENT_RED)
+            self.btn_conn.config(text="📶 連線繼電器", bg=self.hub.ACCENT, fg="#11111B")
+            self.log("⏹️ 已中斷與繼電器的連線")
+        else:
+            ip = self.ip_entry.get().strip()
+            port = self.port_entry.get().strip()
+            self.lbl_status.config(text="● 連線中...", fg=self.hub.ACCENT_YELLOW)
+            self.btn_conn.config(state=tk.DISABLED)
+
+            def do_connect():
+                ok, msg = self.connect(ip, port)
+                self.after(0, lambda: self._on_connect_res(ok, msg))
+
+            threading.Thread(target=do_connect, daemon=True).start()
+
+    def _on_connect_res(self, ok, msg):
+        self.btn_conn.config(state=tk.NORMAL)
+        if ok:
+            self.lbl_status.config(text="● 已連線", fg=self.hub.ACCENT_GREEN)
+            self.btn_conn.config(text="❌ 中斷連線", bg=self.hub.ACCENT_RED, fg="#FFFFFF")
+            self.log(f"✅ {msg}")
+        else:
+            self.lbl_status.config(text="● 連線失敗", fg=self.hub.ACCENT_RED)
+            self.btn_conn.config(text="📶 連線繼電器", bg=self.hub.ACCENT, fg="#11111B")
+            self.log(f"❌ 連線失敗: {msg}")
+            messagebox.showwarning("連線提示", f"無法連線到 {self.ip_entry.get()}:{self.port_entry.get()}\n\n請確認：\n1. 電腦 Wi-Fi 是否已連上模組熱點？\n2. 繼電器板子是否通電且 D6 綠燈慢閃？")
+
+    def set_relay(self, ch, state):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+
+        cmd = (self.CMD_R1_ON if state else self.CMD_R1_OFF) if ch == 1 else (self.CMD_R2_ON if state else self.CMD_R2_OFF)
+        hex_str = ("A0 01 01 A2" if state else "A0 01 00 A1") if ch == 1 else ("A0 02 01 A3" if state else "A0 02 00 A2")
+
+        def task():
+            try:
+                self.send_cmd(cmd)
+                self.after(0, lambda c=ch, s=state, h=hex_str: self._update_ui(c, s, h))
+            except Exception as e:
+                err_msg = str(e)
+                self.after(0, lambda m=err_msg: self._on_err(m))
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def _update_ui(self, ch, state, hex_str):
+        if ch == 1:
+            self.r1_state = state
+            if state:
+                self.r1_badge.config(text="⚡ 已開啟 [ON]", bg="#2E7D32", fg="#FFFFFF")
+                self.btn_r1_on.config(bg=self.hub.ACCENT_GREEN, fg="#11111B")
+                self.btn_r1_off.config(bg="#363A4F", fg=self.hub.TEXT_MAIN)
+            else:
+                self.r1_badge.config(text="已關閉 [OFF]", bg="#363A4F", fg=self.hub.TEXT_MUTED)
+                self.btn_r1_on.config(bg="#363A4F", fg=self.hub.TEXT_MAIN)
+                self.btn_r1_off.config(bg=self.hub.ACCENT_RED, fg="#FFFFFF")
+            self.log(f"📤 第 1 路 -> {'開啟 (ON)' if state else '關閉 (OFF)'} | HEX: [{hex_str}]")
+        else:
+            self.r2_state = state
+            if state:
+                self.r2_badge.config(text="⚡ 已開啟 [ON]", bg="#2E7D32", fg="#FFFFFF")
+                self.btn_r2_on.config(bg=self.hub.ACCENT_GREEN, fg="#11111B")
+                self.btn_r2_off.config(bg="#363A4F", fg=self.hub.TEXT_MAIN)
+            else:
+                self.r2_badge.config(text="已關閉 [OFF]", bg="#363A4F", fg=self.hub.TEXT_MUTED)
+                self.btn_r2_on.config(bg="#363A4F", fg=self.hub.TEXT_MAIN)
+                self.btn_r2_off.config(bg=self.hub.ACCENT_RED, fg="#FFFFFF")
+            self.log(f"📤 第 2 路 -> {'開啟 (ON)' if state else '關閉 (OFF)'} | HEX: [{hex_str}]")
+
+    def _on_err(self, err_msg):
+        self.lbl_status.config(text="● 連線中斷", fg=self.hub.ACCENT_RED)
+        self.btn_conn.config(text="📶 連線繼電器", bg=self.hub.ACCENT, fg="#11111B")
+        self.log(f"⚠️ 傳送失敗: {err_msg}")
+
+    def pulse_relay(self, ch):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+        def task():
+            self.set_relay(ch, True)
+            import time
+            time.sleep(1.0)
+            self.set_relay(ch, False)
+        threading.Thread(target=task, daemon=True).start()
+
+    def all_on(self):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+        self.set_relay(1, True)
+        self.after(100, lambda: self.set_relay(2, True))
+
+    def all_off(self):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+        self.set_relay(1, False)
+        self.after(100, lambda: self.set_relay(2, False))
+
+    def invert_all(self):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+        self.set_relay(1, not self.r1_state)
+        self.after(100, lambda: self.set_relay(2, not self.r2_state))
+
+    def run_self_test(self):
+        if not self.is_connected:
+            messagebox.showinfo("連線提示", "請先點擊「📶 連線繼電器」再進行操作！")
+            return
+        def task():
+            import time
+            self.log("🧪 開始自動測試序列...")
+            self.set_relay(1, True)
+            time.sleep(1.0)
+            self.set_relay(1, False)
+            time.sleep(0.5)
+            self.set_relay(2, True)
+            time.sleep(1.0)
+            self.set_relay(2, False)
+            self.log("🎉 測試序列完成！")
+        threading.Thread(target=task, daemon=True).start()
 
 # ==============================================================================
 # 配件卡片元件類別 (Component Cards)

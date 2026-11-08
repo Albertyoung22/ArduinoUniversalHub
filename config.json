@@ -5,6 +5,10 @@
   "m2_r_pin": "11",
   "m2_g_pin": "9",
   "m2_b_pin": "10",
+  "common_anode": false,
+  "servo_pin": "4",
+  "relay1_pin": "13",
+  "relay2_pin": "12",
   "matrix_din_pin": "12",
   "matrix_cs_pin": "8",
   "matrix_clk_pin": "7",
@@ -18,6 +22,5 @@
     48,
     0
   ],
-  "common_anode": true,
   "last_com_port": "COM4"
 }

@@ -996,6 +996,52 @@ def sse_events():
     })
 
 
+@app.route("/api/relay", methods=["POST"])
+def api_relay():
+    """ESP-01 雙路 Wi-Fi 繼電器遠端控制 API (相容 Web、手機遠端與 Render)"""
+    data = request.get_json(silent=True) or {}
+    ch = int(data.get("channel", 1))
+    action = data.get("action", "on")  # "on", "off", "pulse"
+    ip = data.get("ip", "192.168.4.1")
+    port = int(data.get("port", 8080))
+
+    cmd_map = {
+        (1, "on"): bytes.fromhex("A0 01 01 A2"),
+        (1, "off"): bytes.fromhex("A0 01 00 A1"),
+        (2, "on"): bytes.fromhex("A0 02 01 A3"),
+        (2, "off"): bytes.fromhex("A0 02 00 A2")
+    }
+
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2.0)
+        # 智慧網卡綁定
+        try:
+            hostname = socket.gethostname()
+            local_ips = socket.gethostbyname_ex(hostname)[2]
+            prefix = ".".join(ip.split(".")[:3])
+            matched_ip = next((lip for lip in local_ips if lip.startswith(prefix)), None)
+            if matched_ip:
+                s.bind((matched_ip, 0))
+        except Exception:
+            pass
+
+        s.connect((ip, port))
+        if action == "pulse":
+            s.sendall(cmd_map.get((ch, "on")))
+            time.sleep(1.0)
+            s.sendall(cmd_map.get((ch, "off")))
+        else:
+            cmd = cmd_map.get((ch, action))
+            if cmd:
+                s.sendall(cmd)
+        s.close()
+        return jsonify({"ok": True, "channel": ch, "action": action})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+
+
 @app.route("/api/action", methods=["POST"])
 def api_action():
     """統整動作指令分發入口 (REST API)，相容任何瀏覽器與內網穿透代理"""

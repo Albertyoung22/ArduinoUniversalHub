@@ -688,31 +688,38 @@ def compile_and_upload(port=None):
     print(f"🚀 開始自動編譯並燒錄進電路板 (COM 埠: {port})")
     print(f"=======================================================")
 
-    compile_cmd = [
-        ARDUINO_CLI_PATH,
-        "compile",
-        "--fqbn", "arduino:avr:uno",
-        FIRMWARE_DIR
-    ]
-    print(f"🔨 正在編譯 C++ 固件...")
-    res_compile = subprocess.run(compile_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if res_compile.returncode != 0:
-        print(f"❌ 編譯失敗:\n{res_compile.stderr}")
-        raise RuntimeError("Arduino-cli 編譯失敗")
-    print("✅ 編譯成功！二進位 Flash Image 產生完成。")
+    if os.path.exists(ARDUINO_CLI_PATH):
+        compile_cmd = [
+            ARDUINO_CLI_PATH,
+            "compile",
+            "--fqbn", "arduino:avr:uno",
+            FIRMWARE_DIR
+        ]
+        print(f"🔨 正在編譯 C++ 固件...")
+        res_compile = subprocess.run(compile_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res_compile.returncode != 0:
+            print(f"❌ 編譯失敗:\n{res_compile.stderr}")
+            raise RuntimeError("Arduino-cli 編譯失敗")
+        print("✅ 編譯成功！二進位 Flash Image 產生完成。")
 
-    upload_cmd = [
-        ARDUINO_CLI_PATH,
-        "upload",
-        "-p", port,
-        "--fqbn", "arduino:avr:uno",
-        FIRMWARE_DIR
-    ]
-    print(f"⚡ 正在燒錄 (Flash) 至 Arduino Uno ({port})...")
-    res_upload = subprocess.run(upload_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if res_upload.returncode != 0:
-        print(f"❌ 燒錄失敗:\n{res_upload.stderr}")
-        raise RuntimeError("Arduino-cli 燒錄失敗")
+        upload_cmd = [
+            ARDUINO_CLI_PATH,
+            "upload",
+            "-p", port,
+            "--fqbn", "arduino:avr:uno",
+            FIRMWARE_DIR
+        ]
+        print(f"⚡ 正在燒錄 (Flash) 至 Arduino Uno ({port})...")
+        res_upload = subprocess.run(upload_cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        if res_upload.returncode != 0:
+            print(f"❌ 燒錄失敗:\n{res_upload.stderr}")
+            raise RuntimeError("Arduino-cli 燒錄失敗")
+    else:
+        # 使用本機 AVR-GCC 與 avrdude 進行一鍵燒錄 (無需安裝 arduino-cli)
+        import avr_flasher
+        success = avr_flasher.compile_and_upload(FIRMWARE_INO, port=port, log_cb=print)
+        if not success:
+            raise RuntimeError("AVR 工具鏈燒錄失敗")
     print("🎉 燒錄成功！固件已永久固化進 ATmega328P Flash 晶片。")
     print("\n" + "=" * 55)
     print("✨ 【脫機獨立運行驗證完成】")
