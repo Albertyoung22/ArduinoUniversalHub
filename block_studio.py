@@ -37,7 +37,6 @@ except ImportError:
     cp_model = None
     HAS_ORTOOLS = False
 
-from universal_shared import FONT_5X7, text_to_matrix_frames, PRESET_MATRIX, PRESET_ANIMATIONS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -289,6 +288,16 @@ def healthz():
 @app.route("/")
 def index():
     return send_from_directory(WEB_DIR, "blockly_studio.html")
+
+
+@app.route("/sophia_logo.svg")
+def serve_sophia_logo():
+    return send_from_directory(WEB_DIR, "sophia_logo.svg")
+
+
+@app.route("/static/<path:filename>")
+def serve_static(filename):
+    return send_from_directory(WEB_DIR, filename)
 
 
 @app.route("/static/blockly/<path:filename>")
@@ -1194,7 +1203,7 @@ def api_hardware_test():
         din = hardware_config.get("matrix_din_pin", "12")
         cs = hardware_config.get("matrix_cs_pin", "8")
         clk = hardware_config.get("matrix_clk_pin", "7")
-        icon = str(data.get("icon", "heart")).lower()
+        icon = data.get("icon", "heart")
         if not arduino_serial.is_connected:
             arduino_serial.log(f"⚠️ [USB 未連線] 測試點陣 腳位 DIN:{din} CS:{cs} CLK:{clk} -> {icon}")
             return jsonify({"ok": False, "error": "USB 尚未連線"}), 400
@@ -1321,7 +1330,7 @@ def main():
 
     app_url = f"http://{'localhost' if host == '0.0.0.0' else host}:{port}"
     print("=================================================================", flush=True)
-    print("🐼 Arduino Block Studio (mBlock 5 風格積木程式環境 - Flask + Waitress)", flush=True)
+    print("👧 昕蓉Sophia - 智慧兒童視覺化積木程式設計工作室 (Flask + Waitress)", flush=True)
     print(f"🌐 伺服器啟動於: http://{host}:{port}", flush=True)
     if in_cloud:
         print("☁️ 正在雲端環境 (Render/Cloud) 運行，健康檢查路由: /healthz", flush=True)

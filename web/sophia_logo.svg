@@ -1,0 +1,46 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 外環光暈底圓 -->
+  <circle cx="50" cy="50" r="48" fill="url(#bgGrad)" stroke="#FFFFFF" stroke-width="3"/>
+  <!-- 後髮 -->
+  <path d="M22 45 C15 65 20 85 30 90 C32 80 34 65 35 55 Z" fill="#4A2E18"/>
+  <path d="M78 45 C85 65 80 85 70 90 C68 80 66 65 65 55 Z" fill="#4A2E18"/>
+  <!-- 雙馬尾/髮髻可愛蝴蝶結 -->
+  <path d="M22 36 C14 30 14 42 22 40 C26 42 26 30 22 36 Z" fill="#FF5E8E"/>
+  <circle cx="22" cy="37" r="3" fill="#FFE066"/>
+  <path d="M78 36 C86 30 86 42 78 40 C74 42 74 30 78 36 Z" fill="#FF5E8E"/>
+  <circle cx="78" cy="37" r="3" fill="#FFE066"/>
+  <!-- 衣服/小洋裝領口 -->
+  <path d="M32 95 C35 80 65 80 68 95 Z" fill="#FF7597"/>
+  <path d="M42 82 L50 89 L58 82 Z" fill="#FFFFFF"/>
+  <!-- 臉部與耳朵 -->
+  <circle cx="28" cy="56" r="6" fill="#FDD8BA"/>
+  <circle cx="72" cy="56" r="6" fill="#FDD8BA"/>
+  <ellipse cx="50" cy="56" rx="24" ry="23" fill="#FEE3CD"/>
+  <!-- 腮紅 -->
+  <ellipse cx="36" cy="62" rx="4.5" ry="2.5" fill="#FF94A8" opacity="0.7"/>
+  <ellipse cx="64" cy="62" rx="4.5" ry="2.5" fill="#FF94A8" opacity="0.7"/>
+  <!-- 萌萌大眼 -->
+  <!-- 左眼 -->
+  <ellipse cx="40" cy="54" rx="4" ry="5.5" fill="#3D2314"/>
+  <circle cx="38.5" cy="52" r="1.8" fill="#FFFFFF"/>
+  <circle cx="42" cy="56" r="0.8" fill="#FFFFFF"/>
+  <!-- 右眼 -->
+  <ellipse cx="60" cy="54" rx="4" ry="5.5" fill="#3D2314"/>
+  <circle cx="58.5" cy="52" r="1.8" fill="#FFFFFF"/>
+  <circle cx="62" cy="56" r="0.8" fill="#FFFFFF"/>
+  <!-- 睫毛 -->
+  <path d="M36 49 C38 47 43 47 44 49" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M56 49 C57 47 62 47 64 49" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- 可愛微笑 -->
+  <path d="M47 64 Q50 67 53 64" stroke="#FF5E7E" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+  <!-- 瀏海齊劉海與頭頂髮型 -->
+  <path d="M26 48 C28 26 72 26 74 48 C68 40 60 48 50 43 C40 48 32 40 26 48 Z" fill="#5A381E"/>
+  <path d="M50 25 C45 28 40 33 38 41 C43 36 48 36 50 25 Z" fill="#6E4424" opacity="0.4"/>
+  <!-- 漸層定義 -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFDEE9"/>
+      <stop offset="1" stop-color="#B5FFFC"/>
+    </linearGradient>
+  </defs>
+</svg>

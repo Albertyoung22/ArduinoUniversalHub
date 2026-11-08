@@ -2,8 +2,9 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <title>🐼 Arduino Block Studio - 兒童視覺化積木程式 (mBlock 5 風格)</title>
+  <title>👧 昕蓉Sophia - 智慧兒童積木程式設計工作室</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="/sophia_logo.svg">
 
   <!-- 引入 Google Blockly 核心與語言包 (已本地快取，支援 100% 離線) -->
   <script src="/static/blockly/blockly.min.js"></script>
@@ -29,70 +30,125 @@
       overflow-y: hidden;
     }
 
-    /* 頂部 mBlock 5 風格導航欄 */
+    /* 頂部現代化導航欄 */
     header {
-      height: 52px;
-      min-height: 52px;
-      background: #4C97FF;
+      height: 54px;
+      min-height: 54px;
+      background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 55%, #3B82F6 100%);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 14px;
+      padding: 0 16px;
       color: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 3px 12px rgba(0,0,0,0.22);
       z-index: 100;
       white-space: nowrap;
       flex-shrink: 0;
       overflow-x: auto;
       overflow-y: hidden;
-      min-width: 960px;
+      gap: 12px;
+    }
+
+    /* 左側品牌與核心執行組 */
+    .nav-left-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 15px;
-      font-weight: bold;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-      flex-shrink: 0;
+      gap: 9px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.2s ease;
     }
 
-    .brand-subtitle {
-      font-size: 11px;
-      opacity: 0.85;
-      font-weight: normal;
-      margin-left: 4px;
+    .brand:hover {
+      transform: scale(1.02);
     }
 
-    @media (max-width: 1250px) {
-      .brand-subtitle {
-        display: none;
-      }
-    }
-
-    .brand-icon {
-      font-size: 22px;
-      background: rgba(255,255,255,0.2);
+    .brand-avatar-box {
+      position: relative;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      width: 34px;
-      height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      background: white;
+      padding: 1.5px;
       flex-shrink: 0;
     }
 
-    .nav-controls {
+    .girl-avatar {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .brand:hover .girl-avatar {
+      transform: rotate(-6deg) scale(1.06);
+    }
+
+    .avatar-sparkle {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      font-size: 13px;
+      animation: sparkleGlow 2s infinite ease-in-out;
+      pointer-events: none;
+    }
+
+    @keyframes sparkleGlow {
+      0%, 100% { transform: scale(0.9); opacity: 0.7; }
+      50% { transform: scale(1.25); opacity: 1; }
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.15;
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      background: linear-gradient(135deg, #FFFFFF, #FED7AA 60%, #FECDD3 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .brand-tagline {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    .nav-divider {
+      width: 1px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.22);
+      flex-shrink: 0;
+    }
+
+    .action-btn-group {
       display: flex;
       align-items: center;
-      gap: 8px;
-      white-space: nowrap;
+      gap: 6px;
       flex-shrink: 0;
     }
 
-    /* 綠旗與停止按鈕 */
+    /* 綠旗與停止按鈕 (Scratch / mBlock 鮮亮風格) */
     .btn-flag {
       background: #00D166;
       color: white;
@@ -153,45 +209,209 @@
       box-shadow: 0 1px 0 #CC0000;
     }
 
-    .status-badge {
-      font-size: 12px;
-      background: rgba(0,0,0,0.2);
-      padding: 4px 10px;
+    /* 中間：連線中樞 (Connection Hub) */
+    .nav-center-group {
+      display: flex;
+      align-items: center;
+      flex-shrink: 1;
+    }
+
+    .connection-hub {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(15, 23, 42, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 20px;
+      padding: 3px 9px;
+      backdrop-filter: blur(8px);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .hub-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.16);
+      flex-shrink: 0;
+    }
+
+    .btn-web-serial {
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      color: white;
+      border: none;
       border-radius: 12px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-web-serial:hover {
+      background: linear-gradient(135deg, #8B5CF6, #C084FC);
+      transform: translateY(-1px);
+    }
+
+    .com-selector-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .com-select {
+      background: #0F172A;
+      color: #F8FAFC;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 11px;
+      outline: none;
+      max-width: 135px;
+      cursor: pointer;
+    }
+
+    .btn-com-connect {
+      background: #10B981;
+      color: #064E3B;
+      border: none;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-com-connect:hover {
+      background: #34D399;
+    }
+
+    .btn-refresh-icon {
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 3px 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-refresh-icon:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .status-capsule {
       display: flex;
       align-items: center;
       gap: 6px;
+      padding: 3px 8px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      font-size: 11px;
+      transition: background 0.15s;
       white-space: nowrap;
-      flex-shrink: 0;
+    }
+
+    .status-capsule:hover {
+      background: rgba(255, 255, 255, 0.18);
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #00D166;
-      box-shadow: 0 0 6px #00D166;
+      background: #94A3B8;
+      box-shadow: none;
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    /* 右側：工具與視圖切換區 */
+    .nav-right-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
       flex-shrink: 0;
     }
 
-    .btn-tool {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.3);
+    .tool-select {
+      background: #1E293B;
       color: white;
+      border: 1px solid #475569;
       border-radius: 6px;
-      padding: 5px 12px;
+      padding: 5px 9px;
       font-size: 12px;
+      outline: none;
+      max-width: 210px;
+      cursor: pointer;
+    }
+
+    .btn-tool-cpsat {
+      background: linear-gradient(135deg, #6366F1, #8B5CF6);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
       gap: 4px;
-      transition: background 0.2s;
-      white-space: nowrap;
-      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
+      transition: transform 0.1s, opacity 0.1s;
     }
 
-    .btn-tool:hover {
-      background: rgba(255,255,255,0.3);
+    .btn-tool-cpsat:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-tool-hw {
+      background: linear-gradient(135deg, #059669, #10B981);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    .btn-tool-hw:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-tool-code {
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.15s;
+    }
+
+    .btn-tool-code:hover {
+      background: rgba(255, 255, 255, 0.25);
     }
 
     /* 主要工作區佈局 */
@@ -413,50 +633,108 @@
 </head>
 <body>
 
-  <!-- 頂部導航欄 (mBlock 5 Style) -->
+  <!-- 頂部現代化導航欄 (昕蓉Sophia 智慧兒童程式工作室) -->
   <header>
-    <div class="brand">
-      <div class="brand-icon">🐼</div>
-      <span>Arduino Block Studio</span>
-      <span class="brand-subtitle">兒童積木程式設計環境</span>
+    <!-- 左側：可愛小女孩品牌標誌與核心執行按鈕 -->
+    <div class="nav-left-group">
+      <div class="brand" title="👧 昕蓉Sophia - 智慧兒童積木程式設計工作室">
+        <div class="brand-avatar-box">
+          <svg class="girl-avatar" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="sophiaBgGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#FFDEE9"/>
+                <stop offset="100%" stop-color="#B5FFFC"/>
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="48" fill="url(#sophiaBgGrad)" stroke="#FFFFFF" stroke-width="3"/>
+            <!-- 雙馬尾後髮 -->
+            <path d="M22 45 C15 65 20 85 30 90 C32 80 34 65 35 55 Z" fill="#4A2E18"/>
+            <path d="M78 45 C85 65 80 85 70 90 C68 80 66 65 65 55 Z" fill="#4A2E18"/>
+            <!-- 雙馬尾粉紅蝴蝶結 -->
+            <path d="M22 36 C14 30 14 42 22 40 C26 42 26 30 22 36 Z" fill="#FF5E8E"/>
+            <circle cx="22" cy="37" r="3" fill="#FFE066"/>
+            <path d="M78 36 C86 30 86 42 78 40 C74 42 74 30 78 36 Z" fill="#FF5E8E"/>
+            <circle cx="78" cy="37" r="3" fill="#FFE066"/>
+            <!-- 洋裝領口 -->
+            <path d="M32 95 C35 80 65 80 68 95 Z" fill="#FF7597"/>
+            <path d="M42 82 L50 89 L58 82 Z" fill="#FFFFFF"/>
+            <!-- 臉蛋與腮紅 -->
+            <circle cx="28" cy="56" r="6" fill="#FDD8BA"/>
+            <circle cx="72" cy="56" r="6" fill="#FDD8BA"/>
+            <ellipse cx="50" cy="56" rx="24" ry="23" fill="#FEE3CD"/>
+            <ellipse cx="36" cy="62" rx="4.5" ry="2.5" fill="#FF94A8" opacity="0.75"/>
+            <ellipse cx="64" cy="62" rx="4.5" ry="2.5" fill="#FF94A8" opacity="0.75"/>
+            <!-- 靈動大眼睛 -->
+            <ellipse cx="40" cy="54" rx="4" ry="5.5" fill="#3D2314"/>
+            <circle cx="38.5" cy="52" r="1.8" fill="#FFFFFF"/>
+            <circle cx="42" cy="56" r="0.8" fill="#FFFFFF"/>
+            <ellipse cx="60" cy="54" rx="4" ry="5.5" fill="#3D2314"/>
+            <circle cx="58.5" cy="52" r="1.8" fill="#FFFFFF"/>
+            <circle cx="62" cy="56" r="0.8" fill="#FFFFFF"/>
+            <path d="M36 49 C38 47 43 47 44 49" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M56 49 C57 47 62 47 64 49" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round"/>
+            <!-- 甜美微笑 -->
+            <path d="M47 64 Q50 67 53 64" stroke="#FF5E7E" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+            <!-- 齊瀏海 -->
+            <path d="M26 48 C28 26 72 26 74 48 C68 40 60 48 50 43 C40 48 32 40 26 48 Z" fill="#5A381E"/>
+            <path d="M50 25 C45 28 40 33 38 41 C43 36 48 36 50 25 Z" fill="#6E4424" opacity="0.4"/>
+          </svg>
+          <span class="avatar-sparkle">✨</span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">昕蓉Sophia</div>
+          <div class="brand-tagline">智慧兒童積木程式工作室</div>
+        </div>
+      </div>
+
+      <div class="nav-divider"></div>
+
+      <!-- 綠旗執行與停止按鈕 -->
+      <div class="action-btn-group">
+        <button class="btn-flag" id="btnRun" onclick="runProgram()" title="啟動並執行積木程式">
+          <span style="font-size: 14px;">🚩</span> 執行
+        </button>
+        <button class="btn-stop" id="btnStop" onclick="stopProgram()" title="停止所有積木並安全歸位硬體">
+          <span style="font-size: 13px;">🛑</span> 停止
+        </button>
+      </div>
     </div>
 
-    <div class="nav-controls">
-      <!-- 綠旗與停止按鈕 -->
-      <button class="btn-flag" id="btnRun" onclick="runProgram()">
-        <span style="font-size: 15px;">🚩</span> 執行程式
-      </button>
+    <!-- 中間：硬體連線中樞 (現代化整合膠囊) -->
+    <div class="nav-center-group">
+      <div class="connection-hub">
+        <!-- Web Serial 瀏覽器直連 -->
+        <button id="btnWebSerial" class="btn-web-serial" onclick="toggleWebSerial()" title="Chrome/Edge 瀏覽器原生直連 USB (超低延遲、雲端 Render 免後端必用)">
+          <span style="font-size: 12px;">⚡</span> Web Serial
+        </button>
 
-      <button class="btn-stop" id="btnStop" onclick="stopProgram()">
-        <span style="font-size: 13px;">🛑</span> 停止
-      </button>
+        <div class="hub-divider"></div>
 
-      <!-- USB 序列埠選單與連線 -->
-      <div style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.3); padding:3px 8px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.15);">
-        <span style="font-size:13px;" title="USB 串列埠">🔌</span>
-        <select id="comPortSelect" style="background:#181825; color:white; border:1px solid #45475A; border-radius:5px; padding:3px 6px; font-size:11px; outline:none; max-width:160px;">
-          <option value="">搜尋 COM 埠中...</option>
-        </select>
-        <button id="btnConnectUSB" onclick="toggleUSBConnection()" style="background:#00D166; color:#111; border:none; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer;" title="連線或中斷選定的 COM 埠">連線</button>
-        <button onclick="refreshUsbPorts()" style="background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:4px 7px; font-size:11px; cursor:pointer;" title="重新掃描所有 USB 連接埠">🔄</button>
-        <button id="btnWebSerial" onclick="toggleWebSerial()" style="background:linear-gradient(135deg, #4A00E0, #8E2DE2); color:white; border:none; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="Chrome/Edge 瀏覽器原生直連 USB (雲端 Render / 免後端必用)">🌐 Web Serial</button>
-        <button onclick="testPin13()" style="background:#f39c12; color:#111; border:none; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="測試 Arduino 板載 Pin 13 LED (若閃爍表示 USB 通訊正常)">💡 測Pin13</button>
+        <!-- 本地 COM 埠選擇與連線 -->
+        <div class="com-selector-wrapper">
+          <span style="font-size: 12px;" title="USB 串列埠">🔌</span>
+          <select id="comPortSelect" class="com-select" title="選取本地 Arduino COM 埠">
+            <option value="">搜尋 COM 埠中...</option>
+          </select>
+          <button id="btnConnectUSB" class="btn-com-connect" onclick="toggleUSBConnection()" title="連線或中斷選取的 COM 埠">連線</button>
+          <button class="btn-refresh-icon" onclick="refreshUsbPorts()" title="重新掃描所有 USB 連接埠">🔄</button>
+        </div>
+
+        <div class="hub-divider"></div>
+
+        <!-- 即時連線狀態標籤 (點擊可快速測試 Pin 13) -->
+        <div class="status-capsule" id="usbBadge" onclick="testPin13()" title="點擊可即時閃爍板載 Pin 13 LED 測試通訊">
+          <div class="status-dot" id="usbDot"></div>
+          <span id="usbStatusText" style="font-size: 11px;">USB: 未連線</span>
+        </div>
       </div>
+    </div>
 
-      <!-- 狀態指示 -->
-      <div class="status-badge" id="usbBadge" title="Arduino USB 串列埠狀態 (點擊可重新掃描)" onclick="refreshUsbPorts()" style="cursor:pointer;">
-        <div class="status-dot" id="usbDot" style="background:#888; box-shadow:none;"></div>
-        <span id="usbStatusText">USB: 未連線</span>
-      </div>
-
-      <div class="status-badge" id="wifiBadge" title="ESP-01 Wi-Fi 雙路繼電器">
-        <div class="status-dot" style="background:#00D166;"></div>
-        <span>Wi-Fi: 192.168.4.1</span>
-      </div>
-
-      <!-- 範例積木選單 (多款 RGB 特效，直接展開原始積木) -->
-      <select id="exampleSelect" onchange="loadExample(this.value)" class="btn-tool" style="background:#3377DE; outline:none; max-width:250px;">
-        <option value="">📂 選擇特效範例 (直接展開原始積木)...</option>
+    <!-- 右側：創作工具箱與視圖切換 -->
+    <div class="nav-right-group">
+      <!-- 範例積木選單 -->
+      <select id="exampleSelect" onchange="loadExample(this.value)" class="tool-select" title="選擇預設特效範例，一鍵展開積木">
+        <option value="">📂 選擇特效範例 (展開積木)...</option>
         <optgroup label="🌈 雙 RGB LED 炫彩特效 (展開原始積木)">
           <option value="ex_rgb_rainbow">🌈 雙燈七彩虹霓流光 (紅橙黃綠青藍紫)</option>
           <option value="ex_rgb_police">🚨 警車雙燈爆閃警笛 (燈1紅閃 ➔ 燈2藍閃)</option>
@@ -489,17 +767,17 @@
       </select>
 
       <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
-      <button class="btn-tool" onclick="openCpsatModal()" style="background: linear-gradient(135deg, #7928CA, #4C97FF); border:none; font-weight:bold; box-shadow:0 2px 6px rgba(121,40,202,0.4); padding: 5px 12px;">
-        🧠 OR-Tools CP-SAT 智慧排程
+      <button class="btn-tool-cpsat" onclick="openCpsatModal()" title="Google OR-Tools CP-SAT 智慧排程求解器">
+        <span>🧠</span> CP-SAT 排程
       </button>
 
       <!-- ⚙️ 硬體腳位設定 (M1/M2/極性) -->
-      <button class="btn-tool" onclick="openHwConfigModal()" style="background: linear-gradient(135deg, #11998e, #38ef7d); color:#0c2b18; border:none; font-weight:bold; box-shadow:0 2px 6px rgba(56,239,125,0.4); padding: 5px 12px;">
-        ⚙️ 腳位設定 (M1/M2)
+      <button class="btn-tool-hw" onclick="openHwConfigModal()" title="自訂 M1 / M2 / 點矩陣 / 舵機 / 繼電器 腳位">
+        <span>⚙️</span> 腳位設定
       </button>
 
-      <button class="btn-tool" onclick="toggleSidebar()">
-        💻 <span id="toggleSidebarText">隱藏代碼視窗</span>
+      <button class="btn-tool-code" onclick="toggleSidebar()" title="切換顯示/隱藏右側代碼視窗">
+        <span>💻</span> <span id="toggleSidebarText">代碼視窗</span>
       </button>
     </div>
   </header>
