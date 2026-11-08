@@ -308,13 +308,24 @@ def api_serial_connect():
         return jsonify({"ok": False, "error": "未指定 COM 埠"}), 400
     ok, msg = arduino_serial.connect(port_name, verify_pong=False)
     return jsonify({"ok": ok, "message": msg, "connected": arduino_serial.is_connected})
-    return jsonify({"ok": ok, "message": msg, "connected": arduino_serial.is_connected})
 
 
 @app.route("/api/serial/disconnect", methods=["POST"])
 def api_serial_disconnect():
     arduino_serial.disconnect()
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "connected": False})
+
+
+@app.route("/api/serial/send", methods=["POST"])
+def api_serial_send():
+    data = request.get_json(silent=True) or {}
+    cmd = data.get("cmd", "")
+    if not cmd:
+        return jsonify({"ok": False, "error": "未提供指令內容"}), 400
+    if not arduino_serial.is_connected:
+        return jsonify({"ok": False, "error": "USB 尚未連線"}), 400
+    resp = arduino_serial.send_command(cmd)
+    return jsonify({"ok": True, "resp": resp})
 
 
 execution_state = {

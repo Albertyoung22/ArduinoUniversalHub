@@ -432,16 +432,18 @@
       </button>
 
       <!-- USB 序列埠選單與連線 -->
-      <div style="display:flex; align-items:center; gap:4px; background:rgba(0,0,0,0.25); padding:3px 6px; border-radius:8px; flex-shrink:0;">
-        <span style="font-size:12px;">🔌</span>
-        <select id="comPortSelect" style="background:#1E3A8A; color:white; border:none; border-radius:4px; padding:3px 6px; font-size:11px; outline:none; max-width:140px;">
+      <div style="display:flex; align-items:center; gap:5px; background:rgba(0,0,0,0.3); padding:3px 8px; border-radius:8px; flex-shrink:0; border:1px solid rgba(255,255,255,0.15);">
+        <span style="font-size:13px;" title="USB 串列埠">🔌</span>
+        <select id="comPortSelect" style="background:#181825; color:white; border:1px solid #45475A; border-radius:5px; padding:3px 6px; font-size:11px; outline:none; max-width:160px;">
           <option value="">搜尋 COM 埠中...</option>
         </select>
-        <button id="btnConnectUSB" onclick="toggleUSBConnection()" style="background:#00D166; color:#111; border:none; border-radius:4px; padding:3px 8px; font-size:11px; font-weight:bold; cursor:pointer;">連線</button>
+        <button id="btnConnectUSB" onclick="toggleUSBConnection()" style="background:#00D166; color:#111; border:none; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer;" title="連線或中斷選定的 COM 埠">連線</button>
+        <button onclick="refreshUsbPorts()" style="background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:4px 7px; font-size:11px; cursor:pointer;" title="重新掃描所有 USB 連接埠">🔄</button>
+        <button id="btnWebSerial" onclick="toggleWebSerial()" style="background:linear-gradient(135deg, #4A00E0, #8E2DE2); color:white; border:none; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="Chrome/Edge 瀏覽器原生直連 USB (雲端 Render / 免後端必用)">🌐 Web Serial</button>
       </div>
 
-      <!-- 雙狀態指示 -->
-      <div class="status-badge" id="usbBadge" title="Arduino USB 串列埠狀態">
+      <!-- 狀態指示 -->
+      <div class="status-badge" id="usbBadge" title="Arduino USB 串列埠狀態 (點擊可重新掃描)" onclick="refreshUsbPorts()" style="cursor:pointer;">
         <div class="status-dot" id="usbDot" style="background:#888; box-shadow:none;"></div>
         <span id="usbStatusText">USB: 未連線</span>
       </div>
@@ -1248,12 +1250,27 @@
     // USB 串列埠即時監控與控制 (USB Serial Manager)
     // ==========================================
     let isUsbConnected = false;
+    let lastPortsJson = '';
+
+    // Web Serial 狀態變數 (Chrome/Edge 瀏覽器直連)
+    let webSerialPort = null;
+    let webSerialWriter = null;
+    let webSerialReader = null;
+    let isWebSerialConnected = false;
 
     function updateUsbUI(connected, current_port, ports) {
       const sel = document.getElementById('comPortSelect');
       const btn = document.getElementById('btnConnectUSB');
       const dot = document.getElementById('usbDot');
       const txt = document.getElementById('usbStatusText');
+
+      // 若 Web Serial 直連中，以 Web Serial 為最優先狀態顯示
+      if (isWebSerialConnected) {
+        dot.style.background = '#00E5FF';
+        dot.style.boxShadow = '0 0 8px #00E5FF';
+        txt.textContent = 'Web Serial: 已連線';
+        return;
+      }
 
       isUsbConnected = connected;
 
@@ -1273,18 +1290,55 @@
         txt.textContent = 'USB: 未連線';
       }
 
-      if (!isUsbConnected && ports && ports.length > 0) {
-        const curVal = sel.value;
-        sel.innerHTML = '';
-        ports.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.port;
-          opt.textContent = p.desc;
-          if (p.is_arduino) opt.textContent += ' 🌟 (推薦)';
-          sel.appendChild(opt);
-        });
-        if (curVal) sel.value = curVal;
+      // 只有當連接埠列表實際變動時才更新選項，避免每秒重繪下拉選單造成使用者點選被打斷
+      if (ports && ports.length > 0) {
+        const portsSignature = JSON.stringify(ports.map(p => p.port));
+        if (portsSignature !== lastPortsJson) {
+          lastPortsJson = portsSignature;
+          const prevVal = sel.value;
+          sel.innerHTML = '';
+          let autoSelectPort = '';
+
+          ports.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.port;
+            opt.textContent = p.desc;
+            if (p.is_arduino) {
+              opt.textContent += ' 🌟 (推薦)';
+              if (!autoSelectPort) autoSelectPort = p.port;
+            }
+            sel.appendChild(opt);
+          });
+
+          // 保留先前已選的 port，或優先選擇推薦的 Arduino (如 COM4)
+          if (prevVal && ports.some(p => p.port === prevVal)) {
+            sel.value = prevVal;
+          } else if (current_port && ports.some(p => p.port === current_port)) {
+            sel.value = current_port;
+          } else if (autoSelectPort) {
+            sel.value = autoSelectPort;
+          }
+        } else if (current_port && sel.value !== current_port && isUsbConnected) {
+          sel.value = current_port;
+        }
+      } else if (!ports || ports.length === 0) {
+        if (lastPortsJson !== '[]') {
+          lastPortsJson = '[]';
+          sel.innerHTML = '<option value="">無本機 COM 埠 (可用 Web Serial)</option>';
+        }
       }
+    }
+
+    function refreshUsbPorts() {
+      log('🔍 正在手動重新掃描 USB 串列埠...');
+      fetch('/api/serial/ports')
+        .then(r => r.json())
+        .then(d => {
+          lastPortsJson = ''; // 強制更新選單
+          updateUsbUI(d.connected, d.current_port, d.ports);
+          log(`🔍 掃描完成：發現 ${d.ports ? d.ports.length : 0} 個連接埠`);
+        })
+        .catch(err => log('❌ 掃描連接埠失敗: ' + err));
     }
 
     function toggleUSBConnection() {
@@ -1296,13 +1350,15 @@
           .then(r => r.json())
           .then(res => {
             log('🔌 已中斷 USB 串列埠連線');
+            isUsbConnected = false;
+            updateUsbUI(false, '', []);
           });
       } else {
         if (!port) {
-          alert('請先選擇一個 COM 埠！');
+          alert('請先從選單中選取一個 COM 埠（例如 COM4）！\n若您是在 Render 雲端環境開啟，請點擊紫色的 [🌐 Web Serial] 按鈕進行瀏覽器直連。');
           return;
         }
-        log('🔌 正在連線 ' + port + ' ...');
+        log('🔌 正在連線 ' + port + ' (波特率 115200) ...');
         fetch('/api/serial/connect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1311,11 +1367,146 @@
         .then(r => r.json())
         .then(res => {
           if (res.ok) {
-            log('✅ ' + res.message);
+            log('✅ ' + (res.message || `成功連線 ${port}`));
+            isUsbConnected = true;
+            updateUsbUI(true, port, []);
           } else {
             log('❌ 連線失敗: ' + (res.error || res.message));
+            alert('連線失敗: ' + (res.error || res.message) + '\n\n提示：請確認沒有其他程式（如 Arduino IDE、Cura 或其他控制器）正在佔用該連接埠。');
           }
+        })
+        .catch(err => {
+          log('❌ 連線伺服器異常: ' + err);
         });
+      }
+    }
+
+    // ==========================================
+    // 🌐 Web Serial API 瀏覽器直連 USB (免後端、支援雲端 Render / 本機)
+    // ==========================================
+    async function toggleWebSerial() {
+      if (isWebSerialConnected) {
+        await disconnectWebSerial();
+        return;
+      }
+
+      if (!('serial' in navigator)) {
+        alert('您的瀏覽器不支援 Web Serial API！\n請使用 Google Chrome、Microsoft Edge 或 Opera 瀏覽器開啟，以享有直接從網頁存取 USB Arduino 之功能。');
+        return;
+      }
+
+      try {
+        log('🔌 [Web Serial] 正在開啟 Chrome/Edge 原生裝置選取對話框...');
+        webSerialPort = await navigator.serial.requestPort();
+        log('⏳ 正在連線所選 USB 裝置 (波特率 115200)...');
+        await webSerialPort.open({ baudRate: 115200 });
+
+        isWebSerialConnected = true;
+        updateWebSerialUIState(true);
+        log('🎉 [Web Serial] 成功直連本機 USB Arduino！免透過後端轉發！');
+
+        // 初始化寫入串流
+        const encoder = new TextEncoderStream();
+        encoder.readable.pipeTo(webSerialPort.writable);
+        webSerialWriter = encoder.writable.getWriter();
+
+        // 啟動背景監聽讀取 Arduino 回應
+        readWebSerialStream();
+
+        // 發送握手訊號 PING
+        setTimeout(() => {
+          sendWebSerialCommand('PING');
+        }, 1500);
+
+      } catch (err) {
+        log('⚠️ [Web Serial] 取消或連線失敗: ' + err.message);
+        isWebSerialConnected = false;
+        updateWebSerialUIState(false);
+      }
+    }
+
+    async function disconnectWebSerial() {
+      isWebSerialConnected = false;
+      try {
+        if (webSerialWriter) {
+          await webSerialWriter.close();
+          webSerialWriter = null;
+        }
+        if (webSerialReader) {
+          await webSerialReader.cancel();
+          webSerialReader = null;
+        }
+        if (webSerialPort) {
+          await webSerialPort.close();
+          webSerialPort = null;
+        }
+        log('🔌 [Web Serial] 已中斷瀏覽器直連。');
+      } catch (e) {
+        console.error('Web Serial 斷開異常:', e);
+      }
+      updateWebSerialUIState(false);
+    }
+
+    function updateWebSerialUIState(connected) {
+      const btn = document.getElementById('btnWebSerial');
+      const dot = document.getElementById('usbDot');
+      const txt = document.getElementById('usbStatusText');
+      if (connected) {
+        if (btn) {
+          btn.textContent = '中斷 Web Serial';
+          btn.style.background = '#FF4D4D';
+        }
+        dot.style.background = '#00E5FF';
+        dot.style.boxShadow = '0 0 8px #00E5FF';
+        txt.textContent = 'Web Serial: 已連線';
+      } else {
+        if (btn) {
+          btn.textContent = '🌐 Web Serial';
+          btn.style.background = 'linear-gradient(135deg, #4A00E0, #8E2DE2)';
+        }
+        dot.style.background = '#888';
+        dot.style.boxShadow = 'none';
+        txt.textContent = 'USB: 未連線';
+      }
+    }
+
+    async function sendWebSerialCommand(cmdText) {
+      if (!isWebSerialConnected || !webSerialWriter) return;
+      try {
+        await webSerialWriter.write(cmdText.trim() + '\n');
+        log('📤 [Web Serial 發送] ' + cmdText.trim());
+      } catch (e) {
+        log('❌ [Web Serial 發送失敗] ' + e.message);
+      }
+    }
+
+    async function readWebSerialStream() {
+      const textDecoder = new TextDecoderStream();
+      webSerialPort.readable.pipeTo(textDecoder.writable);
+      const reader = textDecoder.readable.getReader();
+      webSerialReader = reader;
+      let rxBuffer = '';
+
+      try {
+        while (isWebSerialConnected) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            rxBuffer += value;
+            const lines = rxBuffer.split('\n');
+            rxBuffer = lines.pop(); // 保留尚未換行的最後片段
+            for (let l of lines) {
+              const trimmed = l.trim();
+              if (trimmed) {
+                log('📥 [Arduino 韌體回應] ' + trimmed);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Web Serial stream closed:', err);
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
       }
     }
 
@@ -2401,6 +2592,18 @@
         m2_b_pin: document.getElementById('hw_m2_b').value,
         common_anode: document.getElementById('hw_common_anode').value === 'true',
       };
+
+      if (isWebSerialConnected) {
+        const isM1 = String(target) === '1';
+        const r_pin = isM1 ? payload.m1_r_pin : payload.m2_r_pin;
+        const g_pin = isM1 ? payload.m1_g_pin : payload.m2_g_pin;
+        const b_pin = isM1 ? payload.m1_b_pin : payload.m2_b_pin;
+        const anode = payload.common_anode ? 1 : 0;
+        sendWebSerialCommand(`RGB,${r_pin},${g_pin},${b_pin},${anode},${r},${g},${b}`);
+        log(`🧪 [Web Serial 測試點燈] M${target} (腳位 ${r_pin},${g_pin},${b_pin}) -> R:${r} G:${g} B:${b}`);
+        return;
+      }
+
       fetch('/api/hardware/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
