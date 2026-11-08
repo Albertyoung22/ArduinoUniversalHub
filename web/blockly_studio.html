@@ -440,6 +440,7 @@
         <button id="btnConnectUSB" onclick="toggleUSBConnection()" style="background:#00D166; color:#111; border:none; border-radius:5px; padding:4px 10px; font-size:11px; font-weight:bold; cursor:pointer;" title="連線或中斷選定的 COM 埠">連線</button>
         <button onclick="refreshUsbPorts()" style="background:rgba(255,255,255,0.15); color:white; border:none; border-radius:5px; padding:4px 7px; font-size:11px; cursor:pointer;" title="重新掃描所有 USB 連接埠">🔄</button>
         <button id="btnWebSerial" onclick="toggleWebSerial()" style="background:linear-gradient(135deg, #4A00E0, #8E2DE2); color:white; border:none; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="Chrome/Edge 瀏覽器原生直連 USB (雲端 Render / 免後端必用)">🌐 Web Serial</button>
+        <button onclick="testPin13()" style="background:#f39c12; color:#111; border:none; border-radius:5px; padding:4px 8px; font-size:11px; font-weight:bold; cursor:pointer;" title="測試 Arduino 板載 Pin 13 LED (若閃爍表示 USB 通訊正常)">💡 測Pin13</button>
       </div>
 
       <!-- 狀態指示 -->
@@ -1398,25 +1399,32 @@
       try {
         log('🔌 [Web Serial] 正在開啟 Chrome/Edge 原生裝置選取對話框...');
         webSerialPort = await navigator.serial.requestPort();
-        log('⏳ 正在連線所選 USB 裝置 (波特率 115200)...');
+        log('⏳ 正在以波特率 115200 連線 USB 裝置...');
         await webSerialPort.open({ baudRate: 115200 });
+
+        // 嘗試啟動 DTR / RTS 信號
+        try {
+          await webSerialPort.setSignals({ dataTerminalReady: true, requestToSend: true });
+        } catch (_) {}
 
         isWebSerialConnected = true;
         updateWebSerialUIState(true);
-        log('🎉 [Web Serial] 成功直連本機 USB Arduino！免透過後端轉發！');
 
-        // 初始化寫入串流
-        const encoder = new TextEncoderStream();
-        encoder.readable.pipeTo(webSerialPort.writable);
-        webSerialWriter = encoder.writable.getWriter();
+        // 取得 writer (直接取 getWriter，確保即時 flush 不緩衝)
+        webSerialWriter = webSerialPort.writable.getWriter();
 
-        // 啟動背景監聽讀取 Arduino 回應
+        // 啟動背景接收監聽
         readWebSerialStream();
 
-        // 發送握手訊號 PING
-        setTimeout(() => {
-          sendWebSerialCommand('PING');
-        }, 1500);
+        log('🎉 [Web Serial] 瀏覽器直連成功！Arduino 正在開機重置 (約 1.8 秒)...');
+
+        // 等待 Arduino Uno 開機完成後送出 PING 握手，並閃爍 Pin 13 測試
+        setTimeout(async () => {
+          await sendWebSerialCommand('PING');
+          await sendWebSerialCommand('DWRITE,13,1');
+          setTimeout(() => sendWebSerialCommand('DWRITE,13,0'), 400);
+          log('💡 已對 Pin 13 送出點燈訊號，若板載 LED 閃爍即代表通訊 100% 正常！');
+        }, 1800);
 
       } catch (err) {
         log('⚠️ [Web Serial] 取消或連線失敗: ' + err.message);
@@ -1429,11 +1437,12 @@
       isWebSerialConnected = false;
       try {
         if (webSerialWriter) {
-          await webSerialWriter.close();
+          try { await webSerialWriter.close(); } catch (_) {}
+          try { webSerialWriter.releaseLock(); } catch (_) {}
           webSerialWriter = null;
         }
         if (webSerialReader) {
-          await webSerialReader.cancel();
+          try { await webSerialReader.cancel(); } catch (_) {}
           webSerialReader = null;
         }
         if (webSerialPort) {
@@ -1471,13 +1480,41 @@
     }
 
     async function sendWebSerialCommand(cmdText) {
-      if (!isWebSerialConnected || !webSerialWriter) return;
+      if (!isWebSerialConnected || !webSerialPort || !webSerialPort.writable) return;
       try {
-        await webSerialWriter.write(cmdText.trim() + '\n');
-        log('📤 [Web Serial 發送] ' + cmdText.trim());
+        if (!webSerialWriter) {
+          webSerialWriter = webSerialPort.writable.getWriter();
+        }
+        const encoded = new TextEncoder().encode(cmdText.trim() + '\n');
+        await webSerialWriter.write(encoded);
+        log('📤 [Web Serial] ' + cmdText.trim());
       } catch (e) {
         log('❌ [Web Serial 發送失敗] ' + e.message);
+        try { if (webSerialWriter) webSerialWriter.releaseLock(); } catch (_) {}
+        webSerialWriter = null;
       }
+    }
+
+    function testPin13() {
+      log('💡 正在測試 Arduino 板載 Pin 13 LED (閃爍 0.5 秒)...');
+      if (isWebSerialConnected) {
+        sendWebSerialCommand('DWRITE,13,1');
+        setTimeout(() => sendWebSerialCommand('DWRITE,13,0'), 500);
+        return;
+      }
+      fetch('/api/serial/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: 'DWRITE,13,1' })
+      }).then(() => {
+        setTimeout(() => {
+          fetch('/api/serial/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cmd: 'DWRITE,13,0' })
+          });
+        }, 500);
+      }).catch(err => log('⚠️ 測試 Pin 13 失敗: ' + err));
     }
 
     async function readWebSerialStream() {
@@ -1515,6 +1552,13 @@
       fetch('/api/status')
         .then(r => r.json())
         .then(data => {
+          // 🌐 若有從後端執行的硬體命令隊列，且當前使用 Web Serial 瀏覽器直連，即刻寫入硬體
+          if (data.commands && data.commands.length > 0 && isWebSerialConnected) {
+            data.commands.forEach(cmd => {
+              sendWebSerialCommand(cmd);
+            });
+          }
+
           if (data.running) {
             if (!isRunning) {
               isRunning = true;

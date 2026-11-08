@@ -334,6 +334,24 @@ execution_state = {
     "block_id": None
 }
 
+hardware_command_queue = queue.Queue(maxsize=500)
+
+def dispatch_hardware_command(cmd: str):
+    """將硬體控制指令統一分發至：
+    1. 本地實體 serial (若後端有連線 COM 埠)
+    2. hardware_command_queue (供前端 Web Serial 瀏覽器直連時提取寫入 USB)
+    """
+    if arduino_serial.is_connected:
+        arduino_serial.send_command(cmd)
+    try:
+        hardware_command_queue.put_nowait(cmd)
+    except queue.Full:
+        try:
+            hardware_command_queue.get_nowait()
+            hardware_command_queue.put_nowait(cmd)
+        except Exception:
+            pass
+
 
 def make_trace_func(stop_evt, state):
     def trace_func(frame, event, arg):
@@ -351,11 +369,20 @@ def api_get_status():
     logs = []
     while not arduino_serial.log_queue.empty():
         logs.append(arduino_serial.log_queue.get_nowait())
+
+    cmds = []
+    while not hardware_command_queue.empty():
+        try:
+            cmds.append(hardware_command_queue.get_nowait())
+        except Exception:
+            break
+
     return jsonify({
         "running": execution_state["running"],
         "line": execution_state["line"],
         "block_id": execution_state["block_id"],
         "logs": logs,
+        "commands": cmds,
         "ports": arduino_serial.list_ports(),
         "connected": arduino_serial.is_connected,
         "current_port": arduino_serial.port
@@ -434,36 +461,35 @@ def api_run_blocks():
             if stop_event.is_set():
                 return
             v = 1 if str(val).upper() in ["HIGH", "1", "TRUE"] else 0
-            if arduino_serial.is_connected:
-                resp = arduino_serial.send_command(f"DWRITE,{pin},{v}")
-                arduino_serial.log(f"💡 [Arduino USB] 腳位 {pin} -> {'高電位 (HIGH)' if v else '低電位 (LOW)'} | 回應: {resp}")
-            else:
-                arduino_serial.log(f"⚠️ [USB 未連線] 腳位 {pin} -> {v} (請先在頂部連線 COM 埠)")
+            dispatch_hardware_command(f"DWRITE,{pin},{v}")
+            arduino_serial.log(f"💡 [數位輸出] 腳位 {pin} -> {'高電位 (HIGH)' if v else '低電位 (LOW)'}")
 
         def arduino_write_pwm(pin, val):
             if stop_event.is_set():
                 return
             v = max(0, min(255, int(val)))
-            if arduino_serial.is_connected:
-                resp = arduino_serial.send_command(f"AWRITE,{pin},{v}")
-                arduino_serial.log(f"💡 [Arduino PWM] 腳位 {pin} -> 數值 {v} | 回應: {resp}")
+            dispatch_hardware_command(f"AWRITE,{pin},{v}")
+            arduino_serial.log(f"💡 [PWM 輸出] 腳位 {pin} -> 數值 {v}")
 
         def arduino_set_servo(pin, angle):
             if stop_event.is_set():
                 return
             a = max(0, min(180, int(angle)))
-            if arduino_serial.is_connected:
-                resp = arduino_serial.send_command(f"SERVO,{pin},{a}")
-                arduino_serial.log(f"🦾 [Arduino 舵機] 腳位 {pin} -> 角度 {a}° | 回應: {resp}")
+            dispatch_hardware_command(f"SERVO,{pin},{a}")
+            arduino_serial.log(f"🦾 [舵機角度] 腳位 {pin} -> 角度 {a}°")
 
         def set_dual_rgb(r1, g1, b1, r2=None, g2=None, b2=None):
             if r2 is None:
                 r2, g2, b2 = r1, g1, b1
-            if arduino_serial.is_connected:
-                # 模組 1 (M1): Pin 6(R), Pin 3(G), Pin 5(B) (共陽極 1)
-                arduino_serial.send_command(f"RGB,6,3,5,1,{r1},{g1},{b1}")
-                # 模組 2 (M2): Pin 11(R), Pin 9(G), Pin 10(B) (共陽極 1)
-                arduino_serial.send_command(f"RGB,11,9,10,1,{r2},{g2},{b2}")
+            anode_int = 1 if hardware_config.get("common_anode", True) else 0
+            m1_r = hardware_config.get("m1_r_pin", "6")
+            m1_g = hardware_config.get("m1_g_pin", "3")
+            m1_b = hardware_config.get("m1_b_pin", "5")
+            m2_r = hardware_config.get("m2_r_pin", "11")
+            m2_g = hardware_config.get("m2_g_pin", "9")
+            m2_b = hardware_config.get("m2_b_pin", "10")
+            dispatch_hardware_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},{r1},{g1},{b1}")
+            dispatch_hardware_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},{r2},{g2},{b2}")
 
         def play_rgb_effect(effect_name):
             if stop_event.is_set():
@@ -536,15 +562,12 @@ def api_run_blocks():
             m2_b = hardware_config.get("m2_b_pin", "10")
 
             if str(target) == "1":
-                if arduino_serial.is_connected:
-                    arduino_serial.send_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},{r_val},{g_val},{b_val}")
+                dispatch_hardware_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},{r_val},{g_val},{b_val}")
             elif str(target) == "2":
-                if arduino_serial.is_connected:
-                    arduino_serial.send_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},{r_val},{g_val},{b_val}")
+                dispatch_hardware_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},{r_val},{g_val},{b_val}")
             else:
-                if arduino_serial.is_connected:
-                    arduino_serial.send_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},{r_val},{g_val},{b_val}")
-                    arduino_serial.send_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},{r_val},{g_val},{b_val}")
+                dispatch_hardware_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},{r_val},{g_val},{b_val}")
+                dispatch_hardware_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},{r_val},{g_val},{b_val}")
             arduino_serial.log(f"🎨 [RGB 顏色] {target} -> R:{r_val} G:{g_val} B:{b_val}")
 
         def set_custom_rgb(r_pin, g_pin, b_pin, is_anode, r, g, b):
@@ -554,11 +577,8 @@ def api_run_blocks():
             g_val = max(0, min(255, int(g)))
             b_val = max(0, min(255, int(b)))
             anode_val = 1 if str(is_anode) in ["1", "true", "True", "ANODE"] else 0
-            if arduino_serial.is_connected:
-                resp = arduino_serial.send_command(f"RGB,{r_pin},{g_pin},{b_pin},{anode_val},{r_val},{g_val},{b_val}")
-                arduino_serial.log(f"🎨 [自訂 RGB] 腳位 R:{r_pin} G:{g_pin} B:{b_pin} ({'共陽極' if anode_val else '共陰極'}) -> R:{r_val} G:{g_val} B:{b_val} | {resp}")
-            else:
-                arduino_serial.log(f"⚠️ [USB 未連線] 自訂 RGB 腳位 R:{r_pin} G:{g_pin} B:{b_pin}")
+            dispatch_hardware_command(f"RGB,{r_pin},{g_pin},{b_pin},{anode_val},{r_val},{g_val},{b_val}")
+            arduino_serial.log(f"🎨 [自訂 RGB] 腳位 R:{r_pin} G:{g_pin} B:{b_pin} ({'共陽極' if anode_val else '共陰極'}) -> R:{r_val} G:{g_val} B:{b_val}")
 
         def __step__(block_id):
             if stop_event.is_set():
@@ -617,9 +637,19 @@ def api_stop_blocks():
     send_wifi_relay(1, False)
     time.sleep(0.05)
     send_wifi_relay(2, False)
+    anode_int = 1 if hardware_config.get("common_anode", True) else 0
+    m1_r = hardware_config.get("m1_r_pin", "6")
+    m1_g = hardware_config.get("m1_g_pin", "3")
+    m1_b = hardware_config.get("m1_b_pin", "5")
+    m2_r = hardware_config.get("m2_r_pin", "11")
+    m2_g = hardware_config.get("m2_g_pin", "9")
+    m2_b = hardware_config.get("m2_b_pin", "10")
+    dispatch_hardware_command(f"RGB,{m1_r},{m1_g},{m1_b},{anode_int},0,0,0")
+    dispatch_hardware_command(f"RGB,{m2_r},{m2_g},{m2_b},{anode_int},0,0,0")
+    dispatch_hardware_command("DWRITE,13,0")
     if arduino_serial.is_connected:
         arduino_serial.send_command("STOP")
-    arduino_serial.log("🛑 程式已停止，硬體已安全歸位。")
+    arduino_serial.log("🛑 程式已停止，RGB 與外設已安全歸位熄滅。")
     return jsonify({"ok": True})
 
 
