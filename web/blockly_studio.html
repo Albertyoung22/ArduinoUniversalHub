@@ -4208,12 +4208,186 @@ void loop() {
           if (info) {
             if (data.has_cli) {
               const fname = (data.cli_path || '').split(/[/\\\\]/).pop();
-              info.innerHTML = `✅ 伺服器已就緒原生編譯器: <code style="color:#A6E3A1;">${fname}</code>`;
+              info.innerHTML = `✅ 本機原生編譯器已就緒: <code style="color:#A6E3A1;">${fname}</code> (支援直接線上編譯寫入)`;
             } else {
-              info.innerHTML = `⚠️ 尚未偵測到本地 arduino-cli，將提供 .ino 原始碼下載。`;
+              info.innerHTML = `☁️ 雲端/免編譯器模式：支援 Web Serial 瀏覽器直刷萬能韌體與 .ino 原始碼下載。<br><span style="color:#89DCEB;">💡 若需本機原生一鍵編譯燒錄，請以本機網址開啟: <a href="http://127.0.0.1:5050" target="_blank" style="color:#F9E2AF; text-decoration:underline;">http://127.0.0.1:5050</a></span>`;
             }
           }
-        }).catch(() => {});
+        }).catch(() => {
+          const info = document.getElementById('burnCliStatus');
+          if (info) {
+            info.innerHTML = `☁️ 雲端模式：支援 Web Serial 瀏覽器一鍵直刷韌體與 .ino 原始碼下載。`;
+          }
+        });
+    }
+
+    // ========================================================
+    // ⚡ Web Serial 原生 AVR STK500 晶片直刷引擎 (免本地編譯器)
+    // ========================================================
+    async function flashHexViaWebSerial(hexUrl, logBox) {
+      if (!('serial' in navigator)) {
+        throw new Error('此瀏覽器不支援 Web Serial API，請使用 Google Chrome 或 Edge 瀏覽器。');
+      }
+
+      logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 🌐 正在下載已編譯好的萬能韌體二進位碼 (.hex)...</div>`;
+      const resp = await fetch(hexUrl);
+      if (!resp.ok) throw new Error('無法下載韌體檔案: ' + resp.statusText);
+      const hexText = await resp.text();
+
+      // 1. 解析 Intel HEX 格式
+      const flashData = new Uint8Array(32768);
+      flashData.fill(0xFF);
+      let maxAddr = 0;
+      const lines = hexText.split(/\r?\n/);
+      for (const line of lines) {
+        if (!line.startsWith(':')) continue;
+        const len = parseInt(line.substr(1, 2), 16);
+        const addr = parseInt(line.substr(3, 4), 16);
+        const type = parseInt(line.substr(7, 2), 16);
+        if (type === 0) { // Data Record
+          for (let i = 0; i < len; i++) {
+            flashData[addr + i] = parseInt(line.substr(9 + i * 2, 2), 16);
+          }
+          if (addr + len > maxAddr) maxAddr = addr + len;
+        } else if (type === 1) { // End of File
+          break;
+        }
+      }
+
+      const pageSize = 128; // ATmega328P 頁面大小 128 位元組
+      const numPages = Math.ceil(maxAddr / pageSize);
+      logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 📦 韌體解析成功: ${maxAddr} 位元組 (共 ${numPages} 個 Flash 區塊)</div>`;
+
+      // 2. 獲取 / 開啟序列埠
+      let port = currentPort;
+      if (!port) {
+        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 🔌 請在瀏覽器彈窗中選取您的 Arduino 連接埠...</div>`;
+        port = await navigator.serial.requestPort();
+        currentPort = port;
+      }
+
+      // 若目前已有讀取器正在運作，先安全中斷
+      await disconnectWebSerial();
+      await new Promise(r => setTimeout(r, 600));
+
+      logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 正在開啟 USB 串列通訊並重置板子 (115200 baud)...</div>`;
+      await port.open({ baudRate: 115200 });
+
+      const writer = port.writable.getWriter();
+      const reader = port.readable.getReader();
+
+      async function writeBytes(arr) {
+        await writer.write(new Uint8Array(arr));
+      }
+
+      async function readExact(count, timeoutMs = 2500) {
+        const buf = new Uint8Array(count);
+        let offset = 0;
+        const deadline = Date.now() + timeoutMs;
+        while (offset < count) {
+          const remainingTime = deadline - Date.now();
+          if (remainingTime <= 0) throw new Error('Optiboot 回應超時');
+          let timer;
+          const timeoutPromise = new Promise((_, rej) => timer = setTimeout(() => rej(new Error('超時')), remainingTime));
+          try {
+            const { value, done } = await Promise.race([reader.read(), timeoutPromise]);
+            clearTimeout(timer);
+            if (done) break;
+            if (value) {
+              for (let i = 0; i < value.length && offset < count; i++) {
+                buf[offset++] = value[i];
+              }
+            }
+          } catch (e) {
+            clearTimeout(timer);
+            throw e;
+          }
+        }
+        return buf;
+      }
+
+      try {
+        // 3. 脈衝 DTR 重設板子進入 Optiboot 開機啟動區
+        await port.setSignals({ dataTerminalReady: false });
+        await new Promise(r => setTimeout(r, 250));
+        await port.setSignals({ dataTerminalReady: true });
+        await new Promise(r => setTimeout(r, 50));
+
+        // 4. STK500 握手同步 (STK_GET_SYNC: 0x30, 0x20 -> Resp: 0x14, 0x10)
+        let synced = false;
+        for (let attempt = 0; attempt < 10; attempt++) {
+          try {
+            await writeBytes([0x30, 0x20]);
+            const resp = await readExact(2, 350);
+            if (resp[0] === 0x14 && resp[1] === 0x10) {
+              synced = true;
+              break;
+            }
+          } catch (_) {
+            await new Promise(r => setTimeout(r, 30));
+          }
+        }
+
+        if (!synced) {
+          throw new Error('無法與 Arduino 開機區 (Optiboot) 取得同步，請拔除後重新插入 USB 線再試。');
+        }
+
+        logBox.innerHTML += `<div style="color:#A6E3A1;">[${new Date().toLocaleTimeString()}] 🤝 成功與 Optiboot 開機區同步！開始燒錄晶片 Flash...</div>`;
+
+        // 5. 逐頁寫入 Flash
+        for (let p = 0; p < numPages; p++) {
+          const wordAddr = (p * pageSize) >> 1;
+          const addrL = wordAddr & 0xFF;
+          const addrH = (wordAddr >> 8) & 0xFF;
+
+          // 載入位址 (STK_LOAD_ADDRESS: 0x55, addrL, addrH, 0x20)
+          await writeBytes([0x55, addrL, addrH, 0x20]);
+          let r = await readExact(2, 1000);
+          if (r[0] !== 0x14 || r[1] !== 0x10) throw new Error(`第 ${p} 頁載入位址異常`);
+
+          // 寫入頁面 (STK_PROG_PAGE: 0x64, 0x00, 0x80, 0x46, data, 0x20)
+          const pageSlice = flashData.subarray(p * pageSize, (p + 1) * pageSize);
+          const cmd = new Uint8Array(5 + pageSize);
+          cmd[0] = 0x64; // STK_PROG_PAGE
+          cmd[1] = 0x00; // byte count high
+          cmd[2] = 0x80; // byte count low (128)
+          cmd[3] = 0x46; // 'F' (Flash memory)
+          cmd.set(pageSlice, 4);
+          cmd[4 + pageSize] = 0x20; // SYNC_CRC_EOP
+
+          await writer.write(cmd);
+          r = await readExact(2, 1000);
+          if (r[0] !== 0x14 || r[1] !== 0x10) throw new Error(`第 ${p} 頁寫入異常`);
+
+          const pct = Math.round(((p + 1) / numPages) * 100);
+          if (p % 10 === 0 || p === numPages - 1) {
+            logBox.innerHTML += `<div>⚡ 燒錄進度: <b>${pct}%</b> (${p + 1}/${numPages} 頁)...</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+        }
+
+        // 6. 離開燒錄模式 (STK_LEAVE_PROGMODE: 0x51, 0x20)
+        try {
+          await writeBytes([0x51, 0x20]);
+          await readExact(2, 500);
+        } catch (_) {}
+
+        logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:8px;">🎉🎉 瀏覽器直接燒錄大成功！板子正在重啟...</div>`;
+        log('⚡ [Web Serial 直刷成功] 萬能積木互動韌體已成功寫入 Arduino！');
+
+      } finally {
+        try { writer.releaseLock(); } catch (_) {}
+        try { reader.releaseLock(); } catch (_) {}
+        try { await port.close(); } catch (_) {}
+      }
+
+      // 7. 自動透過 Web Serial 重新連接以就緒積木即時控制
+      await new Promise(r => setTimeout(r, 1200));
+      try {
+        await openSerialPort(port);
+      } catch (err) {
+        console.warn('Auto reconnect after flash:', err);
+      }
     }
 
     async function startOfflineBurn() {
@@ -4256,7 +4430,21 @@ void loop() {
           logBox.innerHTML += `<div style="color:#BAC2DE; margin-top:4px;">現在您可以拔除電腦 USB 連接線，接上行動電源或 9V 電池，小板子即可完全自主獨立運作！</div>`;
           log(`🔥 [離線燒錄成功] 程式已永久寫入 Arduino (${fqbn} @ ${port})！可離線自主運作！`);
         } else {
-          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 燒錄失敗: ${data.error || '未知錯誤'}</div>`;
+          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 伺服器回報: ${data.error || '燒錄失敗'}</div>`;
+          if (data.error && data.error.includes('未找到 arduino-cli')) {
+            logBox.innerHTML += `
+              <div style="background:#2A1B1B; border:1px solid #F38BA8; border-radius:6px; padding:10px; margin-top:8px; line-height:1.5;">
+                <b style="color:#F9E2AF;">☁️ 偵測到您目前正在使用雲端 Render 部署：</b><br>
+                <span style="color:#CDD6F4; font-size:11px;">
+                  雲端伺服器位於海外資料中心，無法直接穿透實體 USB 燒錄。為您提供兩種最輕鬆的使用方式：<br>
+                  1. 點擊下方 <b>【📥 下載 .ino 原始碼】</b> 用本機 Arduino IDE 燒錄。<br>
+                  2. 或打開本機網址: <a href="http://127.0.0.1:5050" target="_blank" style="color:#89DCEB; text-decoration:underline; font-weight:bold;">http://127.0.0.1:5050</a> 即可享受本機全自動一鍵編譯燒錄！
+                </span>
+              </div>
+            `;
+            // 自動為使用者下載 .ino
+            downloadInoSketch();
+          }
           if (data.log) {
             logBox.innerHTML += `<pre style="color:#F38BA8; font-size:10px; margin-top:4px; max-height:150px; overflow-y:auto;">${data.log}</pre>`;
           }
@@ -4292,7 +4480,7 @@ void loop() {
       const logBox = document.getElementById('burnLogBox');
 
       logBox.style.display = 'block';
-      logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 🛠️ 正在重新上傳萬能積木互動韌體至板子 (${port})...</div>`;
+      logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 🛠️ 正在準備還原萬能積木互動韌體 (${port})...</div>`;
 
       if (isWebSerialConnected) {
         logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 暫時關閉 Web Serial 串列埠以供燒錄...</div>`;
@@ -4302,24 +4490,36 @@ void loop() {
         } catch (_) {}
       }
 
-      fetch('/api/burn/restore_interactive_firmware', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ port: port, fqbn: fqbn })
-      })
-      .then(r => r.json())
-      .then(data => {
+      let usedServer = false;
+      try {
+        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 📡 檢查伺服器編譯上傳功能...</div>`;
+        const res = await fetch('/api/burn/restore_interactive_firmware', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ port: port, fqbn: fqbn })
+        });
+        const data = await res.json();
         if (data.ok) {
-          logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:6px;">🎉🎉 萬能積木互動韌體還原大成功！板子已就緒！</div>`;
+          usedServer = true;
+          logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:6px;">🎉🎉 伺服器本地還原大成功！板子已就緒！</div>`;
           log(`⚡ [韌體還原成功] Arduino Uno (${port}) 已成功恢復積木互動模式！`);
+          return;
         } else {
-          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 還原失敗: ${data.error || '未知錯誤'}</div>`;
-          log(`❌ [韌體還原失敗]: ${data.error || ''}`);
+          logBox.innerHTML += `<div style="color:#F9E2AF;">ℹ️ 伺服器回報: ${data.error}</div>`;
+          logBox.innerHTML += `<div style="color:#89DCEB; font-weight:bold;">🚀 自動無縫啟動【Web Serial 瀏覽器直接燒錄】黑科技...</div>`;
         }
-      })
-      .catch(err => {
-        logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 請求伺服器異常: ${err}</div>`;
-      });
+      } catch (err) {
+        logBox.innerHTML += `<div style="color:#F9E2AF;">ℹ️ 伺服器離線，自動無縫啟動【Web Serial 瀏覽器直接燒錄】黑科技...</div>`;
+      }
+
+      if (!usedServer) {
+        try {
+          await flashHexViaWebSerial('/static/firmware/universal_firmware.ino.hex', logBox);
+        } catch (flashErr) {
+          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 瀏覽器直接燒錄異常: ${flashErr.message || flashErr}</div>`;
+          log(`❌ [韌體還原失敗]: ${flashErr.message || flashErr}`);
+        }
+      }
     }
 
     // ==========================================
