@@ -37,6 +37,8 @@ except ImportError:
     cp_model = None
     HAS_ORTOOLS = False
 
+from universal_shared import FONT_5X7, text_to_matrix_frames, PRESET_MATRIX
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
 BLOCKLY_DIR = os.path.join(WEB_DIR, "blockly")
@@ -54,7 +56,10 @@ def load_hardware_config():
         "common_anode": True,
         "servo_pin": "4",
         "relay1_pin": "13",
-        "relay2_pin": "12"
+        "relay2_pin": "12",
+        "matrix_din_pin": "12",
+        "matrix_cs_pin": "8",
+        "matrix_clk_pin": "7"
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -308,13 +313,10 @@ def api_serial_connect():
         return jsonify({"ok": False, "error": "未指定 COM 埠"}), 400
     ok, msg = arduino_serial.connect(port_name, verify_pong=False)
     return jsonify({"ok": ok, "message": msg, "connected": arduino_serial.is_connected})
-
-
 @app.route("/api/serial/disconnect", methods=["POST"])
 def api_serial_disconnect():
     arduino_serial.disconnect()
     return jsonify({"ok": True, "connected": False})
-
 
 @app.route("/api/serial/send", methods=["POST"])
 def api_serial_send():
@@ -580,6 +582,48 @@ def api_run_blocks():
             dispatch_hardware_command(f"RGB,{r_pin},{g_pin},{b_pin},{anode_val},{r_val},{g_val},{b_val}")
             arduino_serial.log(f"🎨 [自訂 RGB] 腳位 R:{r_pin} G:{g_pin} B:{b_pin} ({'共陽極' if anode_val else '共陰極'}) -> R:{r_val} G:{g_val} B:{b_val}")
 
+        def matrix_clear():
+            if stop_event.is_set():
+                return
+            din = hardware_config.get("matrix_din_pin", "12")
+            cs = hardware_config.get("matrix_cs_pin", "8")
+            clk = hardware_config.get("matrix_clk_pin", "7")
+            dispatch_hardware_command(f"MATRIX_CLEAR,{din},{cs},{clk}")
+            arduino_serial.log("📟 [8x8點陣] 清除畫面")
+
+        def matrix_show_bitmap(b0, b1, b2, b3, b4, b5, b6, b7):
+            if stop_event.is_set():
+                return
+            din = hardware_config.get("matrix_din_pin", "12")
+            cs = hardware_config.get("matrix_cs_pin", "8")
+            clk = hardware_config.get("matrix_clk_pin", "7")
+            dispatch_hardware_command(f"MATRIX_ALL,{din},{cs},{clk},{b0},{b1},{b2},{b3},{b4},{b5},{b6},{b7}")
+
+        def matrix_show_icon(icon_name):
+            if stop_event.is_set():
+                return
+            icon_key = str(icon_name).lower()
+            bm = None
+            for k, v in PRESET_MATRIX.items():
+                if icon_key in k.lower():
+                    bm = v
+                    break
+            if not bm:
+                bm = PRESET_MATRIX.get("❤️ 愛心", [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18])
+            matrix_show_bitmap(*bm)
+            arduino_serial.log(f"📟 [8x8點陣] 顯示圖案: {icon_name}")
+
+        def matrix_scroll_text(text, speed=0.08):
+            if stop_event.is_set():
+                return
+            frames = text_to_matrix_frames(str(text), padding=True)
+            arduino_serial.log(f"📟 [8x8點陣] 滾動字幕: '{text}' (共 {len(frames)} 影格)")
+            for frame in frames:
+                if stop_event.is_set():
+                    break
+                matrix_show_bitmap(*frame)
+                interruptible_sleep(float(speed))
+
         def __step__(block_id):
             if stop_event.is_set():
                 raise KeyboardInterrupt("Stopped by user")
@@ -599,6 +643,10 @@ def api_run_blocks():
             "set_rgb_color": set_rgb_color,
             "set_custom_rgb": set_custom_rgb,
             "play_rgb_effect": play_rgb_effect,
+            "matrix_clear": matrix_clear,
+            "matrix_show_bitmap": matrix_show_bitmap,
+            "matrix_show_icon": matrix_show_icon,
+            "matrix_scroll_text": matrix_scroll_text,
             "time": time,
             "True": True,
             "False": False,
@@ -1074,11 +1122,11 @@ def api_hardware_config():
     global hardware_config
     if request.method == "POST":
         data = request.get_json(silent=True) or {}
-        for k in ["m1_r_pin", "m1_g_pin", "m1_b_pin", "m2_r_pin", "m2_g_pin", "m2_b_pin", "common_anode", "servo_pin", "relay1_pin", "relay2_pin"]:
+        for k in ["m1_r_pin", "m1_g_pin", "m1_b_pin", "m2_r_pin", "m2_g_pin", "m2_b_pin", "common_anode", "servo_pin", "relay1_pin", "relay2_pin", "matrix_din_pin", "matrix_cs_pin", "matrix_clk_pin"]:
             if k in data:
                 hardware_config[k] = data[k]
         save_hardware_config(hardware_config)
-        arduino_serial.log(f"⚙️ 硬體腳位配置已更新: M1({hardware_config.get('m1_r_pin')},{hardware_config.get('m1_g_pin')},{hardware_config.get('m1_b_pin')}), M2({hardware_config.get('m2_r_pin')},{hardware_config.get('m2_g_pin')},{hardware_config.get('m2_b_pin')}), 共陽極={hardware_config.get('common_anode')}")
+        arduino_serial.log(f"⚙️ 硬體腳位配置已更新: M1({hardware_config.get('m1_r_pin')},{hardware_config.get('m1_g_pin')},{hardware_config.get('m1_b_pin')}), M2({hardware_config.get('m2_r_pin')},{hardware_config.get('m2_g_pin')},{hardware_config.get('m2_b_pin')}), 點陣({hardware_config.get('matrix_din_pin')},{hardware_config.get('matrix_cs_pin')},{hardware_config.get('matrix_clk_pin')})")
         return jsonify({"ok": True, "config": hardware_config})
     return jsonify(hardware_config)
 
@@ -1088,6 +1136,29 @@ def api_hardware_test():
     global hardware_config
     data = request.get_json(silent=True) or {}
     target = str(data.get("target", "1"))
+
+    if target == "matrix":
+        din = hardware_config.get("matrix_din_pin", "12")
+        cs = hardware_config.get("matrix_cs_pin", "8")
+        clk = hardware_config.get("matrix_clk_pin", "7")
+        icon = data.get("icon", "heart")
+        if icon == "heart":
+            bm = PRESET_MATRIX.get("❤️ 愛心", [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18])
+        elif icon == "smile":
+            bm = PRESET_MATRIX.get("😊 笑臉", [0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C])
+        elif icon == "clear":
+            bm = [0, 0, 0, 0, 0, 0, 0, 0]
+        else:
+            bm = PRESET_MATRIX.get("❤️ 愛心")
+        cmd = f"MATRIX_ALL,{din},{cs},{clk}," + ",".join(str(b) for b in bm)
+        if arduino_serial.is_connected:
+            resp = arduino_serial.send_command(cmd)
+            arduino_serial.log(f"🧪 [測試點陣] 腳位 DIN:{din} CS:{cs} CLK:{clk} -> 顯示 {icon} | {resp}")
+            return jsonify({"ok": True, "resp": resp})
+        else:
+            arduino_serial.log(f"⚠️ [USB 未連線] 測試點陣 腳位 DIN:{din} CS:{cs} CLK:{clk} -> {icon}")
+            return jsonify({"ok": False, "error": "USB 尚未連線"}), 400
+
     r = max(0, min(255, int(data.get("r", 255))))
     g = max(0, min(255, int(data.get("g", 0))))
     b = max(0, min(255, int(data.get("b", 0))))

@@ -470,6 +470,7 @@
           <option value="ex_rgb_fire">🔥 壁爐跳火燭光 (暖橙與烈火金光搖曳)</option>
         </optgroup>
         <optgroup label="💡 基礎與硬體控制">
+          <option value="ex_matrix_marquee">📟 點矩陣：跑馬燈字幕與跳動愛心 (HELLO ARDUINO ➔ ❤️)</option>
           <option value="ex_arduino_blink">💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)</option>
           <option value="ex_arduino_servo">🦾 動作：伺服舵機擺動 (Pin 4: 0° ➔ 90° ➔ 180°)</option>
           <option value="ex_relay_blink">⚡ 繼電器：雙路交替開關循環</option>
@@ -585,6 +586,22 @@
       <block type="arduino_rgb_fx">
         <field name="EFFECT">police_strobe</field>
       </block>
+    </category>
+
+    <!-- 📟 8x8 點矩陣顯示器 (MAX7219 字幕與圖示) -->
+    <category name="📟 點矩陣字幕" colour="#D946EF">
+      <block type="matrix_scroll_text">
+        <value name="TEXT">
+          <shadow type="text"><field name="TEXT">HELLO ARDUINO</field></shadow>
+        </value>
+        <value name="SPEED">
+          <shadow type="math_number"><field name="NUM">0.08</field></shadow>
+        </value>
+      </block>
+      <block type="matrix_show_icon">
+        <field name="ICON">heart</field>
+      </block>
+      <block type="matrix_clear"></block>
     </category>
 
     <!-- ⏱️ 控制與時間 -->
@@ -927,6 +944,67 @@
       return `play_rgb_effect("${fx}")\n`;
     });
 
+    // 13. 點矩陣滾動字幕 (MAX7219)
+    Blockly.Blocks['matrix_scroll_text'] = {
+      init: function() {
+        this.appendValueInput("TEXT")
+            .setCheck("String")
+            .appendField("📟 點矩陣滾動字幕");
+        this.appendValueInput("SPEED")
+            .setCheck("Number")
+            .appendField("滾動速度(秒):");
+        this.setInputsInline(true);
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#D946EF");
+        this.setTooltip("在 MAX7219 8x8 點矩陣顯示器上平滑滾動顯示英數文字跑馬燈");
+      }
+    };
+    definePyBlock('matrix_scroll_text', function(block) {
+      const text = Blockly.Python.valueToCode(block, 'TEXT', Order.ATOMIC) || '"HELLO"';
+      const speed = Blockly.Python.valueToCode(block, 'SPEED', Order.ATOMIC) || '0.08';
+      return `matrix_scroll_text(${text}, ${speed})\n`;
+    });
+
+    // 14. 點矩陣顯示預設圖案
+    Blockly.Blocks['matrix_show_icon'] = {
+      init: function() {
+        this.appendDummyInput()
+            .appendField("📟 點矩陣顯示圖案:")
+            .appendField(new Blockly.FieldDropdown([
+              ["❤️ 愛心", "heart"],
+              ["😊 笑臉", "smile"],
+              ["🚀 火箭", "rocket"],
+              ["🌟 星星", "star"],
+              ["👾 外星人", "alien"],
+              ["⬆️ 向上箭頭", "arrow_up"],
+              ["➡️ 向右箭頭", "arrow_right"],
+              ["⏹️ 全部點亮", "all_on"]
+            ]), "ICON");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#D946EF");
+        this.setTooltip("在 8x8 點矩陣上顯示經典預設圖形");
+      }
+    };
+    definePyBlock('matrix_show_icon', function(block) {
+      const icon = block.getFieldValue('ICON');
+      return `matrix_show_icon("${icon}")\n`;
+    });
+
+    // 15. 點矩陣清除顯示
+    Blockly.Blocks['matrix_clear'] = {
+      init: function() {
+        this.appendDummyInput().appendField("📟 清除點矩陣顯示 (全滅)");
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour("#D946EF");
+      }
+    };
+    definePyBlock('matrix_clear', function(block) {
+      return `matrix_clear()\n`;
+    });
+
     // ==========================================
     // 初始化 Blockly 畫布
     // ==========================================
@@ -1186,6 +1264,113 @@
     }
 
     // ==========================================
+    // 點矩陣 (MAX7219) 字元表與預設圖示資料庫
+    // ==========================================
+    const MATRIX_PRESETS = {
+      'heart': [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18],
+      'smile': [0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C],
+      'rocket': [0x18, 0x3C, 0x7E, 0xDB, 0x99, 0x99, 0x3C, 0x18],
+      'star': [0x18, 0x18, 0x99, 0x5A, 0x3C, 0x5A, 0x99, 0x18],
+      'alien': [0x18, 0x3C, 0x7E, 0xDB, 0xFF, 0x24, 0x5A, 0x81],
+      'arrow_up': [0x18, 0x3C, 0x7E, 0x18, 0x18, 0x18, 0x18, 0x18],
+      'arrow_right': [0x10, 0x30, 0x7F, 0xFF, 0x7F, 0x30, 0x10, 0x00],
+      'all_on': [0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]
+    };
+
+    const MATRIX_FONT_5X7 = {
+      ' ': [0x00, 0x00, 0x00, 0x00, 0x00],
+      '!': [0x00, 0x00, 0x5F, 0x00, 0x00],
+      '"': [0x00, 0x07, 0x00, 0x07, 0x00],
+      '#': [0x14, 0x7F, 0x14, 0x7F, 0x14],
+      '$': [0x24, 0x2A, 0x7F, 0x2A, 0x12],
+      '%': [0x23, 0x13, 0x08, 0x64, 0x62],
+      '&': [0x36, 0x49, 0x55, 0x22, 0x50],
+      '\'': [0x00, 0x05, 0x03, 0x00, 0x00],
+      '(': [0x00, 0x1C, 0x22, 0x41, 0x00],
+      ')': [0x00, 0x41, 0x22, 0x1C, 0x00],
+      '*': [0x08, 0x2A, 0x1C, 0x2A, 0x08],
+      '+': [0x08, 0x08, 0x3E, 0x08, 0x08],
+      ',': [0x00, 0x50, 0x30, 0x00, 0x00],
+      '-': [0x08, 0x08, 0x08, 0x08, 0x08],
+      '.': [0x00, 0x60, 0x60, 0x00, 0x00],
+      '/': [0x20, 0x10, 0x08, 0x04, 0x02],
+      '0': [0x3E, 0x51, 0x49, 0x45, 0x3E],
+      '1': [0x00, 0x42, 0x7F, 0x40, 0x00],
+      '2': [0x42, 0x61, 0x51, 0x49, 0x46],
+      '3': [0x21, 0x41, 0x45, 0x4B, 0x31],
+      '4': [0x18, 0x14, 0x12, 0x7F, 0x10],
+      '5': [0x27, 0x45, 0x45, 0x45, 0x39],
+      '6': [0x3C, 0x4A, 0x49, 0x49, 0x30],
+      '7': [0x01, 0x71, 0x09, 0x05, 0x03],
+      '8': [0x36, 0x49, 0x49, 0x49, 0x36],
+      '9': [0x06, 0x49, 0x49, 0x29, 0x1E],
+      ':': [0x00, 0x36, 0x36, 0x00, 0x00],
+      ';': [0x00, 0x56, 0x36, 0x00, 0x00],
+      '<': [0x08, 0x14, 0x22, 0x41, 0x00],
+      '=': [0x14, 0x14, 0x14, 0x14, 0x14],
+      '>': [0x00, 0x41, 0x22, 0x14, 0x08],
+      '?': [0x02, 0x01, 0x51, 0x09, 0x06],
+      '@': [0x32, 0x49, 0x79, 0x41, 0x3E],
+      'A': [0x7E, 0x11, 0x11, 0x11, 0x7E],
+      'B': [0x7F, 0x49, 0x49, 0x49, 0x36],
+      'C': [0x3E, 0x41, 0x41, 0x41, 0x22],
+      'D': [0x7F, 0x41, 0x41, 0x22, 0x1C],
+      'E': [0x7F, 0x49, 0x49, 0x49, 0x41],
+      'F': [0x7F, 0x09, 0x09, 0x09, 0x01],
+      'G': [0x3E, 0x41, 0x49, 0x49, 0x7A],
+      'H': [0x7F, 0x08, 0x08, 0x08, 0x7F],
+      'I': [0x00, 0x41, 0x7F, 0x41, 0x00],
+      'J': [0x20, 0x40, 0x41, 0x3F, 0x01],
+      'K': [0x7F, 0x08, 0x14, 0x22, 0x41],
+      'L': [0x7F, 0x40, 0x40, 0x40, 0x40],
+      'M': [0x7F, 0x02, 0x0C, 0x02, 0x7F],
+      'N': [0x7F, 0x04, 0x08, 0x10, 0x7F],
+      'O': [0x3E, 0x41, 0x41, 0x41, 0x3E],
+      'P': [0x7F, 0x09, 0x09, 0x09, 0x06],
+      'Q': [0x3E, 0x41, 0x51, 0x21, 0x5E],
+      'R': [0x7F, 0x09, 0x19, 0x29, 0x46],
+      'S': [0x46, 0x49, 0x49, 0x49, 0x31],
+      'T': [0x01, 0x01, 0x7F, 0x01, 0x01],
+      'U': [0x3F, 0x40, 0x40, 0x40, 0x3F],
+      'V': [0x1F, 0x20, 0x40, 0x20, 0x1F],
+      'W': [0x7F, 0x20, 0x18, 0x20, 0x7F],
+      'X': [0x63, 0x14, 0x08, 0x14, 0x63],
+      'Y': [0x07, 0x08, 0x70, 0x08, 0x07],
+      'Z': [0x61, 0x51, 0x49, 0x45, 0x43]
+    };
+
+    function jsTextToMatrixFrames(text) {
+      const cols = [0, 0, 0, 0, 0, 0, 0, 0];
+      const str = String(text || '').toUpperCase();
+      for (let i = 0; i < str.length; i++) {
+        const c = str[i];
+        const glyph = MATRIX_FONT_5X7[c] || [0x00, 0x55, 0x2A, 0x55, 0x00];
+        cols.push(...glyph);
+        cols.push(0x00);
+      }
+      cols.push(0, 0, 0, 0, 0, 0, 0, 0);
+
+      const frames = [];
+      const totalShifts = Math.max(1, cols.length - 7);
+      for (let shift = 0; shift < totalShifts; shift++) {
+        const windowCols = cols.slice(shift, shift + 8);
+        while (windowCols.length < 8) windowCols.push(0);
+        const frame = [0, 0, 0, 0, 0, 0, 0, 0];
+        for (let r = 0; r < 8; r++) {
+          let rowVal = 0;
+          for (let c = 0; c < 8; c++) {
+            if ((windowCols[c] >> r) & 1) {
+              rowVal |= (1 << (7 - c));
+            }
+          }
+          frame[r] = rowVal;
+        }
+        frames.push(frame);
+      }
+      return frames;
+    }
+
+    // ==========================================
     // 執行與停止控制 (Run & Stop)
     // ==========================================
     let clientExecutionStop = false;
@@ -1203,7 +1388,10 @@
         m2_r: document.getElementById('hw_m2_r') ? document.getElementById('hw_m2_r').value : '11',
         m2_g: document.getElementById('hw_m2_g') ? document.getElementById('hw_m2_g').value : '9',
         m2_b: document.getElementById('hw_m2_b') ? document.getElementById('hw_m2_b').value : '10',
-        anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0
+        anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0,
+        matrix_din: document.getElementById('hw_matrix_din') ? document.getElementById('hw_matrix_din').value : '12',
+        matrix_cs: document.getElementById('hw_matrix_cs') ? document.getElementById('hw_matrix_cs').value : '8',
+        matrix_clk: document.getElementById('hw_matrix_clk') ? document.getElementById('hw_matrix_clk').value : '7'
       };
 
       const topBlocks = workspace.getTopBlocks(true);
@@ -1304,9 +1492,40 @@
           await sleepAsync(dur * 1000);
           await sendWebSerialCommand(`DWRITE,${pin},0`);
         }
+        else if (curr.type === 'matrix_scroll_text') {
+          const txt = evalStrInput(curr, 'TEXT', 'HELLO');
+          const spd = evalNumInput(curr, 'SPEED', 0.08);
+          const frames = jsTextToMatrixFrames(txt);
+          log(`📟 [Web Serial 點陣] 開始滾動字幕: "${txt}" (共 ${frames.length} 影格)`);
+          for (let f = 0; f < frames.length; f++) {
+            if (clientExecutionStop) break;
+            const b = frames[f];
+            await sendWebSerialCommand(`MATRIX_ALL,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk},${b[0]},${b[1]},${b[2]},${b[3]},${b[4]},${b[5]},${b[6]},${b[7]}`);
+            await sleepAsync(spd * 1000);
+          }
+        }
+        else if (curr.type === 'matrix_show_icon') {
+          const icon = curr.getFieldValue('ICON') || 'heart';
+          const b = MATRIX_PRESETS[icon] || MATRIX_PRESETS['heart'];
+          await sendWebSerialCommand(`MATRIX_ALL,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk},${b[0]},${b[1]},${b[2]},${b[3]},${b[4]},${b[5]},${b[6]},${b[7]}`);
+          log(`📟 [Web Serial 點陣] 顯示圖案: ${icon}`);
+        }
+        else if (curr.type === 'matrix_clear') {
+          await sendWebSerialCommand(`MATRIX_CLEAR,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk}`);
+          log(`📟 [Web Serial 點陣] 清除畫面 (全滅)`);
+        }
 
         curr = curr.getNextBlock();
       }
+    }
+
+    function evalStrInput(block, name, defaultVal) {
+      const target = block.getInputTargetBlock(name);
+      if (!target) return defaultVal;
+      if (target.type === 'text') {
+        return target.getFieldValue('TEXT') || defaultVal;
+      }
+      return defaultVal;
     }
 
     function evalNumInput(block, name, defaultVal) {
@@ -1400,11 +1619,15 @@
           m2_r: document.getElementById('hw_m2_r') ? document.getElementById('hw_m2_r').value : '11',
           m2_g: document.getElementById('hw_m2_g') ? document.getElementById('hw_m2_g').value : '9',
           m2_b: document.getElementById('hw_m2_b') ? document.getElementById('hw_m2_b').value : '10',
-          anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0
+          anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0,
+          matrix_din: document.getElementById('hw_matrix_din') ? document.getElementById('hw_matrix_din').value : '12',
+          matrix_cs: document.getElementById('hw_matrix_cs') ? document.getElementById('hw_matrix_cs').value : '8',
+          matrix_clk: document.getElementById('hw_matrix_clk') ? document.getElementById('hw_matrix_clk').value : '7'
         };
         sendWebSerialCommand(`RGB,${hw.m1_r},${hw.m1_g},${hw.m1_b},${hw.anode},0,0,0`);
         sendWebSerialCommand(`RGB,${hw.m2_r},${hw.m2_g},${hw.m2_b},${hw.anode},0,0,0`);
         sendWebSerialCommand('DWRITE,13,0');
+        sendWebSerialCommand(`MATRIX_CLEAR,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk}`);
       }
 
       fetch('/api/stop_blocks', { method: 'POST' })
@@ -1774,7 +1997,57 @@
       workspace.clear();
 
       let xmlText = '';
-      if (key === 'ex_arduino_blink') {
+      if (key === 'ex_matrix_marquee') {
+        // 📟 點矩陣：跑馬燈字幕與跳動愛心
+        xmlText = `
+        <xml xmlns="https://developers.google.com/blockly/xml">
+          <block type="event_when_flag_clicked" x="60" y="40">
+            <next>
+              <block type="control_forever">
+                <statement name="DO">
+                  <block type="matrix_scroll_text">
+                    <value name="TEXT">
+                      <shadow type="text"><field name="TEXT">HELLO ARDUINO</field></shadow>
+                    </value>
+                    <value name="SPEED">
+                      <shadow type="math_number"><field name="NUM">0.08</field></shadow>
+                    </value>
+                    <next>
+                      <block type="matrix_show_icon">
+                        <field name="ICON">heart</field>
+                        <next>
+                          <block type="control_wait">
+                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
+                            <next>
+                              <block type="matrix_clear">
+                                <next>
+                                  <block type="control_wait">
+                                    <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.3</field></shadow></value>
+                                    <next>
+                                      <block type="matrix_show_icon">
+                                        <field name="ICON">heart</field>
+                                        <next>
+                                          <block type="control_wait">
+                                            <value name="SECONDS"><shadow type="math_number"><field name="NUM">0.8</field></shadow></value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </xml>`;
+      } else if (key === 'ex_arduino_blink') {
         // 💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)
         xmlText = `
         <xml xmlns="https://developers.google.com/blockly/xml">
@@ -2759,6 +3032,9 @@
           if (document.getElementById('hw_servo_pin')) document.getElementById('hw_servo_pin').value = String(cfg.servo_pin || '4');
           if (document.getElementById('hw_relay1_pin')) document.getElementById('hw_relay1_pin').value = String(cfg.relay1_pin || '7');
           if (document.getElementById('hw_relay2_pin')) document.getElementById('hw_relay2_pin').value = String(cfg.relay2_pin || '8');
+          if (document.getElementById('hw_matrix_din')) document.getElementById('hw_matrix_din').value = String(cfg.matrix_din_pin || '12');
+          if (document.getElementById('hw_matrix_cs')) document.getElementById('hw_matrix_cs').value = String(cfg.matrix_cs_pin || '8');
+          if (document.getElementById('hw_matrix_clk')) document.getElementById('hw_matrix_clk').value = String(cfg.matrix_clk_pin || '7');
         })
         .catch(e => console.error('載入硬體腳位失敗:', e));
     }
@@ -2774,7 +3050,10 @@
         common_anode: document.getElementById('hw_common_anode').value === 'true',
         servo_pin: document.getElementById('hw_servo_pin').value,
         relay1_pin: document.getElementById('hw_relay1_pin').value,
-        relay2_pin: document.getElementById('hw_relay2_pin').value
+        relay2_pin: document.getElementById('hw_relay2_pin').value,
+        matrix_din_pin: document.getElementById('hw_matrix_din').value,
+        matrix_cs_pin: document.getElementById('hw_matrix_cs').value,
+        matrix_clk_pin: document.getElementById('hw_matrix_clk').value
       };
 
       fetch('/api/hardware/config', {
@@ -2785,13 +3064,44 @@
       .then(r => r.json())
       .then(data => {
         if (data.ok) {
-          log(`⚙️ 硬體腳位已成功儲存！ M1(R:${payload.m1_r_pin}, G:${payload.m1_g_pin}, B:${payload.m1_b_pin}) | M2(R:${payload.m2_r_pin}, G:${payload.m2_g_pin}, B:${payload.m2_b_pin}) | 共陽=${payload.common_anode}`);
+          log(`⚙️ 硬體腳位已成功儲存！ M1(R:${payload.m1_r_pin}, G:${payload.m1_g_pin}, B:${payload.m1_b_pin}) | M2(R:${payload.m2_r_pin}, G:${payload.m2_g_pin}, B:${payload.m2_b_pin}) | 點陣(DIN:${payload.matrix_din_pin}, CS:${payload.matrix_cs_pin}, CLK:${payload.matrix_clk_pin})`);
           closeHwConfigModal();
         } else {
           alert('儲存失敗: ' + (data.error || '未知錯誤'));
         }
       })
       .catch(err => alert('儲存失敗: ' + err));
+    }
+
+    function testHwMatrix(icon) {
+      const din = document.getElementById('hw_matrix_din') ? document.getElementById('hw_matrix_din').value : '12';
+      const cs = document.getElementById('hw_matrix_cs') ? document.getElementById('hw_matrix_cs').value : '8';
+      const clk = document.getElementById('hw_matrix_clk') ? document.getElementById('hw_matrix_clk').value : '7';
+
+      if (isWebSerialConnected) {
+        if (icon === 'clear') {
+          sendWebSerialCommand(`MATRIX_CLEAR,${din},${cs},${clk}`);
+          log(`🧪 [Web Serial 測試點陣] 清除畫面 (全滅)`);
+        } else {
+          const b = MATRIX_PRESETS[icon] || MATRIX_PRESETS['heart'];
+          sendWebSerialCommand(`MATRIX_ALL,${din},${cs},${clk},${b[0]},${b[1]},${b[2]},${b[3]},${b[4]},${b[5]},${b[6]},${b[7]}`);
+          log(`🧪 [Web Serial 測試點陣] 腳位 DIN:${din} CS:${cs} CLK:${clk} 顯示 ${icon}`);
+        }
+        return;
+      }
+
+      fetch('/api/hardware/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: 'matrix', icon: icon })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (!data.ok) {
+          log(`⚠️ 點陣測試提示: ${data.error || '尚未連線 USB 串列埠'}`);
+        }
+      })
+      .catch(err => log(`⚠️ 點陣通訊錯誤: ${err}`));
     }
 
     function testHwRgbColor(target, r, g, b) {
@@ -2842,7 +3152,7 @@
     <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:520px; max-width:92vw; padding:22px; box-shadow:0 12px 36px rgba(0,0,0,0.6); border:1px solid #313244; max-height:90vh; overflow-y:auto;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #313244; padding-bottom:10px;">
         <div style="font-size:16px; font-weight:bold; color:#38ef7d; display:flex; align-items:center; gap:8px;">
-          <span>⚙️ 硬體腳位與極性設定 (M1 / M2 / 舵機 / 繼電器)</span>
+          <span>⚙️ 硬體腳位與極性設定 (M1 / M2 / 點矩陣 / 舵機 / 繼電器)</span>
         </div>
         <span style="cursor:pointer; font-size:20px; color:#A6ADC8;" onclick="closeHwConfigModal()">✕</span>
       </div>
@@ -2998,6 +3308,60 @@
               <option value="13">Pin 13</option>
             </select>
           </div>
+        </div>
+      </div>
+
+      <!-- 📟 MAX7219 8x8 點矩陣顯示器腳位設定 -->
+      <div style="background:#181825; border:1px solid #313244; border-radius:8px; padding:12px; margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:bold; color:#D946EF; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+          <span>📟 MAX7219 8x8 點矩陣顯示器腳位</span>
+          <span style="font-size:10px; color:#A6ADC8;">DIN / CS / CLK 三線串列控制</span>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">📥 資料 (DIN):</label>
+            <select id="hw_matrix_din" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="4">Pin 4</option>
+              <option value="7">Pin 7</option>
+              <option value="8">Pin 8</option>
+              <option value="11">Pin 11</option>
+              <option value="12" selected>Pin 12</option>
+              <option value="13">Pin 13</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">🔒 晶片選取 (CS):</label>
+            <select id="hw_matrix_cs" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="4">Pin 4</option>
+              <option value="7">Pin 7</option>
+              <option value="8" selected>Pin 8</option>
+              <option value="10">Pin 10</option>
+              <option value="12">Pin 12</option>
+              <option value="13">Pin 13</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; color:#BAC2DE; display:block; margin-bottom:2px;">⏱️ 時脈 (CLK):</label>
+            <select id="hw_matrix_clk" style="width:100%; background:#11111B; color:white; border:1px solid #45475A; padding:4px 6px; border-radius:5px; font-size:11px;">
+              <option value="2">Pin 2</option>
+              <option value="4">Pin 4</option>
+              <option value="7" selected>Pin 7</option>
+              <option value="8">Pin 8</option>
+              <option value="12">Pin 12</option>
+              <option value="13">Pin 13</option>
+            </select>
+          </div>
+        </div>
+        <!-- 點矩陣快速測試按鈕 -->
+        <div style="font-size:11px; color:#A6ADC8; margin-bottom:6px;">即時測試點矩陣圖形:</div>
+        <div style="display:flex; gap:6px;">
+          <button onclick="testHwMatrix('heart')" style="flex:1; background:#E11D48; color:white; border:none; padding:5px 0; border-radius:4px; font-size:11px; cursor:pointer;" title="顯示愛心">❤️ 愛心</button>
+          <button onclick="testHwMatrix('smile')" style="flex:1; background:#F59E0B; color:white; border:none; padding:5px 0; border-radius:4px; font-size:11px; cursor:pointer;" title="顯示笑臉">😊 笑臉</button>
+          <button onclick="testHwMatrix('rocket')" style="flex:1; background:#3B82F6; color:white; border:none; padding:5px 0; border-radius:4px; font-size:11px; cursor:pointer;" title="顯示火箭">🚀 火箭</button>
+          <button onclick="testHwMatrix('star')" style="flex:1; background:#8B5CF6; color:white; border:none; padding:5px 0; border-radius:4px; font-size:11px; cursor:pointer;" title="顯示星星">🌟 星星</button>
+          <button onclick="testHwMatrix('clear')" style="flex:1; background:#374151; color:white; border:none; padding:5px 0; border-radius:4px; font-size:11px; cursor:pointer;" title="清除全滅">⬛ 清除</button>
         </div>
       </div>
 
