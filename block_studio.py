@@ -1110,7 +1110,7 @@ def launch_desktop_window(app_url: str):
     return True
 
 
-def run_server(port=5050):
+def is_running_in_cloud():
     return bool(
         os.environ.get("RENDER")
         or os.environ.get("DYNO")
