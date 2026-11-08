@@ -970,9 +970,9 @@ def solve_lightshow_with_cpsat(style="balanced", target_sec=30, max_power_rate=8
     # 約束 1: 總時長嚴格相等
     model.Add(sum(dur_vars) == target_sec)
 
-    # 約束 2: 演出的特效段數多樣性 (3 到 6 段)
+    # 約束 2: 演出的特效段數多樣性 (3 到 5 段)
     model.Add(sum(active_vars) >= min(3, n))
-    model.Add(sum(active_vars) <= min(6, n))
+    model.Add(sum(active_vars) <= min(5, n))
 
     # 約束 3: 功率上限約束
     total_power = sum(dur_vars[i] * candidates[i]["power"] for i in range(n))
@@ -1377,6 +1377,23 @@ def api_burn_boards():
     })
 
 
+def safe_run_process(args, timeout=60):
+    """安全執行外部 CLI 指令，防範 Windows Big5/CP950 編碼解碼崩潰"""
+    p = subprocess.run(args, capture_output=True, timeout=timeout)
+    def decode_stream(stream_bytes):
+        if not stream_bytes:
+            return ""
+        for enc in ("utf-8", "cp950", "gbk", "latin-1"):
+            try:
+                return stream_bytes.decode(enc)
+            except Exception:
+                pass
+        return stream_bytes.decode("utf-8", errors="replace")
+    stdout = decode_stream(p.stdout)
+    stderr = decode_stream(p.stderr)
+    return p.returncode, stdout, stderr
+
+
 @app.route("/api/burn/compile_and_upload", methods=["POST"])
 def api_burn_compile_and_upload():
     cli_path = find_arduino_cli()
@@ -1400,7 +1417,7 @@ def api_burn_compile_and_upload():
         was_connected = True
         arduino_serial.log(f"🔥 [離線燒錄] 暫時釋放 {port} 串列埠以執行韌體燒錄...")
         arduino_serial.disconnect()
-        time.sleep(0.6)
+        time.sleep(1.0)
 
     temp_dir = os.path.join(tempfile.gettempdir(), f"sophia_sketch_{int(time.time())}")
     sketch_dir = os.path.join(temp_dir, "sophia_sketch")
@@ -1413,45 +1430,41 @@ def api_burn_compile_and_upload():
 
         arduino_serial.log(f"🛠️ [離線燒錄] 正在啟動編譯 (FQBN: {fqbn})...")
         # 1. Compile
-        comp_res = subprocess.run(
+        ret, comp_stdout, comp_stderr = safe_run_process(
             [cli_path, "compile", "--fqbn", fqbn, sketch_dir],
-            capture_output=True,
-            text=True,
             timeout=60
         )
-        if comp_res.returncode != 0:
-            err_msg = comp_res.stderr or comp_res.stdout
+        if ret != 0:
+            err_msg = comp_stderr or comp_stdout
             arduino_serial.log(f"❌ [離線燒錄] 編譯失敗:\n{err_msg}")
             return jsonify({
                 "ok": False,
                 "stage": "compile",
                 "error": "Arduino 編譯失敗，請檢查語法或設定",
-                "log": comp_res.stdout + "\n" + comp_res.stderr
+                "log": (comp_stdout or "") + "\n" + (comp_stderr or "")
             }), 400
 
         arduino_serial.log(f"✅ [離線燒錄] 編譯成功！正在上傳韌體至 {port}...")
         # 2. Upload
-        upload_res = subprocess.run(
+        ret, upload_stdout, upload_stderr = safe_run_process(
             [cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir],
-            capture_output=True,
-            text=True,
             timeout=60
         )
-        if upload_res.returncode != 0:
-            err_msg = upload_res.stderr or upload_res.stdout
+        if ret != 0:
+            err_msg = upload_stderr or upload_stdout
             arduino_serial.log(f"❌ [離線燒錄] 上傳失敗:\n{err_msg}")
             return jsonify({
                 "ok": False,
                 "stage": "upload",
                 "error": f"韌體上傳失敗，請確認板子連接在 {port} 且未被其他軟體佔用",
-                "log": upload_res.stdout + "\n" + upload_res.stderr
+                "log": (upload_stdout or "") + "\n" + (upload_stderr or "")
             }), 400
 
         arduino_serial.log(f"🎉🎉 [離線燒錄] 燒錄大成功！板子已完成重置，可拔除電腦 USB，以行動電源或電池獨立離線運作！")
         return jsonify({
             "ok": True,
             "message": "燒錄成功！現在板子已可完全離線自主運行！",
-            "log": comp_res.stdout + "\n" + upload_res.stdout
+            "log": (comp_stdout or "") + "\n" + (upload_stdout or "")
         })
 
     except Exception as e:

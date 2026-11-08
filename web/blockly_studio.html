@@ -4240,13 +4240,14 @@ void loop() {
         }).catch(() => {});
     }
 
-    function startOfflineBurn() {
+    async function startOfflineBurn() {
       const port = document.getElementById('burnPortSelect').value || 'COM4';
       const fqbn = document.getElementById('burnBoardSelect').value || 'arduino:avr:uno';
       const logBox = document.getElementById('burnLogBox');
       const btn = document.getElementById('btnStartBurn');
 
       // 產生純淨的 C++ 離線程式碼
+      updateCodeView();
       const cppCode = convertToCpp(rawPythonCode);
 
       logBox.style.display = 'block';
@@ -4256,7 +4257,10 @@ void loop() {
       // 若目前有 Web Serial 瀏覽器直連，先暫時中斷 Web Serial，以防佔用 USB 串列埠
       if (isWebSerialConnected) {
         logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 暫時關閉 Web Serial 串列埠以供燒錄...</div>`;
-        toggleWebSerial();
+        try {
+          await disconnectWebSerial();
+          await new Promise(r => setTimeout(r, 800)); // 讓作業系統釋放 COM 埠
+        } catch (e) {}
       }
 
       if (btn) {
