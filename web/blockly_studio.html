@@ -1188,8 +1188,159 @@
     // ==========================================
     // 執行與停止控制 (Run & Stop)
     // ==========================================
+    let clientExecutionStop = false;
+
+    async function executeBlocksLocallyWebSerial() {
+      clientExecutionStop = false;
+      isRunning = true;
+      document.getElementById('runningBanner').style.display = 'block';
+      log('🚩 【Web Serial 直連執行】開始以瀏覽器原生驅動積木程式...');
+
+      const hw = {
+        m1_r: document.getElementById('hw_m1_r') ? document.getElementById('hw_m1_r').value : '6',
+        m1_g: document.getElementById('hw_m1_g') ? document.getElementById('hw_m1_g').value : '3',
+        m1_b: document.getElementById('hw_m1_b') ? document.getElementById('hw_m1_b').value : '5',
+        m2_r: document.getElementById('hw_m2_r') ? document.getElementById('hw_m2_r').value : '11',
+        m2_g: document.getElementById('hw_m2_g') ? document.getElementById('hw_m2_g').value : '9',
+        m2_b: document.getElementById('hw_m2_b') ? document.getElementById('hw_m2_b').value : '10',
+        anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0
+      };
+
+      const topBlocks = workspace.getTopBlocks(true);
+      const startBlock = topBlocks.find(b => b.type === 'event_when_flag_clicked') || topBlocks[0];
+      if (!startBlock) {
+        log('⚠️ 工作區無有效積木，請先放置積木。');
+        stopProgram();
+        return;
+      }
+
+      try {
+        let first = startBlock.type === 'event_when_flag_clicked' ? startBlock.getNextBlock() : startBlock;
+        await executeBlockChain(first, hw);
+        if (!clientExecutionStop) {
+          log('🏁 程式順利執行完畢！');
+        }
+      } catch (err) {
+        log('❌ 執行中斷: ' + err.message);
+      } finally {
+        stopProgram();
+      }
+    }
+
+    async function executeBlockChain(block, hw) {
+      let curr = block;
+      while (curr && !clientExecutionStop) {
+        highlightBlockVisual(curr.id);
+
+        const mappedLine = blockLineMap[curr.id];
+        if (mappedLine) setGlowBar(mappedLine);
+
+        if (curr.type === 'arduino_rgb_color') {
+          const target = curr.getFieldValue('TARGET');
+          const r = evalNumInput(curr, 'R', 0);
+          const g = evalNumInput(curr, 'G', 0);
+          const b = evalNumInput(curr, 'B', 0);
+          if (target === '1') {
+            await sendWebSerialCommand(`RGB,${hw.m1_r},${hw.m1_g},${hw.m1_b},${hw.anode},${r},${g},${b}`);
+          } else if (target === '2') {
+            await sendWebSerialCommand(`RGB,${hw.m2_r},${hw.m2_g},${hw.m2_b},${hw.anode},${r},${g},${b}`);
+          } else {
+            await sendWebSerialCommand(`RGB,${hw.m1_r},${hw.m1_g},${hw.m1_b},${hw.anode},${r},${g},${b}`);
+            await sendWebSerialCommand(`RGB,${hw.m2_r},${hw.m2_g},${hw.m2_b},${hw.anode},${r},${g},${b}`);
+          }
+          log(`🎨 [Web Serial RGB] 燈${target} -> R:${r} G:${g} B:${b}`);
+        }
+        else if (curr.type === 'arduino_rgb_custom_pins') {
+          const rPin = curr.getFieldValue('R_PIN');
+          const gPin = curr.getFieldValue('G_PIN');
+          const bPin = curr.getFieldValue('B_PIN');
+          const isAnode = curr.getFieldValue('ANODE');
+          const r = evalNumInput(curr, 'R', 0);
+          const g = evalNumInput(curr, 'G', 0);
+          const b = evalNumInput(curr, 'B', 0);
+          await sendWebSerialCommand(`RGB,${rPin},${gPin},${bPin},${isAnode},${r},${g},${b}`);
+        }
+        else if (curr.type === 'control_wait') {
+          const sec = evalNumInput(curr, 'SECONDS', 1);
+          await sleepAsync(sec * 1000);
+        }
+        else if (curr.type === 'control_forever') {
+          const branch = curr.getInputTargetBlock('DO');
+          while (!clientExecutionStop) {
+            if (branch) {
+              await executeBlockChain(branch, hw);
+            } else {
+              await sleepAsync(100);
+            }
+          }
+          break;
+        }
+        else if (curr.type === 'arduino_digital_write') {
+          const pin = curr.getFieldValue('PIN');
+          const val = curr.getFieldValue('VAL');
+          await sendWebSerialCommand(`DWRITE,${pin},${val}`);
+          log(`💡 [數位輸出] 腳位 ${pin} -> ${val}`);
+        }
+        else if (curr.type === 'arduino_pwm_write') {
+          const pin = curr.getFieldValue('PIN');
+          const val = evalNumInput(curr, 'VAL', 255);
+          await sendWebSerialCommand(`AWRITE,${pin},${val}`);
+        }
+        else if (curr.type === 'arduino_servo') {
+          const pin = curr.getFieldValue('PIN');
+          const deg = evalNumInput(curr, 'ANGLE', 90);
+          await sendWebSerialCommand(`SERVO,${pin},${deg}`);
+        }
+        else if (curr.type === 'relay_turn') {
+          const ch = curr.getFieldValue('CHANNEL');
+          const state = curr.getFieldValue('STATE') === 'ON' ? 1 : 0;
+          await sendWebSerialCommand(`DWRITE,${ch == 1 ? 13 : 12},${state}`);
+        }
+        else if (curr.type === 'relay_pulse') {
+          const ch = curr.getFieldValue('CHANNEL');
+          const dur = evalNumInput(curr, 'DURATION', 1);
+          const pin = ch == 1 ? 13 : 12;
+          await sendWebSerialCommand(`DWRITE,${pin},1`);
+          await sleepAsync(dur * 1000);
+          await sendWebSerialCommand(`DWRITE,${pin},0`);
+        }
+
+        curr = curr.getNextBlock();
+      }
+    }
+
+    function evalNumInput(block, name, defaultVal) {
+      const target = block.getInputTargetBlock(name);
+      if (!target) return defaultVal;
+      if (target.type === 'math_number') {
+        const v = parseFloat(target.getFieldValue('NUM'));
+        return isNaN(v) ? defaultVal : v;
+      }
+      return defaultVal;
+    }
+
+    function sleepAsync(ms) {
+      return new Promise(resolve => {
+        let elapsed = 0;
+        const interval = 20;
+        const timer = setInterval(() => {
+          elapsed += interval;
+          if (elapsed >= ms || clientExecutionStop) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, interval);
+      });
+    }
+
     function runProgram() {
       if (!workspace) return;
+
+      // 🌟 若當前已建立 Web Serial 瀏覽器直連，直接在瀏覽器端極速執行，零延遲點燈！
+      if (isWebSerialConnected) {
+        executeBlocksLocallyWebSerial();
+        return;
+      }
 
       // 產生帶有步驟標記的回傳執行代碼 (注意：%1 前後不加引號，Blockly 會自動格式化)
       Blockly.Python.STATEMENT_PREFIX = '__step__(%1)\n';
@@ -1234,17 +1385,34 @@
     }
 
     function stopProgram() {
+      clientExecutionStop = true;
       isRunning = false;
       document.getElementById('runningBanner').style.display = 'none';
       highlightBlockVisual(null);
       setGlowBar(0);
       log('🛑 【程式停止】已發送全域停止訊號，硬體安全歸位。');
 
+      if (isWebSerialConnected) {
+        const hw = {
+          m1_r: document.getElementById('hw_m1_r') ? document.getElementById('hw_m1_r').value : '6',
+          m1_g: document.getElementById('hw_m1_g') ? document.getElementById('hw_m1_g').value : '3',
+          m1_b: document.getElementById('hw_m1_b') ? document.getElementById('hw_m1_b').value : '5',
+          m2_r: document.getElementById('hw_m2_r') ? document.getElementById('hw_m2_r').value : '11',
+          m2_g: document.getElementById('hw_m2_g') ? document.getElementById('hw_m2_g').value : '9',
+          m2_b: document.getElementById('hw_m2_b') ? document.getElementById('hw_m2_b').value : '10',
+          anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 1 : 0
+        };
+        sendWebSerialCommand(`RGB,${hw.m1_r},${hw.m1_g},${hw.m1_b},${hw.anode},0,0,0`);
+        sendWebSerialCommand(`RGB,${hw.m2_r},${hw.m2_g},${hw.m2_b},${hw.anode},0,0,0`);
+        sendWebSerialCommand('DWRITE,13,0');
+      }
+
       fetch('/api/stop_blocks', { method: 'POST' })
       .then(r => r.json())
       .then(data => {
         log('⏹️ 所有硬體動作已停止。');
-      });
+      })
+      .catch(() => {});
     }
 
     // ==========================================
