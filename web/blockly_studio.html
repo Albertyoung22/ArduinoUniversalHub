@@ -565,6 +565,16 @@
       100% { box-shadow: 0 0 8px rgba(0, 230, 112, 0.45); }
     }
 
+    @keyframes pulseGlow {
+      0% { transform: scale(1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.6); }
+      100% { transform: scale(1.02); box-shadow: 0 0 35px rgba(245, 158, 11, 0.95); }
+    }
+
+    @keyframes floatBob {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+
     .code-line {
       display: flex;
       min-height: 22px;
@@ -848,9 +858,9 @@
         </optgroup>
       </select>
 
-      <!-- 👧 昕蓉小導師智慧闖關指引 -->
-      <button class="btn-tool-guide" onclick="openLearningGuide()" title="👧 昕蓉小導師智慧闖關指引 (適合小朋友循序學習)">
-        <span>👧</span> 學習指引
+      <!-- 👧 昕蓉小導師智慧教學模式 -->
+      <button class="btn-tool-guide" onclick="openLearningGuide()" title="👧 昕蓉小老師 - 自動教小朋友操作與互動闖關 (支援一鍵自動示範與音效引導)">
+        <span>🎓</span> 教學模式
       </button>
 
       <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
@@ -4099,15 +4109,224 @@ void loop() {
     }
 
     // ==========================================
-    // 👧 昕蓉小導師智慧闖關指引控制
+    // 👧 昕蓉小老師 - 互動教學與自動引導引擎
     // ==========================================
-    const GUIDE_MISSIONS = [
-      { id: 1, title: '🧩 第一關：積木王國探險', desc: '從左側積木抽屜中，拖曳一塊「🎨 雙 RGB 模組顏色」或「💡 數位輸出」積木到畫布上！' },
-      { id: 2, title: '🔌 第二關：魔杖魔法連線', desc: '點擊導覽列上的「⚡ Web Serial」或選取 COM 埠按「連線」，把 Arduino 魔法板子連上工作室！' },
-      { id: 3, title: '🚀 第三關：綠旗啟動與流光追蹤', desc: '點擊「🚩 執行」，觀察右側程式碼視窗的綠色流光光棒與積木高亮邊框逐行同步追蹤！' },
-      { id: 4, title: '📟 第四關：8x8 點矩陣大冒險', desc: '在左側點矩陣分類中，挑選「心跳搏動」或「火箭升空」動畫，在 8x8 LED 螢幕上看見你的像素圖案！' },
-      { id: 5, title: '🧠 第五關：AI 數學家排程大秀', desc: '開啟「🧠 CP-SAT 排程」，選擇風格與秒數，讓 Google OR-Tools 人工智慧幫你算出完美護眼燈光秀！' }
+    let audioCtx = null;
+    let soundEnabled = true;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function playSound(type) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        if (type === 'ding') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1046.5, now);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'magic') {
+          const freqs = [523.25, 659.25, 783.99, 1046.5];
+          freqs.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, now + i * 0.07);
+            gain.gain.setValueAtTime(0.1, now + i * 0.07);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.22);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.07);
+            osc.stop(now + i * 0.07 + 0.22);
+          });
+        } else if (type === 'victory') {
+          const freqs = [523.25, 659.25, 783.99, 1046.5, 1318.5];
+          freqs.forEach((f, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + i * 0.09);
+            gain.gain.setValueAtTime(0.14, now + i * 0.09);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + (i === 4 ? 0.7 : 0.2));
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.09);
+            osc.stop(now + i * 0.09 + (i === 4 ? 0.7 : 0.2));
+          });
+        }
+      } catch (e) {}
+    }
+
+    const LESSONS_DATA = [
+      {
+        id: 1,
+        title: '💡 第 1 課：讓小燈泡為你眨眨眼 (板載 LED 閃爍)',
+        tag: '基礎必修',
+        badge: '🌟 初級小學徒',
+        concept: '認識程式三大支柱：重複迴圈 (Forever)、數位訊號 (開/關) 與等待秒數。',
+        exampleKey: 'ex_arduino_blink',
+        steps: [
+          {
+            target: '#exampleSelect',
+            title: '選取閃爍積木範例',
+            text: '嗨！我是昕蓉小老師！首先我們在【範例清單】中，選取「💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)」。',
+            action: () => {
+              const sel = document.getElementById('exampleSelect');
+              if (sel) { sel.value = 'ex_arduino_blink'; loadExample('ex_arduino_blink'); }
+            }
+          },
+          {
+            target: '#blocklyArea',
+            title: '認識視覺化積木',
+            text: '你看！工作區出現了「重複無限次」積木，裡面依序「開燈 ➔ 等待1秒 ➔ 關燈 ➔ 等待1秒」，就像心跳一樣規律！',
+            action: () => {}
+          },
+          {
+            target: '#rightSidebar',
+            title: '觀察即時 C++ 程式碼',
+            text: '看到右側視窗了嗎？你拼的積木已經即時轉譯成真正的 Arduino C++ 與 Python 程式碼囉！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+            }
+          },
+          {
+            target: '#btnRunBlocks',
+            title: '點擊綠旗施放魔法！',
+            text: '現在請點擊【🚩 執行】！積木指令會立刻發送到 Arduino 板子，板載小黃燈就會開始對你眨眼睛囉！',
+            action: () => { runBlocks(); }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '流光光棒逐行追蹤！',
+            text: '太神奇了！右側代碼視窗有一條綠色霓虹光棒正在逐行跳動追蹤，跟著板子上的燈光節奏一起奔跑！',
+            action: () => {}
+          }
+        ]
+      },
+      {
+        id: 2,
+        title: '🎨 第 2 課：小小調色大師 (RGB 全彩混色魔法)',
+        tag: '色彩科學',
+        badge: '🎨 色彩魔術師',
+        concept: '探索光學三原色 (Red 紅, Green 綠, Blue 藍)，調出上百萬種彩虹色彩！',
+        exampleKey: 'ex_rgb_rainbow',
+        steps: [
+          {
+            target: '#exampleSelect',
+            title: '載入雙模組彩虹燈光秀',
+            text: '現在我們要當小小調色大師！在範例清單選取「🌈 RGB：雙模組全彩虹霓虹燈光秀」。',
+            action: () => {
+              const sel = document.getElementById('exampleSelect');
+              if (sel) { sel.value = 'ex_rgb_rainbow'; loadExample('ex_rgb_rainbow'); }
+            }
+          },
+          {
+            target: '#blocklyArea',
+            title: '光的三原色原理',
+            text: '紅光(255)加上綠光(255)會混成溫暖的小鴨黃！紅光加藍光會變成夢幻紫色！三種全開就是純白光喔！',
+            action: () => {}
+          },
+          {
+            target: '#btnRunBlocks',
+            title: '啟動彩虹極光！',
+            text: '點擊【🚩 執行】！看看兩顆 RGB 燈珠如彩虹瀑布一般七彩流動變色！',
+            action: () => { runBlocks(); }
+          }
+        ]
+      },
+      {
+        id: 3,
+        title: '👾 第 3 課：點矩陣像素動畫師 (8x8 LED 動態點陣)',
+        tag: '像素動畫',
+        badge: '🚀 像素動畫家',
+        concept: '像素座標 (8x8=64點) 與連續畫面動畫 (Frames)。',
+        exampleKey: 'ex_matrix_rocket',
+        steps: [
+          {
+            target: '#exampleSelect',
+            title: '選取火箭發射範例',
+            text: '讓我們在 8x8 LED 螢幕上放動畫！選取「🚀 點矩陣：像素太空火箭升空發射」。',
+            action: () => {
+              const sel = document.getElementById('exampleSelect');
+              if (sel) { sel.value = 'ex_matrix_rocket'; loadExample('ex_matrix_rocket'); }
+            }
+          },
+          {
+            target: '#blocklyArea',
+            title: '點矩陣動畫積木',
+            text: '積木箱裡有火箭、吃豆人、太空外星人、愛心等多種生動動畫，還能自訂跑馬燈文字喔！',
+            action: () => {}
+          },
+          {
+            target: '#btnRunBlocks',
+            title: '火箭發射衝上太空！',
+            text: '點擊【🚩 執行】，看 8x8 點矩陣點火升空！你也可以自己手繪像素圖案喔！',
+            action: () => { runBlocks(); }
+          }
+        ]
+      },
+      {
+        id: 4,
+        title: '🧠 第 4 課：請 AI 小幫手排程 (Google OR-Tools CP-SAT)',
+        tag: '人工智慧',
+        badge: '🧠 未來 AI 總監',
+        concept: '人工智慧數學模型：約束滿足求解 (CP-SAT) 與多目標最佳化。',
+        exampleKey: null,
+        steps: [
+          {
+            target: '.btn-tool-cpsat',
+            title: '打開 Google OR-Tools AI 排程器',
+            text: '點擊頂部導覽列的【🧠 CP-SAT 排程】按鈕，喚醒 AI 數學小精靈！',
+            action: () => { openCpsatModal(); }
+          },
+          {
+            target: '#cpsatTotalSec',
+            title: '告訴 AI 你的心願',
+            text: '設定你想要的總秒數（例如 30 秒）與喜好的風格（派對、放鬆或均衡）！',
+            action: () => {}
+          },
+          {
+            target: '#btnRunCpsat',
+            title: 'AI 極速求解！',
+            text: '點擊【🚀 啟動 CP-SAT 最佳化求解】！AI 在 0.05 秒內就能為你排出最省電、最順暢的整套長篇積木！',
+            action: () => { runCpsatOptimizer(); }
+          }
+        ]
+      }
     ];
+
+    let currentTutLesson = null;
+    let currentTutStepIdx = 0;
+    let tutAutoPlayTimer = null;
+    let isTutAutoPlaying = false;
+
+    function openLearningGuide() {
+      renderGuideModal();
+      document.getElementById('learningGuideModal').style.display = 'flex';
+      playSound('ding');
+    }
+
+    function closeLearningGuide() {
+      document.getElementById('learningGuideModal').style.display = 'none';
+    }
 
     function getCompletedMissions() {
       try {
@@ -4122,21 +4341,13 @@ void loop() {
       renderGuideModal();
     }
 
-    function openLearningGuide() {
-      renderGuideModal();
-      document.getElementById('learningGuideModal').style.display = 'flex';
-    }
-
-    function closeLearningGuide() {
-      document.getElementById('learningGuideModal').style.display = 'none';
-    }
-
     function toggleGuideMission(id) {
       let done = getCompletedMissions();
       if (done.includes(id)) {
         done = done.filter(x => x !== id);
       } else {
         done.push(id);
+        playSound('magic');
       }
       saveCompletedMissions(done);
     }
@@ -4149,39 +4360,240 @@ void loop() {
 
       if (starsDiv) {
         let starsHtml = '';
-        for (let i = 1; i <= 5; i++) {
+        for (let i = 1; i <= LESSONS_DATA.length; i++) {
           starsHtml += done.includes(i) ? '⭐ ' : '☆ ';
         }
-        starsDiv.innerHTML = `<span style="font-size: 20px; color: #F59E0B;">${starsHtml}</span> <span style="font-size: 13px; color: #A6ADC8;">(${done.length} / 5 關卡已過關)</span>`;
+        starsDiv.innerHTML = `<span style="font-size: 20px; color: #F59E0B;">${starsHtml}</span> <span style="font-size: 13px; color: #A6ADC8;">(${done.length} / ${LESSONS_DATA.length} 關卡已過關)</span>`;
       }
 
       if (badgeDiv) {
-        if (done.length === 5) {
+        if (done.length >= LESSONS_DATA.length) {
           badgeDiv.style.display = 'block';
-          badgeDiv.innerHTML = '🏆 <b>大成功！全通關成就解鎖！</b><br>你已經是一位出色的昕蓉小創客工程師囉！可以將作品一鍵燒錄到板子帶出門炫耀！';
+          badgeDiv.innerHTML = '🏆 <b>大成功！全通關成就解鎖！</b><br>你已經是一位優秀的昕蓉小創客工程師囉！可以將作品一鍵燒錄到板子帶出門炫耀！';
         } else {
           badgeDiv.style.display = 'none';
         }
       }
 
       if (listDiv) {
-        listDiv.innerHTML = GUIDE_MISSIONS.map(m => {
-          const isDone = done.includes(m.id);
+        listDiv.innerHTML = LESSONS_DATA.map(lesson => {
+          const isDone = done.includes(lesson.id);
           return `
-            <div style="background: ${isDone ? '#1B2B28' : '#181825'}; border: 1px solid ${isDone ? '#00E670' : '#313244'}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
-              <div style="flex: 1;">
-                <div style="font-size: 13px; font-weight: bold; color: ${isDone ? '#00E670' : '#CDD6F4'}; margin-bottom: 3px;">
-                  ${isDone ? '✅ ' : '🎯 '}${m.title}
+            <div style="background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px;">
+                <div style="font-size:13.5px; font-weight:bold; color:${isDone ? '#00E670' : '#CDD6F4'}; display:flex; align-items:center; gap:6px;">
+                  <span>${isDone ? '✅' : '🎯'}</span>
+                  <span>${lesson.title}</span>
                 </div>
-                <div style="font-size: 11.5px; color: #A6ADC8; line-height: 1.4;">${m.desc}</div>
+                <span style="font-size:10px; padding:2px 7px; border-radius:10px; background:${isDone ? '#059669' : '#313244'}; color:white; font-weight:bold;">${lesson.badge}</span>
               </div>
-              <button onclick="toggleGuideMission(${m.id})" style="background: ${isDone ? '#00E670' : '#313244'}; color: ${isDone ? '#000' : '#CDD6F4'}; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0;">
-                ${isDone ? '已完成' : '打勾標記'}
-              </button>
+              <div style="font-size:11.5px; color:#A6ADC8; line-height:1.45; margin-bottom:10px;">
+                💡 <b>核心概念:</b> ${lesson.concept}
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; gap:8px;">
+                  <button onclick="startTutorial(${lesson.id}, true)" style="background:linear-gradient(135deg, #8B5CF6, #6366F1); color:white; border:none; padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(99,102,241,0.35);">
+                    <span>🎬</span> 自動示範
+                  </button>
+                  <button onclick="startTutorial(${lesson.id}, false)" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px; box-shadow:0 2px 6px rgba(244,63,94,0.35);">
+                    <span>👣</span> 帶我操作
+                  </button>
+                </div>
+                <button onclick="toggleGuideMission(${lesson.id})" style="background:${isDone ? '#00E670' : '#313244'}; color:${isDone ? '#000' : '#CDD6F4'}; border:none; padding:5px 12px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+                  ${isDone ? '★ 已通關' : '標記完成'}
+                </button>
+              </div>
             </div>
           `;
         }).join('');
       }
+    }
+
+    // 啟動教學模式 (可選自動播放示範或親手跟著做)
+    function startTutorial(lessonId, isAutoPlay = false) {
+      closeLearningGuide();
+      const lesson = LESSONS_DATA.find(l => l.id === lessonId);
+      if (!lesson) return;
+
+      currentTutLesson = lesson;
+      currentTutStepIdx = 0;
+      isTutAutoPlaying = isAutoPlay;
+
+      const overlay = document.getElementById('tutorialSpotlightOverlay');
+      const card = document.getElementById('tutorialCompanionCard');
+      if (overlay) overlay.style.display = 'block';
+      if (card) card.style.display = 'block';
+
+      renderTutorialStep();
+      playSound(isAutoPlay ? 'magic' : 'ding');
+
+      if (isAutoPlay) {
+        scheduleNextAutoStep();
+      }
+    }
+
+    function renderTutorialStep() {
+      if (!currentTutLesson) return;
+      const step = currentTutLesson.steps[currentTutStepIdx];
+      if (!step) return;
+
+      const cardHeader = document.getElementById('tutCardHeader');
+      const cardStep = document.getElementById('tutCardStepIndicator');
+      const cardMsg = document.getElementById('tutCardMessage');
+      const btnAuto = document.getElementById('btnTutAutoPlay');
+      const btnPrev = document.getElementById('btnTutPrev');
+      const btnNext = document.getElementById('btnTutNext');
+
+      if (cardHeader) cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step.title}`;
+      if (cardStep) cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${isTutAutoPlaying ? '• 🎬 自動示範中' : '• 👣 互動中'}`;
+      if (cardMsg) {
+        cardMsg.innerHTML = `
+          <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px;">${step.title}</div>
+          <div style="color:#CDD6F4;">${step.text}</div>
+        `;
+      }
+      if (btnAuto) {
+        btnAuto.innerHTML = isTutAutoPlaying ? '⏸️ 暫停' : '▶️ 自動示範';
+      }
+      if (btnPrev) {
+        btnPrev.disabled = currentTutStepIdx === 0;
+        btnPrev.style.opacity = currentTutStepIdx === 0 ? '0.5' : '1';
+      }
+      if (btnNext) {
+        btnNext.innerHTML = (currentTutStepIdx === currentTutLesson.steps.length - 1) ? '🎉 完成關卡' : '下一步 ⏭️';
+      }
+
+      // 執行步驟預定義動作
+      if (typeof step.action === 'function') {
+        try { step.action(); } catch (e) { console.warn('Tutorial step action error:', e); }
+      }
+
+      // 聚焦並高亮目標 DOM 元件
+      highlightElement(step.target);
+    }
+
+    function highlightElement(selector) {
+      const box = document.getElementById('tutorialHighlightBox');
+      const card = document.getElementById('tutorialCompanionCard');
+      if (!box || !selector) return;
+
+      const el = document.querySelector(selector);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        box.style.display = 'block';
+        box.style.left = (rect.left - 6) + 'px';
+        box.style.top = (rect.top - 6) + 'px';
+        box.style.width = (rect.width + 12) + 'px';
+        box.style.height = (rect.height + 12) + 'px';
+
+        // 避免懸浮解說卡片擋到高亮元素
+        if (card) {
+          if (rect.right > window.innerWidth - 420 && rect.bottom > window.innerHeight - 250) {
+            card.style.right = 'auto';
+            card.style.left = '24px';
+          } else {
+            card.style.left = 'auto';
+            card.style.right = '24px';
+          }
+        }
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    function scheduleNextAutoStep() {
+      clearTimeout(tutAutoPlayTimer);
+      if (!isTutAutoPlaying) return;
+      tutAutoPlayTimer = setTimeout(() => {
+        if (!isTutAutoPlaying) return;
+        if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
+          nextTutorialStep();
+          scheduleNextAutoStep();
+        } else {
+          // 最後一步自動完成
+          finishTutorialLesson();
+        }
+      }, 4200);
+    }
+
+    function nextTutorialStep() {
+      clearTimeout(tutAutoPlayTimer);
+      if (!currentTutLesson) return;
+      if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
+        currentTutStepIdx++;
+        renderTutorialStep();
+        playSound('ding');
+        if (isTutAutoPlaying) scheduleNextAutoStep();
+      } else {
+        finishTutorialLesson();
+      }
+    }
+
+    function prevTutorialStep() {
+      clearTimeout(tutAutoPlayTimer);
+      if (currentTutStepIdx > 0) {
+        currentTutStepIdx--;
+        renderTutorialStep();
+        playSound('ding');
+        if (isTutAutoPlaying) scheduleNextAutoStep();
+      }
+    }
+
+    function finishTutorialLesson() {
+      clearTimeout(tutAutoPlayTimer);
+      isTutAutoPlaying = false;
+      playSound('victory');
+
+      let done = getCompletedMissions();
+      if (!done.includes(currentTutLesson.id)) {
+        done.push(currentTutLesson.id);
+        saveCompletedMissions(done);
+      }
+
+      const cardMsg = document.getElementById('tutCardMessage');
+      if (cardMsg) {
+        cardMsg.innerHTML = `
+          <div style="color:#00E670; font-size:15px; font-weight:bold; margin-bottom:6px;">🎉 哇！恭喜你完成了【${currentTutLesson.title.split('：')[0]}】！</div>
+          <div style="color:#CDD6F4; font-size:12px;">你獲得了一顆金黃星星 ⭐！現在你可以隨心所欲修改數值，玩出你的專屬作品喔！</div>
+        `;
+      }
+      const btnNext = document.getElementById('btnTutNext');
+      if (btnNext) {
+        btnNext.innerHTML = '🏆 回教學選單';
+        btnNext.onclick = () => { stopTutorial(); openLearningGuide(); };
+      }
+    }
+
+    function stopTutorial() {
+      clearTimeout(tutAutoPlayTimer);
+      isTutAutoPlaying = false;
+      currentTutLesson = null;
+      currentTutStepIdx = 0;
+
+      const overlay = document.getElementById('tutorialSpotlightOverlay');
+      const card = document.getElementById('tutorialCompanionCard');
+      if (overlay) overlay.style.display = 'none';
+      if (card) card.style.display = 'none';
+    }
+
+    function toggleTutorialAutoPlay() {
+      isTutAutoPlaying = !isTutAutoPlaying;
+      const btnAuto = document.getElementById('btnTutAutoPlay');
+      if (btnAuto) {
+        btnAuto.innerHTML = isTutAutoPlaying ? '⏸️ 暫停' : '▶️ 自動示範';
+      }
+      if (isTutAutoPlaying) {
+        scheduleNextAutoStep();
+      } else {
+        clearTimeout(tutAutoPlayTimer);
+      }
+    }
+
+    function toggleTutorialSound() {
+      soundEnabled = !soundEnabled;
+      const btn = document.getElementById('btnTutSound');
+      if (btn) btn.innerText = soundEnabled ? '🔊' : '🔇';
+      if (soundEnabled) playSound('ding');
     }
 
     // ==========================================
@@ -4984,12 +5396,12 @@ void loop() {
     </div>
   </div>
 
-  <!-- 👧 昕蓉小導師智慧闖關指引對話框 -->
+  <!-- 👧 昕蓉小老師 - 互動教學與自動引導教室對話框 -->
   <div id="learningGuideModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:14px; width:520px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; padding:22px; box-shadow:0 14px 44px rgba(0,0,0,0.7); border:1px solid #313244;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:14px; width:560px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; padding:22px; box-shadow:0 14px 44px rgba(0,0,0,0.7); border:1px solid #313244;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
         <div style="font-size:16px; font-weight:bold; color:#F472B6; display:flex; align-items:center; gap:8px;">
-          <span>👧 昕蓉小導師智慧闖關指引</span>
+          <span>👧 昕蓉小老師 - 互動教學與自動引導教室</span>
         </div>
         <span style="cursor:pointer; font-size:18px; color:#A6ADC8;" onclick="closeLearningGuide()">✕</span>
       </div>
@@ -4999,13 +5411,15 @@ void loop() {
           <div style="font-size:11px; color:#BAC2DE; margin-bottom:2px;">🏆 小小工程師闖關進度:</div>
           <div id="guideStarsDisplay"></div>
         </div>
-        <div style="font-size:24px;">⭐</div>
+        <button onclick="startTutorial(1, true)" style="background:linear-gradient(135deg, #8B5CF6, #6366F1); color:white; border:none; padding:6px 14px; border-radius:6px; font-size:11.5px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; box-shadow:0 2px 8px rgba(99,102,241,0.4);">
+          <span>🎬</span> 一鍵自動示範全部
+        </button>
       </div>
 
       <div id="guideBadgeBanner" style="display:none; background:linear-gradient(135deg, #10B981, #059669); color:white; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px; line-height:1.4;"></div>
 
-      <div style="font-size:12px; color:#A6ADC8; margin-bottom:10px;">
-        跟著昕蓉小導師的 5 大挑戰，輕鬆學會 Arduino 積木魔法、點矩陣與人工智慧排程！完成後點擊右側按鈕打勾領取星星！
+      <div style="font-size:12px; color:#A6ADC8; margin-bottom:10px; line-height:1.4;">
+        歡迎來到魔法程式教室！點擊 <b>【🎬 自動示範】</b> 系統會自動操作教你看懂，或點擊 <b>【👣 帶我操作】</b> 由昕蓉小老師手把手帶你一步一步點亮硬體！
       </div>
 
       <!-- 任務清單 -->
@@ -5013,7 +5427,7 @@ void loop() {
 
       <div style="display:flex; justify-content:flex-end;">
         <button onclick="closeLearningGuide()" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:8px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
-          繼續冒險！
+          開始自由練習！
         </button>
       </div>
     </div>
@@ -5075,6 +5489,45 @@ void loop() {
             🔥 開始燒錄 (Burn to Board)
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🎓 互動教學 Spotlight 聚光燈遮罩 -->
+  <div id="tutorialSpotlightOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9980; pointer-events:none; transition:all 0.3s ease;">
+    <!-- 聚光燈外框與跳動黃色流光 -->
+    <div id="tutorialHighlightBox" style="position:absolute; border:3px solid #F59E0B; border-radius:10px; box-shadow:0 0 25px rgba(245,158,11,0.85), inset 0 0 15px rgba(245,158,11,0.3); pointer-events:none; transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1); animation:pulseGlow 1.4s infinite alternate;"></div>
+  </div>
+
+  <!-- 👧 昕蓉小導師懸浮解說卡片 -->
+  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:24px;">👧</span>
+        <div>
+          <div style="font-weight:bold; font-size:14px; color:#F472B6;" id="tutCardHeader">昕蓉小老師教學中</div>
+          <div style="font-size:11px; color:#A6ADC8;" id="tutCardStepIndicator">步驟 1 / 5</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:6px;">
+        <button onclick="toggleTutorialSound()" id="btnTutSound" style="background:#313244; color:#CDD6F4; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="開關音效">🔊</button>
+        <button onclick="stopTutorial()" style="background:#45475A; color:#BAC2DE; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="退出教學">✕ 結束</button>
+      </div>
+    </div>
+    <div style="font-size:13px; line-height:1.55; color:#F8FAFC; background:#181825; border-radius:10px; padding:12px; margin-bottom:14px; border:1px solid #313244;" id="tutCardMessage">
+      嗨！看這裡喔！
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <button id="btnTutPrev" onclick="prevTutorialStep()" style="background:#313244; color:#BAC2DE; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+        ⏮️ 上一步
+      </button>
+      <div style="display:flex; gap:8px;">
+        <button id="btnTutAutoPlay" onclick="toggleTutorialAutoPlay()" style="background:linear-gradient(135deg, #8B5CF6, #6366F1); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+          ⏸️ 暫停
+        </button>
+        <button id="btnTutNext" onclick="nextTutorialStep()" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:7px 18px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
+          下一步 ⏭️
+        </button>
       </div>
     </div>
   </div>
