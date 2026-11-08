@@ -37,7 +37,7 @@ except ImportError:
     cp_model = None
     HAS_ORTOOLS = False
 
-from universal_shared import FONT_5X7, text_to_matrix_frames, PRESET_MATRIX
+from universal_shared import FONT_5X7, text_to_matrix_frames, PRESET_MATRIX, PRESET_ANIMATIONS
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "web")
@@ -624,6 +624,57 @@ def api_run_blocks():
                 matrix_show_bitmap(*frame)
                 interruptible_sleep(float(speed))
 
+        matrix_pixel_buf = [0] * 8
+
+        def matrix_play_animation(anim_name, repeat=1, speed=0.1):
+            if stop_event.is_set():
+                return
+            anim_key = str(anim_name).lower()
+            frames = None
+            for k, v in PRESET_ANIMATIONS.items():
+                if anim_key in k.lower():
+                    frames = v
+                    break
+            if not frames:
+                # 模糊比對常用英文代號
+                aliases = {
+                    "heartbeat": "💓 心跳搏動動畫",
+                    "heart": "💓 心跳搏動動畫",
+                    "rocket": "🚀 火箭升空動畫",
+                    "wave": "🌊 像素海浪動畫",
+                    "radar": "⏳ 旋轉雷達動畫",
+                    "pacman": "ᗧ 吃豆人動態",
+                    "alien": "👾 外星人跳舞",
+                    "rain": "🌧️ 矩陣數位雨",
+                    "ripple": "🌀 同心方塊波紋",
+                    "flame": "🔥 像素跳動火焰",
+                    "hourglass": "⏳ 翻轉沙漏",
+                }
+                actual_key = aliases.get(anim_key, "💓 心跳搏動動畫")
+                frames = PRESET_ANIMATIONS.get(actual_key, [])
+            
+            arduino_serial.log(f"📟 [8x8點陣] 播放動態特效: {anim_name} (重複 {repeat} 次, 每幀 {speed}s)")
+            for r in range(max(1, int(repeat))):
+                if stop_event.is_set():
+                    break
+                for frame in frames:
+                    if stop_event.is_set():
+                        break
+                    matrix_show_bitmap(*frame)
+                    interruptible_sleep(float(speed))
+
+        def matrix_set_pixel(x, y, state=True):
+            if stop_event.is_set():
+                return
+            col = max(0, min(7, int(x)))
+            row = max(0, min(7, int(y)))
+            st = str(state).lower() in ["1", "true", "on", "yes"]
+            if st:
+                matrix_pixel_buf[row] |= (1 << (7 - col))
+            else:
+                matrix_pixel_buf[row] &= ~(1 << (7 - col))
+            matrix_show_bitmap(*matrix_pixel_buf)
+
         def __step__(block_id):
             if stop_event.is_set():
                 raise KeyboardInterrupt("Stopped by user")
@@ -647,6 +698,8 @@ def api_run_blocks():
             "matrix_show_bitmap": matrix_show_bitmap,
             "matrix_show_icon": matrix_show_icon,
             "matrix_scroll_text": matrix_scroll_text,
+            "matrix_play_animation": matrix_play_animation,
+            "matrix_set_pixel": matrix_set_pixel,
             "time": time,
             "True": True,
             "False": False,
@@ -1141,23 +1194,42 @@ def api_hardware_test():
         din = hardware_config.get("matrix_din_pin", "12")
         cs = hardware_config.get("matrix_cs_pin", "8")
         clk = hardware_config.get("matrix_clk_pin", "7")
-        icon = data.get("icon", "heart")
-        if icon == "heart":
-            bm = PRESET_MATRIX.get("❤️ 愛心", [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18])
-        elif icon == "smile":
-            bm = PRESET_MATRIX.get("😊 笑臉", [0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C])
-        elif icon == "clear":
-            bm = [0, 0, 0, 0, 0, 0, 0, 0]
-        else:
-            bm = PRESET_MATRIX.get("❤️ 愛心")
-        cmd = f"MATRIX_ALL,{din},{cs},{clk}," + ",".join(str(b) for b in bm)
-        if arduino_serial.is_connected:
-            resp = arduino_serial.send_command(cmd)
-            arduino_serial.log(f"🧪 [測試點陣] 腳位 DIN:{din} CS:{cs} CLK:{clk} -> 顯示 {icon} | {resp}")
-            return jsonify({"ok": True, "resp": resp})
-        else:
+        icon = str(data.get("icon", "heart")).lower()
+        if not arduino_serial.is_connected:
             arduino_serial.log(f"⚠️ [USB 未連線] 測試點陣 腳位 DIN:{din} CS:{cs} CLK:{clk} -> {icon}")
             return jsonify({"ok": False, "error": "USB 尚未連線"}), 400
+
+        if icon == "clear":
+            arduino_serial.send_command(f"MATRIX_CLEAR,{din},{cs},{clk}")
+            arduino_serial.log(f"🧪 [測試點陣] 清除畫面全滅")
+            return jsonify({"ok": True})
+
+        # 動態動畫測試
+        matched_anim = None
+        for k, v in PRESET_ANIMATIONS.items():
+            if icon in k.lower():
+                matched_anim = v
+                break
+        if matched_anim:
+            for frame in matched_anim:
+                cmd = f"MATRIX_ALL,{din},{cs},{clk}," + ",".join(str(b) for b in frame)
+                arduino_serial.send_command(cmd)
+                time.sleep(0.08)
+            arduino_serial.log(f"🧪 [測試點陣動畫] 腳位 DIN:{din} CS:{cs} CLK:{clk} -> 播放動態 {icon}")
+            return jsonify({"ok": True, "type": "animation"})
+
+        # 靜態圖形測試
+        matched_bm = None
+        for k, v in PRESET_MATRIX.items():
+            if icon in k.lower():
+                matched_bm = v
+                break
+        if not matched_bm:
+            matched_bm = PRESET_MATRIX.get("❤️ 愛心", [0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18])
+        cmd = f"MATRIX_ALL,{din},{cs},{clk}," + ",".join(str(b) for b in matched_bm)
+        resp = arduino_serial.send_command(cmd)
+        arduino_serial.log(f"🧪 [測試點陣圖示] 腳位 DIN:{din} CS:{cs} CLK:{clk} -> 顯示 {icon} | {resp}")
+        return jsonify({"ok": True, "resp": resp})
 
     r = max(0, min(255, int(data.get("r", 255))))
     g = max(0, min(255, int(data.get("g", 0))))
