@@ -29,7 +29,11 @@ if sys.platform.startswith("win"):
 import serial
 import serial.tools.list_ports
 import json
-from flask import Flask, request, jsonify, send_from_directory
+import tempfile
+import shutil
+import subprocess
+import datetime
+from flask import Flask, request, jsonify, send_from_directory, send_file
 try:
     from ortools.sat.python import cp_model
     HAS_ORTOOLS = True
@@ -867,8 +871,71 @@ CPSAT_EFFECT_CATALOG = [
         "excitement": 5,
         "is_strobe": False,
         "styles": {"party": 2, "relax": 10, "cyberpunk": 3, "police": 1, "balanced": 7}
+    },
+    {
+        "id": "matrix_rocket",
+        "name": "🚀 點矩陣火箭升空",
+        "min_sec": 3,
+        "max_sec": 10,
+        "power": 5,
+        "excitement": 9,
+        "is_strobe": False,
+        "styles": {"party": 8, "relax": 2, "cyberpunk": 9, "police": 2, "balanced": 8}
+    },
+    {
+        "id": "matrix_pacman",
+        "name": "ᗧ 點矩陣吃豆人冒險",
+        "min_sec": 3,
+        "max_sec": 10,
+        "power": 4,
+        "excitement": 8,
+        "is_strobe": False,
+        "styles": {"party": 8, "relax": 3, "cyberpunk": 8, "police": 1, "balanced": 8}
+    },
+    {
+        "id": "matrix_alien",
+        "name": "👾 點矩陣太空外星人跳舞",
+        "min_sec": 3,
+        "max_sec": 10,
+        "power": 4,
+        "excitement": 7,
+        "is_strobe": False,
+        "styles": {"party": 7, "relax": 3, "cyberpunk": 9, "police": 1, "balanced": 7}
+    },
+    {
+        "id": "matrix_rain",
+        "name": "🌧️ 點矩陣數位駭客雨",
+        "min_sec": 3,
+        "max_sec": 12,
+        "power": 5,
+        "excitement": 7,
+        "is_strobe": False,
+        "styles": {"party": 6, "relax": 6, "cyberpunk": 10, "police": 3, "balanced": 8}
+    },
+    {
+        "id": "matrix_radar",
+        "name": "⏳ 點矩陣旋轉雷達掃描",
+        "min_sec": 3,
+        "max_sec": 10,
+        "power": 4,
+        "excitement": 6,
+        "is_strobe": False,
+        "styles": {"party": 5, "relax": 7, "cyberpunk": 8, "police": 8, "balanced": 7}
+    },
+    {
+        "id": "matrix_marquee",
+        "name": "📟 點矩陣跑馬燈 (SOPHIA)",
+        "min_sec": 4,
+        "max_sec": 12,
+        "power": 4,
+        "excitement": 7,
+        "is_strobe": False,
+        "styles": {"party": 7, "relax": 6, "cyberpunk": 7, "police": 2, "balanced": 9}
     }
 ]
+
+# 求解歷程紀錄清單 (最近 50 筆，供小朋友與教學者回溯觀察 AI 數學求解決策)
+cpsat_history_log = []
 
 
 def solve_lightshow_with_cpsat(style="balanced", target_sec=30, max_power_rate=8):
@@ -878,6 +945,7 @@ def solve_lightshow_with_cpsat(style="balanced", target_sec=30, max_power_rate=8
     2. 兒童護眼爆閃上限約束 (Strobe Cap <= 25%)
     3. 硬體功率安全負載約束 (Power Load Integral Constraint)
     4. 特效風格滿意度目標函數最大化 (Objective Function Maximization)
+    5. 歷程紀錄與兒童專屬數學解題筆記
     """
     if not HAS_ORTOOLS:
         return None, "伺服器環境尚未安裝 ortools (請執行 pip install ortools)"
@@ -902,9 +970,9 @@ def solve_lightshow_with_cpsat(style="balanced", target_sec=30, max_power_rate=8
     # 約束 1: 總時長嚴格相等
     model.Add(sum(dur_vars) == target_sec)
 
-    # 約束 2: 演出的特效段數多樣性 (3 到 5 段)
+    # 約束 2: 演出的特效段數多樣性 (3 到 6 段)
     model.Add(sum(active_vars) >= min(3, n))
-    model.Add(sum(active_vars) <= min(5, n))
+    model.Add(sum(active_vars) <= min(6, n))
 
     # 約束 3: 功率上限約束
     total_power = sum(dur_vars[i] * candidates[i]["power"] for i in range(n))
@@ -941,12 +1009,40 @@ def solve_lightshow_with_cpsat(style="balanced", target_sec=30, max_power_rate=8
                 "power": e["power"]
             })
 
+    wall_ms = round(solver.WallTime() * 1000, 1)
+    kid_explanation = (
+        f"👧 昕蓉小導師解題筆記：這次我運用了 {len(dur_vars) + len(active_vars)} 個決策變數與 4 大守恆限制，"
+        f"在短短 {wall_ms} 毫秒內算出了得分高達 {solver.ObjectiveValue():.0f} 的最佳排程！"
+        f"總時長剛好 {target_sec} 秒，包含 {len(result_segments)} 種精彩動態，既好看又護眼安全！"
+    )
+
+    history_item = {
+        "id": f"solve_{int(time.time()*1000)}",
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "style": style,
+        "target_sec": target_sec,
+        "max_power": max_power_rate,
+        "status": solver.StatusName(status),
+        "score": solver.ObjectiveValue(),
+        "wall_time_ms": wall_ms,
+        "num_variables": len(dur_vars) + len(active_vars),
+        "num_constraints": 4,
+        "segments": result_segments,
+        "explanation": kid_explanation
+    }
+    cpsat_history_log.insert(0, history_item)
+    if len(cpsat_history_log) > 50:
+        cpsat_history_log.pop()
+
     return {
         "status": solver.StatusName(status),
         "score": solver.ObjectiveValue(),
         "target_sec": target_sec,
         "style": style,
-        "segments": result_segments
+        "segments": result_segments,
+        "wall_time_ms": wall_ms,
+        "explanation": kid_explanation,
+        "history_id": history_item["id"]
     }, None
 
 
@@ -1121,6 +1217,58 @@ def build_blockly_xml_from_schedule(segments):
               </statement>
               <next>__NEXT__</next>
             </block>""")
+        elif s_id == "matrix_rocket":
+            reps = max(1, int(sec / 1.8))
+            block_snippets.append(f"""
+            <block type="matrix_play_animation">
+              <field name="ANIM">rocket</field>
+              <value name="REPEAT"><shadow type="math_number"><field name="NUM">{reps}</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.1</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
+        elif s_id == "matrix_pacman":
+            reps = max(1, int(sec / 1.6))
+            block_snippets.append(f"""
+            <block type="matrix_play_animation">
+              <field name="ANIM">pacman</field>
+              <value name="REPEAT"><shadow type="math_number"><field name="NUM">{reps}</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.12</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
+        elif s_id == "matrix_alien":
+            reps = max(1, int(sec / 1.5))
+            block_snippets.append(f"""
+            <block type="matrix_play_animation">
+              <field name="ANIM">alien</field>
+              <value name="REPEAT"><shadow type="math_number"><field name="NUM">{reps}</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.12</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
+        elif s_id == "matrix_rain":
+            reps = max(1, int(sec / 1.6))
+            block_snippets.append(f"""
+            <block type="matrix_play_animation">
+              <field name="ANIM">rain</field>
+              <value name="REPEAT"><shadow type="math_number"><field name="NUM">{reps}</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
+        elif s_id == "matrix_radar":
+            reps = max(1, int(sec / 1.5))
+            block_snippets.append(f"""
+            <block type="matrix_play_animation">
+              <field name="ANIM">radar</field>
+              <value name="REPEAT"><shadow type="math_number"><field name="NUM">{reps}</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.1</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
+        elif s_id == "matrix_marquee":
+            block_snippets.append(f"""
+            <block type="matrix_scroll_text">
+              <value name="TEXT"><shadow type="text"><field name="TEXT">SOPHIA</field></shadow></value>
+              <value name="SPEED"><shadow type="math_number"><field name="NUM">0.08</field></shadow></value>
+              <next>__NEXT__</next>
+            </block>""")
         else:
             step = round(sec / 2.0, 2)
             block_snippets.append(f"""
@@ -1177,6 +1325,161 @@ def api_cpsat_optimize():
         arduino_serial.log(f"   ⏱️ {s['name']}: {s['duration']} 秒 (功耗等級 {s['power']})")
 
     return jsonify({"ok": True, "solution": solution})
+
+
+@app.route("/api/cpsat/history", methods=["GET"])
+def api_cpsat_history():
+    return jsonify({
+        "ok": True,
+        "count": len(cpsat_history_log),
+        "history": cpsat_history_log
+    })
+
+
+def find_arduino_cli():
+    candidates = [
+        r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe",
+        r"C:\Program Files (x86)\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe",
+        shutil.which("arduino-cli") or "",
+        os.path.expanduser(r"~\AppData\Local\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe")
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return None
+
+
+@app.route("/api/burn/boards", methods=["GET"])
+def api_burn_boards():
+    cli_path = find_arduino_cli()
+    detected_boards = []
+    if cli_path:
+        try:
+            res = subprocess.run([cli_path, "board", "list"], capture_output=True, text=True, timeout=8)
+            detected_boards = res.stdout.strip().splitlines()
+        except Exception:
+            pass
+
+    presets = [
+        {"name": "Arduino Uno (ATmega328P)", "fqbn": "arduino:avr:uno"},
+        {"name": "Arduino Nano (ATmega328P - 新版 Bootloader)", "fqbn": "arduino:avr:nano"},
+        {"name": "Arduino Nano (ATmega328P - 舊版 Old Bootloader 常見副廠)", "fqbn": "arduino:avr:nano:cpu=atmega328old"},
+        {"name": "ESP32 Dev Module", "fqbn": "arduino:esp32:esp32"},
+        {"name": "NodeMCU 1.0 (ESP-12E)", "fqbn": "esp8266:esp8266:nodemcuv2"}
+    ]
+    return jsonify({
+        "ok": True,
+        "has_cli": bool(cli_path),
+        "cli_path": cli_path,
+        "presets": presets,
+        "detected_raw": detected_boards,
+        "current_port": arduino_serial.port
+    })
+
+
+@app.route("/api/burn/compile_and_upload", methods=["POST"])
+def api_burn_compile_and_upload():
+    cli_path = find_arduino_cli()
+    if not cli_path:
+        return jsonify({
+            "ok": False,
+            "error": "伺服器未找到 arduino-cli 編譯器。請確認已安裝 Arduino IDE 2 或手動將 arduino-cli 加入環境變數。"
+        }), 400
+
+    data = request.get_json(silent=True) or {}
+    code = data.get("code", "")
+    port = data.get("port") or arduino_serial.port or "COM4"
+    fqbn = data.get("fqbn", "arduino:avr:uno")
+
+    if not code.strip():
+        return jsonify({"ok": False, "error": "無有效 C++ 代碼可供編譯"}), 400
+
+    # 若後端目前佔用該 COM 埠，暫時釋放以供燒錄
+    was_connected = False
+    if arduino_serial.is_connected:
+        was_connected = True
+        arduino_serial.log(f"🔥 [離線燒錄] 暫時釋放 {port} 串列埠以執行韌體燒錄...")
+        arduino_serial.disconnect()
+        time.sleep(0.6)
+
+    temp_dir = os.path.join(tempfile.gettempdir(), f"sophia_sketch_{int(time.time())}")
+    sketch_dir = os.path.join(temp_dir, "sophia_sketch")
+    os.makedirs(sketch_dir, exist_ok=True)
+    ino_path = os.path.join(sketch_dir, "sophia_sketch.ino")
+
+    try:
+        with open(ino_path, "w", encoding="utf-8") as f:
+            f.write(code)
+
+        arduino_serial.log(f"🛠️ [離線燒錄] 正在啟動編譯 (FQBN: {fqbn})...")
+        # 1. Compile
+        comp_res = subprocess.run(
+            [cli_path, "compile", "--fqbn", fqbn, sketch_dir],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if comp_res.returncode != 0:
+            err_msg = comp_res.stderr or comp_res.stdout
+            arduino_serial.log(f"❌ [離線燒錄] 編譯失敗:\n{err_msg}")
+            return jsonify({
+                "ok": False,
+                "stage": "compile",
+                "error": "Arduino 編譯失敗，請檢查語法或設定",
+                "log": comp_res.stdout + "\n" + comp_res.stderr
+            }), 400
+
+        arduino_serial.log(f"✅ [離線燒錄] 編譯成功！正在上傳韌體至 {port}...")
+        # 2. Upload
+        upload_res = subprocess.run(
+            [cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir],
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        if upload_res.returncode != 0:
+            err_msg = upload_res.stderr or upload_res.stdout
+            arduino_serial.log(f"❌ [離線燒錄] 上傳失敗:\n{err_msg}")
+            return jsonify({
+                "ok": False,
+                "stage": "upload",
+                "error": f"韌體上傳失敗，請確認板子連接在 {port} 且未被其他軟體佔用",
+                "log": upload_res.stdout + "\n" + upload_res.stderr
+            }), 400
+
+        arduino_serial.log(f"🎉🎉 [離線燒錄] 燒錄大成功！板子已完成重置，可拔除電腦 USB，以行動電源或電池獨立離線運作！")
+        return jsonify({
+            "ok": True,
+            "message": "燒錄成功！現在板子已可完全離線自主運行！",
+            "log": comp_res.stdout + "\n" + upload_res.stdout
+        })
+
+    except Exception as e:
+        arduino_serial.log(f"❌ [離線燒錄] 發生異常: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except Exception:
+            pass
+
+
+@app.route("/api/burn/download_ino", methods=["POST"])
+def api_burn_download_ino():
+    data = request.get_json(silent=True) or {}
+    code = data.get("code", "")
+    if not code.strip():
+        code = "// 👧 昕蓉Sophia 離線獨立運行程式\nvoid setup() {}\nvoid loop() {}\n"
+    from io import BytesIO
+    mem = BytesIO()
+    mem.write(code.encode("utf-8"))
+    mem.seek(0)
+    return send_file(
+        mem,
+        mimetype="text/x-c",
+        as_attachment=True,
+        download_name="Sophia_Offline_Firmware.ino"
+    )
 
 
 @app.route("/api/hardware/config", methods=["GET", "POST"])

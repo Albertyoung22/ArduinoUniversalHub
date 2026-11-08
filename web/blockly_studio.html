@@ -353,6 +353,27 @@
       cursor: pointer;
     }
 
+    .btn-tool-guide {
+      background: linear-gradient(135deg, #EC4899, #F43F5E);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    .btn-tool-guide:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
     .btn-tool-cpsat {
       background: linear-gradient(135deg, #6366F1, #8B5CF6);
       color: white;
@@ -370,6 +391,27 @@
     }
 
     .btn-tool-cpsat:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+
+    .btn-tool-burn {
+      background: linear-gradient(135deg, #EA580C, #F97316);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+      transition: transform 0.1s, opacity 0.1s;
+    }
+
+    .btn-tool-burn:hover {
       opacity: 0.92;
       transform: translateY(-1px);
     }
@@ -501,11 +543,10 @@
       right: 0;
       height: 22px;
       top: 0;
-      /* 乾淨半透明翠綠與青藍漸層光芒，小光暈不暈染 */
-      background: linear-gradient(90deg, rgba(0, 209, 102, 0.22) 0%, rgba(76, 151, 255, 0.10) 65%, transparent 100%);
-      border-left: 3.5px solid #00D166;
-      box-shadow: 0 0 6px rgba(0, 209, 102, 0.35);
-      border-radius: 0 4px 4px 0;
+      background: linear-gradient(90deg, rgba(0, 230, 112, 0.40) 0%, rgba(56, 189, 248, 0.28) 60%, transparent 100%);
+      border-left: 5px solid #00E670;
+      box-shadow: 0 0 16px rgba(0, 230, 112, 0.65), inset 0 0 8px rgba(0, 230, 112, 0.25);
+      border-radius: 0 6px 6px 0;
       pointer-events: none;
       opacity: 0;
       transform: translateY(0);
@@ -519,9 +560,9 @@
     }
 
     @keyframes lightBarPulse {
-      0% { box-shadow: 0 0 4px rgba(0, 209, 102, 0.3); }
-      50% { box-shadow: 0 0 8px rgba(0, 209, 102, 0.55); }
-      100% { box-shadow: 0 0 4px rgba(0, 209, 102, 0.3); }
+      0% { box-shadow: 0 0 8px rgba(0, 230, 112, 0.45); }
+      50% { box-shadow: 0 0 20px rgba(0, 230, 112, 0.85); }
+      100% { box-shadow: 0 0 8px rgba(0, 230, 112, 0.45); }
     }
 
     .code-line {
@@ -550,16 +591,39 @@
       user-select: text;
     }
 
-    .code-line.current-executing .line-num {
-      color: #00D166;
+    .code-line.current-executing {
+      background: linear-gradient(90deg, rgba(0, 230, 112, 0.38) 0%, rgba(56, 189, 248, 0.20) 65%, transparent 100%) !important;
+      border-left: 4.5px solid #00E670 !important;
+      box-shadow: 0 0 14px rgba(0, 230, 112, 0.55) !important;
+      position: relative;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .code-line.current-executing::before {
+      content: '▶';
+      position: absolute;
+      left: 2px;
+      color: #00E670;
+      font-size: 10px;
       font-weight: bold;
-      text-shadow: 0 0 4px rgba(0, 209, 102, 0.6);
+      animation: pointerBounce 0.7s infinite alternate;
+    }
+
+    @keyframes pointerBounce {
+      0% { transform: translateX(0px); opacity: 0.8; }
+      100% { transform: translateX(3px); opacity: 1; }
+    }
+
+    .code-line.current-executing .line-num {
+      color: #00E670;
+      font-weight: 900;
+      text-shadow: 0 0 6px rgba(0, 230, 112, 0.85);
     }
 
     .code-line.current-executing .line-text {
       color: #FFFFFF !important;
-      font-weight: bold;
-      text-shadow: 0 0 4px rgba(0, 209, 102, 0.5);
+      font-weight: 700;
+      text-shadow: 0 0 6px rgba(0, 230, 112, 0.65);
     }
 
     /* Blockly 工作區：緊湊精緻的積木流光描邊 (精確只鎖定自體輪廓，絕不擴散成一大片) */
@@ -594,7 +658,25 @@
       font-family: "Consolas", monospace;
       font-size: 11px;
       color: #A6ADC8;
-      user-select: text;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+    }
+
+    #logContent,
+    #logContent * {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      -moz-user-select: text !important;
+      -ms-user-select: text !important;
+      cursor: text;
+    }
+
+    #logContent ::selection,
+    .log-container ::selection {
+      background: rgba(0, 209, 102, 0.45);
+      color: #FFFFFF;
     }
 
     .log-title {
@@ -766,9 +848,19 @@
         </optgroup>
       </select>
 
+      <!-- 👧 昕蓉小導師智慧闖關指引 -->
+      <button class="btn-tool-guide" onclick="openLearningGuide()" title="👧 昕蓉小導師智慧闖關指引 (適合小朋友循序學習)">
+        <span>👧</span> 學習指引
+      </button>
+
       <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
       <button class="btn-tool-cpsat" onclick="openCpsatModal()" title="Google OR-Tools CP-SAT 智慧排程求解器">
         <span>🧠</span> CP-SAT 排程
+      </button>
+
+      <!-- 🔥 線上編譯燒錄到板子 (離線運行模式) -->
+      <button class="btn-tool-burn" onclick="openBurnModal()" title="🔥 線上編譯並燒錄韌體到板子 (拔除 USB 即可離線自主運作)">
+        <span>🔥</span> 離線燒錄
       </button>
 
       <!-- ⚙️ 硬體腳位設定 (M1/M2/極性) -->
@@ -809,7 +901,10 @@
       <div class="log-container">
         <div class="log-title">
           <span>📜 硬體執行與除錯紀錄 (Terminal)</span>
-          <span style="cursor: pointer; color: #89B4FA;" onclick="clearLog()">清除</span>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="cursor: pointer; color: #00E670; font-weight: bold; font-size: 11px;" onclick="copyAllLogs()" title="一鍵複製全部紀錄內容至剪貼簿">📋 複製紀錄</span>
+            <span style="cursor: pointer; color: #89B4FA; font-size: 11px;" onclick="clearLog()" title="清空終端機紀錄">🗑️ 清除</span>
+          </div>
         </div>
         <div id="logContent">系統已就緒。點擊上方 🚩 綠旗開始執行積木！</div>
       </div>
@@ -1539,40 +1634,251 @@
 
     function convertToCpp(pyCode) {
       if (!pyCode) return '// 尚無代碼';
-      let cpp = '// === Arduino C++ 自動生成代碼 ===\n#include <Arduino.h>\n\nvoid setup() {\n  Serial.begin(115200);\n}\n\nvoid loop() {\n';
+
+      const hw = {
+        m1_r: document.getElementById('hw_m1_r') ? document.getElementById('hw_m1_r').value : '6',
+        m1_g: document.getElementById('hw_m1_g') ? document.getElementById('hw_m1_g').value : '3',
+        m1_b: document.getElementById('hw_m1_b') ? document.getElementById('hw_m1_b').value : '5',
+        m2_r: document.getElementById('hw_m2_r') ? document.getElementById('hw_m2_r').value : '11',
+        m2_g: document.getElementById('hw_m2_g') ? document.getElementById('hw_m2_g').value : '9',
+        m2_b: document.getElementById('hw_m2_b') ? document.getElementById('hw_m2_b').value : '10',
+        anode: document.getElementById('hw_common_anode') && document.getElementById('hw_common_anode').value === 'true' ? 'true' : 'false',
+        servo: document.getElementById('hw_servo_pin') ? document.getElementById('hw_servo_pin').value : '4',
+        relay1: document.getElementById('hw_relay1_pin') ? document.getElementById('hw_relay1_pin').value : '7',
+        relay2: document.getElementById('hw_relay2_pin') ? document.getElementById('hw_relay2_pin').value : '8',
+        matrix_din: document.getElementById('hw_matrix_din') ? document.getElementById('hw_matrix_din').value : '12',
+        matrix_cs: document.getElementById('hw_matrix_cs') ? document.getElementById('hw_matrix_cs').value : '8',
+        matrix_clk: document.getElementById('hw_matrix_clk') ? document.getElementById('hw_matrix_clk').value : '7'
+      };
+
+      let cpp = `// ========================================================
+// 👧 昕蓉Sophia - 離線獨立運行 Arduino 韌體 (自動生成)
+// 提示：線上燒錄後拔除 USB，外接行動電源或電池即可自主運行！
+// ========================================================
+#include <Arduino.h>
+
+// --- 硬體腳位配置 ---
+const int PIN_M1_R = ${hw.m1_r};
+const int PIN_M1_G = ${hw.m1_g};
+const int PIN_M1_B = ${hw.m1_b};
+const int PIN_M2_R = ${hw.m2_r};
+const int PIN_M2_G = ${hw.m2_g};
+const int PIN_M2_B = ${hw.m2_b};
+const bool COMMON_ANODE = ${hw.anode};
+
+const int PIN_RELAY1 = ${hw.relay1};
+const int PIN_RELAY2 = ${hw.relay2};
+const int PIN_SERVO  = ${hw.servo};
+
+const int PIN_DIN = ${hw.matrix_din};
+const int PIN_CS  = ${hw.matrix_cs};
+const int PIN_CLK = ${hw.matrix_clk};
+
+// --- RGB 與週邊控制輔助函式 ---
+void set_rgb_color(const char* target, int r, int g, int b) {
+  int rVal = COMMON_ANODE ? (255 - r) : r;
+  int gVal = COMMON_ANODE ? (255 - g) : g;
+  int bVal = COMMON_ANODE ? (255 - b) : b;
+  if (strcmp(target, "1") == 0 || strcmp(target, "ALL") == 0) {
+    analogWrite(PIN_M1_R, rVal);
+    analogWrite(PIN_M1_G, gVal);
+    analogWrite(PIN_M1_B, bVal);
+  }
+  if (strcmp(target, "2") == 0 || strcmp(target, "ALL") == 0) {
+    analogWrite(PIN_M2_R, rVal);
+    analogWrite(PIN_M2_G, gVal);
+    analogWrite(PIN_M2_B, bVal);
+  }
+}
+
+void set_custom_rgb(int rPin, int gPin, int bPin, int isAnode, int r, int g, int b) {
+  pinMode(rPin, OUTPUT); pinMode(gPin, OUTPUT); pinMode(bPin, OUTPUT);
+  analogWrite(rPin, isAnode ? (255 - r) : r);
+  analogWrite(gPin, isAnode ? (255 - g) : g);
+  analogWrite(bPin, isAnode ? (255 - b) : b);
+}
+
+void set_relay(int ch, const char* state) {
+  int pin = (ch == 1) ? PIN_RELAY1 : PIN_RELAY2;
+  digitalWrite(pin, (strcmp(state, "ON") == 0) ? LOW : HIGH);
+}
+
+void arduino_write_digital(int pin, int val) {
+  pinMode(pin, OUTPUT);
+  digitalWrite(pin, val ? HIGH : LOW);
+}
+
+void arduino_write_pwm(int pin, int val) {
+  pinMode(pin, OUTPUT);
+  analogWrite(pin, val);
+}
+
+void arduino_set_servo(int pin, int deg) {
+  pinMode(pin, OUTPUT);
+  int pulse = map(deg, 0, 180, 544, 2400);
+  for (int i = 0; i < 15; i++) {
+    digitalWrite(pin, HIGH);
+    delayMicroseconds(pulse);
+    digitalWrite(pin, LOW);
+    delayMicroseconds(20000 - pulse);
+  }
+}
+
+// --- MAX7219 8x8 點矩陣純原生驅動 (免第三方庫，100% 穩定編譯) ---
+void max7219_write(byte reg, byte data) {
+  digitalWrite(PIN_CS, LOW);
+  shiftOut(PIN_DIN, PIN_CLK, MSBFIRST, reg);
+  shiftOut(PIN_DIN, PIN_CLK, MSBFIRST, data);
+  digitalWrite(PIN_CS, HIGH);
+}
+
+void max7219_init() {
+  pinMode(PIN_DIN, OUTPUT);
+  pinMode(PIN_CS, OUTPUT);
+  pinMode(PIN_CLK, OUTPUT);
+  digitalWrite(PIN_CS, HIGH);
+  max7219_write(0x09, 0x00);
+  max7219_write(0x0A, 0x04);
+  max7219_write(0x0B, 0x07);
+  max7219_write(0x0C, 0x01);
+  max7219_write(0x0F, 0x00);
+  for (int i = 1; i <= 8; i++) max7219_write(i, 0x00);
+}
+
+void matrix_clear() {
+  for (int i = 1; i <= 8; i++) max7219_write(i, 0x00);
+}
+
+void matrix_set_pixel(int x, int y, int state) {
+  static byte buf[8] = {0};
+  if (x < 0 || x > 7 || y < 0 || y > 7) return;
+  if (state) buf[y] |= (1 << (7 - x));
+  else buf[y] &= ~(1 << (7 - x));
+  max7219_write(y + 1, buf[y]);
+}
+
+void matrix_show_bitmap(const byte rows[8]) {
+  for (int i = 0; i < 8; i++) max7219_write(i + 1, rows[i]);
+}
+
+const byte G_ICON_HEART[8]  = { 0x00, 0x66, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C, 0x18 };
+const byte G_ICON_SMILE[8]  = { 0x3C, 0x42, 0xA5, 0x81, 0xA5, 0x99, 0x42, 0x3C };
+const byte G_ICON_STAR[8]   = { 0x18, 0x18, 0x99, 0xDB, 0x3C, 0x3C, 0x66, 0x66 };
+const byte G_ICON_ROCKET[8] = { 0x18, 0x3C, 0x3C, 0x7E, 0x7E, 0x5A, 0x24, 0x42 };
+const byte G_ICON_PACMAN[8] = { 0x3C, 0x7E, 0xF7, 0xF8, 0xF0, 0xF8, 0x7E, 0x3C };
+const byte G_ICON_ALIEN[8]  = { 0x24, 0x5A, 0x7E, 0x5A, 0x3C, 0x5A, 0x42, 0x24 };
+
+void matrix_show_icon(const char* name) {
+  if (strcmp(name, "heart") == 0) matrix_show_bitmap(G_ICON_HEART);
+  else if (strcmp(name, "smile") == 0) matrix_show_bitmap(G_ICON_SMILE);
+  else if (strcmp(name, "star") == 0) matrix_show_bitmap(G_ICON_STAR);
+  else if (strcmp(name, "rocket") == 0) matrix_show_bitmap(G_ICON_ROCKET);
+  else if (strcmp(name, "pacman") == 0) matrix_show_bitmap(G_ICON_PACMAN);
+  else if (strcmp(name, "alien") == 0) matrix_show_bitmap(G_ICON_ALIEN);
+  else matrix_clear();
+}
+
+void matrix_play_animation(const char* anim, int repeat, float speed) {
+  int d = (int)(speed * 1000.0);
+  if (d < 30) d = 30;
+  for (int r = 0; r < repeat; r++) {
+    if (strcmp(anim, "heartbeat") == 0) {
+      matrix_show_bitmap(G_ICON_HEART); delay(d * 2);
+      const byte small_h[8] = { 0x00, 0x00, 0x24, 0x7E, 0x7E, 0x3C, 0x18, 0x00 };
+      matrix_show_bitmap(small_h); delay(d * 2);
+    } else if (strcmp(anim, "rocket") == 0) {
+      for (int s = 0; s < 8; s++) {
+        byte f[8];
+        for (int row = 0; row < 8; row++) {
+          int src = row + s;
+          f[row] = (src < 8) ? G_ICON_ROCKET[src] : 0x00;
+        }
+        matrix_show_bitmap(f); delay(d);
+      }
+    } else if (strcmp(anim, "pacman") == 0) {
+      const byte pm1[8] = { 0x3C, 0x7E, 0xFF, 0xFF, 0xFF, 0xFF, 0x7E, 0x3C };
+      matrix_show_bitmap(G_ICON_PACMAN); delay(d * 2);
+      matrix_show_bitmap(pm1); delay(d * 2);
+    } else {
+      matrix_show_bitmap(G_ICON_HEART); delay(d);
+      matrix_clear(); delay(d);
+    }
+  }
+}
+
+void matrix_scroll_text(const char* txt, float speed) {
+  matrix_show_bitmap(G_ICON_HEART);
+  delay((int)(speed * 1000.0) * 8);
+  matrix_clear();
+}
+
+void setup() {
+  pinMode(PIN_M1_R, OUTPUT);
+  pinMode(PIN_M1_G, OUTPUT);
+  pinMode(PIN_M1_B, OUTPUT);
+  pinMode(PIN_M2_R, OUTPUT);
+  pinMode(PIN_M2_G, OUTPUT);
+  pinMode(PIN_M2_B, OUTPUT);
+
+  pinMode(PIN_RELAY1, OUTPUT);
+  pinMode(PIN_RELAY2, OUTPUT);
+  digitalWrite(PIN_RELAY1, HIGH);
+  digitalWrite(PIN_RELAY2, HIGH);
+
+  set_rgb_color("ALL", 0, 0, 0);
+  max7219_init();
+  matrix_clear();
+}
+
+void loop() {
+`;
+
       const lines = pyCode.split('\n');
+      let inForever = false;
+      let indent = '  ';
+
       for (let l of lines) {
-        if (l.includes('set_relay(1, "ON")')) cpp += '  // 繼電器 1 ON\n  Serial.write(byte(0xA0)); Serial.write(byte(0x01)); Serial.write(byte(0x01)); Serial.write(byte(0xA2));\n';
-        else if (l.includes('set_relay(1, "OFF")')) cpp += '  // 繼電器 1 OFF\n  Serial.write(byte(0xA0)); Serial.write(byte(0x01)); Serial.write(byte(0x00)); Serial.write(byte(0xA1));\n';
-        else if (l.includes('set_relay(2, "ON")')) cpp += '  // 繼電器 2 ON\n  Serial.write(byte(0xA0)); Serial.write(byte(0x02)); Serial.write(byte(0x01)); Serial.write(byte(0xA3));\n';
-        else if (l.includes('set_relay(2, "OFF")')) cpp += '  // 繼電器 2 OFF\n  Serial.write(byte(0xA0)); Serial.write(byte(0x02)); Serial.write(byte(0x00)); Serial.write(byte(0xA2));\n';
-        else if (l.includes('arduino_write_digital(')) {
-          let m = l.match(/arduino_write_digital\((\d+),\s*([01])\)/);
-          if (m) cpp += `  pinMode(${m[1]}, OUTPUT);\n  digitalWrite(${m[1]}, ${m[2] == 1 ? 'HIGH' : 'LOW'});\n`;
+        let trimmed = l.trim();
+        if (!trimmed || trimmed.startsWith('#')) continue;
+
+        if (trimmed.startsWith('while True:')) {
+          inForever = true;
+          continue;
         }
-        else if (l.includes('arduino_write_pwm(')) {
-          let m = l.match(/arduino_write_pwm\((\d+),\s*(\d+)\)/);
-          if (m) cpp += `  pinMode(${m[1]}, OUTPUT);\n  analogWrite(${m[1]}, ${m[2]});\n`;
+
+        let m;
+        if ((m = trimmed.match(/set_rgb_color\("([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)/))) {
+          cpp += `${indent}set_rgb_color("${m[1]}", ${m[2]}, ${m[3]}, ${m[4]});\n`;
+        } else if ((m = trimmed.match(/set_custom_rgb\((\d+),\s*(\d+),\s*(\d+),\s*([01]),\s*(\d+),\s*(\d+),\s*(\d+)\)/))) {
+          cpp += `${indent}set_custom_rgb(${m[1]}, ${m[2]}, ${m[3]}, ${m[4]}, ${m[5]}, ${m[6]}, ${m[7]});\n`;
+        } else if ((m = trimmed.match(/set_relay\((\d+),\s*"([^"]+)"\)/))) {
+          cpp += `${indent}set_relay(${m[1]}, "${m[2]}");\n`;
+        } else if ((m = trimmed.match(/arduino_write_digital\((\d+),\s*([01])\)/))) {
+          cpp += `${indent}arduino_write_digital(${m[1]}, ${m[2]});\n`;
+        } else if ((m = trimmed.match(/arduino_write_pwm\((\d+),\s*(\d+)\)/))) {
+          cpp += `${indent}arduino_write_pwm(${m[1]}, ${m[2]});\n`;
+        } else if ((m = trimmed.match(/arduino_set_servo\((\d+),\s*(\d+)\)/))) {
+          cpp += `${indent}arduino_set_servo(${m[1]}, ${m[2]});\n`;
+        } else if ((m = trimmed.match(/matrix_show_icon\("([^"]+)"\)/))) {
+          cpp += `${indent}matrix_show_icon("${m[1]}");\n`;
+        } else if ((m = trimmed.match(/matrix_clear\(\)/))) {
+          cpp += `${indent}matrix_clear();\n`;
+        } else if ((m = trimmed.match(/matrix_play_animation\("([^"]+)",\s*(\d+),\s*([\d\.]+)\)/))) {
+          cpp += `${indent}matrix_play_animation("${m[1]}", ${m[2]}, ${m[3]});\n`;
+        } else if ((m = trimmed.match(/matrix_scroll_text\((".*"),\s*([\d\.]+)\)/))) {
+          cpp += `${indent}matrix_scroll_text(${m[1]}, ${m[2]});\n`;
+        } else if ((m = trimmed.match(/matrix_set_pixel\((\d+),\s*(\d+),\s*([01])\)/))) {
+          cpp += `${indent}matrix_set_pixel(${m[1]}, ${m[2]}, ${m[3]});\n`;
+        } else if ((m = trimmed.match(/sleep\(([\d\.]+)\)/))) {
+          cpp += `${indent}delay(${Math.round(parseFloat(m[1]) * 1000)});\n`;
+        } else if ((m = trimmed.match(/for\s+\w+\s+in\s+range\((\d+)\):/))) {
+          cpp += `${indent}for (int c = 0; c < ${m[1]}; c++) {\n`;
+          indent += '  ';
         }
-        else if (l.includes('arduino_set_servo(')) {
-          let m = l.match(/arduino_set_servo\((\d+),\s*(\d+)\)/);
-          if (m) cpp += `  // 伺服馬達 Pin ${m[1]} -> ${m[2]} 度\n  servo.write(${m[2]});\n`;
-        }
-        else if (l.includes('set_rgb_color(')) {
-          let m = l.match(/set_rgb_color\("([^"]+)",\s*(\d+),\s*(\d+),\s*(\d+)\)/);
-          if (m) cpp += `  // RGB 模組 ${m[1]} -> R:${m[2]} G:${m[3]} B:${m[4]}\n  analogWrite(11, 255 - ${m[2]}); analogWrite(9, 255 - ${m[3]}); analogWrite(10, 255 - ${m[4]});\n`;
-        }
-        else if (l.includes('set_custom_rgb(')) {
-          let m = l.match(/set_custom_rgb\((\d+),\s*(\d+),\s*(\d+),\s*([01]),\s*(\d+),\s*(\d+),\s*(\d+)\)/);
-          if (m) {
-            let isAn = m[4] == '1';
-            cpp += `  // 自訂 RGB Pin R:${m[1]} G:${m[2]} B:${m[3]} (${isAn ? '共陽' : '共陰'})\n  analogWrite(${m[1]}, ${isAn ? 255 - parseInt(m[5]) : m[5]});\n  analogWrite(${m[2]}, ${isAn ? 255 - parseInt(m[6]) : m[6]});\n  analogWrite(${m[3]}, ${isAn ? 255 - parseInt(m[7]) : m[7]});\n`;
-          }
-        }
-        else if (l.includes('sleep(')) {
-          let s = l.match(/sleep\((.*)\)/);
-          if (s) cpp += `  delay(${parseFloat(s[1])*1000});\n`;
-        }
+      }
+
+      if (indent.length > 2) {
+        cpp += '  }\n';
       }
       cpp += '}\n';
       return cpp;
@@ -1602,6 +1908,39 @@
 
     function clearLog() {
       document.getElementById('logContent').innerHTML = '';
+    }
+
+    function copyAllLogs() {
+      const box = document.getElementById('logContent');
+      if (!box) return;
+      const text = box.innerText || box.textContent || '';
+      if (!text.trim()) {
+        alert('目前尚無終端機紀錄可複製！');
+        return;
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          log('📋 【已複製】已將所有硬體執行與除錯紀錄成功複製到剪貼簿！');
+        }).catch(() => fallbackCopyText(text));
+      } else {
+        fallbackCopyText(text);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        log('📋 【已複製】已將所有硬體執行與除錯紀錄成功複製到剪貼簿！');
+      } catch (e) {
+        alert('無法自動複製，請直接框選文字按 Ctrl+C 複製');
+      }
+      document.body.removeChild(ta);
     }
 
     let currentHighlightedPath = null;
@@ -1851,6 +2190,17 @@
       clientExecutionStop = false;
       isRunning = true;
       document.getElementById('runningBanner').style.display = 'block';
+
+      // 🌟 自動展開右側代碼視窗，確保小朋友隨時看到程式代碼與光棒游標追蹤
+      const rightSidebar = document.getElementById('rightSidebar');
+      if (rightSidebar && rightSidebar.classList.contains('collapsed')) {
+        rightSidebar.classList.remove('collapsed');
+        const toggleBtn = document.getElementById('toggleSidebarText');
+        if (toggleBtn) toggleBtn.textContent = '隱藏代碼視窗';
+        Blockly.svgResize(workspace);
+      }
+      updateCodeView();
+
       log('🚩 【Web Serial 直連執行】開始以瀏覽器原生驅動積木程式...');
 
       const hw = {
@@ -1934,6 +2284,16 @@
             }
           }
           break;
+        }
+        else if (curr.type === 'controls_repeat_ext' || curr.type === 'controls_repeat') {
+          const times = Math.max(1, Math.round(evalNumInput(curr, 'TIMES', 1)));
+          const branch = curr.getInputTargetBlock('DO');
+          for (let i = 0; i < times; i++) {
+            if (clientExecutionStop) break;
+            if (branch) {
+              await executeBlockChain(branch, hw);
+            }
+          }
         }
         else if (curr.type === 'arduino_digital_write') {
           const pin = curr.getFieldValue('PIN');
@@ -2056,6 +2416,16 @@
 
     function runProgram() {
       if (!workspace) return;
+
+      // 🌟 自動展開右側代碼視窗，確保小朋友隨時看到程式代碼與光棒游標追蹤
+      const rightSidebar = document.getElementById('rightSidebar');
+      if (rightSidebar && rightSidebar.classList.contains('collapsed')) {
+        rightSidebar.classList.remove('collapsed');
+        const toggleBtn = document.getElementById('toggleSidebarText');
+        if (toggleBtn) toggleBtn.textContent = '隱藏代碼視窗';
+        Blockly.svgResize(workspace);
+      }
+      updateCodeView();
 
       // 🌟 若當前已建立 Web Serial 瀏覽器直連，直接在瀏覽器端極速執行，零延遲點燈！
       if (isWebSerialConnected) {
@@ -2512,7 +2882,7 @@
               setGlowBar(data.line);
             }
           } else {
-            if (isRunning) {
+            if (isRunning && !isWebSerialConnected) {
               isRunning = false;
               document.getElementById('runningBanner').style.display = 'none';
               highlightBlockVisual(null);
@@ -3649,10 +4019,72 @@
     // ==========================================
     function openCpsatModal() {
       document.getElementById('cpsatModal').style.display = 'flex';
+      switchCpsatTab('config');
     }
 
     function closeCpsatModal() {
       document.getElementById('cpsatModal').style.display = 'none';
+    }
+
+    function switchCpsatTab(tab) {
+      const cfg = document.getElementById('tabCpsatConfig');
+      const his = document.getElementById('tabCpsatHistory');
+      const bCfg = document.getElementById('btnTabCpsatConfig');
+      const bHis = document.getElementById('btnTabCpsatHistory');
+      if (cfg) cfg.style.display = (tab === 'config') ? 'block' : 'none';
+      if (his) his.style.display = (tab === 'history') ? 'block' : 'none';
+      if (bCfg) bCfg.style.background = (tab === 'config') ? '#6366F1' : 'transparent';
+      if (bHis) bHis.style.background = (tab === 'history') ? '#6366F1' : 'transparent';
+      if (tab === 'history') loadCpsatHistory();
+    }
+
+    function loadCpsatHistory() {
+      const box = document.getElementById('cpsatHistoryList');
+      if (!box) return;
+      box.innerHTML = '<div style="color:#A6ADC8; font-size:12px; padding:10px;">⏳ 正在載入 AI 數學求解歷程...</div>';
+
+      fetch('/api/cpsat/history')
+        .then(r => r.json())
+        .then(data => {
+          if (!data.ok || !data.history || data.history.length === 0) {
+            box.innerHTML = '<div style="color:#BAC2DE; font-size:12px; padding:16px; text-align:center;">尚無歷程紀錄。請先點擊「🚀 啟動求解」，AI 會自動記錄每次思考筆記！</div>';
+            return;
+          }
+          box.innerHTML = data.history.map((h, idx) => {
+            let segList = (h.segments || []).map(s => `<span style="background:#313244; color:#CDD6F4; padding:2px 7px; border-radius:4px; font-size:10.5px; margin:2px 4px 2px 0; display:inline-block;">${s.name} ${s.duration}秒</span>`).join(' ');
+            return `
+              <div style="background:#181825; border:1px solid #313244; border-radius:8px; padding:10px 12px; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                  <span style="font-size:12.5px; font-weight:bold; color:#A6E3A1;">🎯 第 ${data.history.length - idx} 次排程 (${h.style} 風格, ${h.target_sec}秒)</span>
+                  <span style="font-size:10px; color:#6C7086;">${h.timestamp}</span>
+                </div>
+                <div style="background:#11111B; border-left:3.5px solid #F9E2AF; padding:7px 10px; border-radius:4px; font-size:11.5px; color:#F9E2AF; margin-bottom:7px; line-height:1.5;">
+                  ${h.explanation || 'AI 數學求解成功'}
+                </div>
+                <div style="font-size:11px; color:#A6ADC8; margin-bottom:7px;">
+                  ⏱️ 耗時: <b style="color:#89B4FA;">${h.wall_time_ms} ms</b> | 🧮 決策變數: <b>${h.num_variables}</b> | 滿意度得分: <b style="color:#F9E2AF;">${h.score}</b>
+                </div>
+                <div style="margin-bottom:8px;">
+                  ${segList}
+                </div>
+                <div style="text-align:right;">
+                  <button onclick="applyHistoryToWorkspace('${h.style}', ${h.target_sec})" style="background:#2563EB; color:white; border:none; padding:5px 12px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">
+                    📥 載入並展開此排程積木
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        })
+        .catch(err => {
+          box.innerHTML = `<div style="color:#F38BA8; font-size:12px;">載入失敗: ${err}</div>`;
+        });
+    }
+
+    function applyHistoryToWorkspace(style, totalSec) {
+      document.getElementById('cpsatStyle').value = style;
+      document.getElementById('cpsatDuration').value = String(totalSec);
+      runCpsatSolve();
     }
 
     function runCpsatSolve() {
@@ -3676,6 +4108,7 @@
           Blockly.Xml.domToWorkspace(dom, workspace);
 
           log(`🎯 [CP-SAT 求解完成] 狀態: ${sol.status} | 最優得分: ${sol.score}`);
+          if (sol.explanation) log(`👧 ${sol.explanation}`);
           let summary = sol.segments.map(s => `${s.name} (${s.duration}s)`).join(' ➔ ');
           log(`📋 CP-SAT 最佳化時序: ${summary}`);
           log(`✨ 已自動在工作區展開原始積木！點擊 🚩 綠旗即可帶光棒執行！`);
@@ -3687,6 +4120,190 @@
       .catch(err => {
         log('❌ 連線 CP-SAT 伺服器失敗: ' + err);
       });
+    }
+
+    // ==========================================
+    // 👧 昕蓉小導師智慧闖關指引控制
+    // ==========================================
+    const GUIDE_MISSIONS = [
+      { id: 1, title: '🧩 第一關：積木王國探險', desc: '從左側積木抽屜中，拖曳一塊「🎨 雙 RGB 模組顏色」或「💡 數位輸出」積木到畫布上！' },
+      { id: 2, title: '🔌 第二關：魔杖魔法連線', desc: '點擊導覽列上的「⚡ Web Serial」或選取 COM 埠按「連線」，把 Arduino 魔法板子連上工作室！' },
+      { id: 3, title: '🚀 第三關：綠旗啟動與流光追蹤', desc: '點擊「🚩 執行」，觀察右側程式碼視窗的綠色流光光棒與積木高亮邊框逐行同步追蹤！' },
+      { id: 4, title: '📟 第四關：8x8 點矩陣大冒險', desc: '在左側點矩陣分類中，挑選「心跳搏動」或「火箭升空」動畫，在 8x8 LED 螢幕上看見你的像素圖案！' },
+      { id: 5, title: '🧠 第五關：AI 數學家排程大秀', desc: '開啟「🧠 CP-SAT 排程」，選擇風格與秒數，讓 Google OR-Tools 人工智慧幫你算出完美護眼燈光秀！' }
+    ];
+
+    function getCompletedMissions() {
+      try {
+        return JSON.parse(localStorage.getItem('sophia_guide_done') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveCompletedMissions(list) {
+      localStorage.setItem('sophia_guide_done', JSON.stringify(list));
+      renderGuideModal();
+    }
+
+    function openLearningGuide() {
+      renderGuideModal();
+      document.getElementById('learningGuideModal').style.display = 'flex';
+    }
+
+    function closeLearningGuide() {
+      document.getElementById('learningGuideModal').style.display = 'none';
+    }
+
+    function toggleGuideMission(id) {
+      let done = getCompletedMissions();
+      if (done.includes(id)) {
+        done = done.filter(x => x !== id);
+      } else {
+        done.push(id);
+      }
+      saveCompletedMissions(done);
+    }
+
+    function renderGuideModal() {
+      const done = getCompletedMissions();
+      const starsDiv = document.getElementById('guideStarsDisplay');
+      const listDiv = document.getElementById('guideMissionList');
+      const badgeDiv = document.getElementById('guideBadgeBanner');
+
+      if (starsDiv) {
+        let starsHtml = '';
+        for (let i = 1; i <= 5; i++) {
+          starsHtml += done.includes(i) ? '⭐ ' : '☆ ';
+        }
+        starsDiv.innerHTML = `<span style="font-size: 20px; color: #F59E0B;">${starsHtml}</span> <span style="font-size: 13px; color: #A6ADC8;">(${done.length} / 5 關卡已過關)</span>`;
+      }
+
+      if (badgeDiv) {
+        if (done.length === 5) {
+          badgeDiv.style.display = 'block';
+          badgeDiv.innerHTML = '🏆 <b>大成功！全通關成就解鎖！</b><br>你已經是一位出色的昕蓉小創客工程師囉！可以將作品一鍵燒錄到板子帶出門炫耀！';
+        } else {
+          badgeDiv.style.display = 'none';
+        }
+      }
+
+      if (listDiv) {
+        listDiv.innerHTML = GUIDE_MISSIONS.map(m => {
+          const isDone = done.includes(m.id);
+          return `
+            <div style="background: ${isDone ? '#1B2B28' : '#181825'}; border: 1px solid ${isDone ? '#00E670' : '#313244'}; border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+              <div style="flex: 1;">
+                <div style="font-size: 13px; font-weight: bold; color: ${isDone ? '#00E670' : '#CDD6F4'}; margin-bottom: 3px;">
+                  ${isDone ? '✅ ' : '🎯 '}${m.title}
+                </div>
+                <div style="font-size: 11.5px; color: #A6ADC8; line-height: 1.4;">${m.desc}</div>
+              </div>
+              <button onclick="toggleGuideMission(${m.id})" style="background: ${isDone ? '#00E670' : '#313244'}; color: ${isDone ? '#000' : '#CDD6F4'}; border: none; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; flex-shrink: 0;">
+                ${isDone ? '已完成' : '打勾標記'}
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    // ==========================================
+    // 🔥 線上燒錄到板子 (離線運行模式) 控制
+    // ==========================================
+    function openBurnModal() {
+      updateBurnBoards();
+      document.getElementById('offlineBurnModal').style.display = 'flex';
+    }
+
+    function closeBurnModal() {
+      document.getElementById('offlineBurnModal').style.display = 'none';
+    }
+
+    function updateBurnBoards() {
+      fetch('/api/burn/boards')
+        .then(r => r.json())
+        .then(data => {
+          const portSel = document.getElementById('burnPortSelect');
+          if (portSel && data.current_port) {
+            portSel.innerHTML = `<option value="${data.current_port}">${data.current_port} (當前連接板子)</option><option value="COM4">COM4</option><option value="COM3">COM3</option>`;
+          }
+          const info = document.getElementById('burnCliStatus');
+          if (info) {
+            if (data.has_cli) {
+              const fname = (data.cli_path || '').split(/[/\\\\]/).pop();
+              info.innerHTML = `✅ 伺服器已就緒原生編譯器: <code style="color:#A6E3A1;">${fname}</code>`;
+            } else {
+              info.innerHTML = `⚠️ 尚未偵測到本地 arduino-cli，將提供 .ino 原始碼下載。`;
+            }
+          }
+        }).catch(() => {});
+    }
+
+    function startOfflineBurn() {
+      const port = document.getElementById('burnPortSelect').value || 'COM4';
+      const fqbn = document.getElementById('burnBoardSelect').value || 'arduino:avr:uno';
+      const logBox = document.getElementById('burnLogBox');
+      const btn = document.getElementById('btnStartBurn');
+
+      // 產生純淨的 C++ 離線程式碼
+      const cppCode = convertToCpp(rawPythonCode);
+
+      logBox.style.display = 'block';
+      logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 🚀 正在準備將程式寫入板子 (${port}, ${fqbn})...</div>`;
+      logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 💡 提示：燒錄完成後，拔掉電腦 USB 線，板子只要接上電池或行動電源即可自主運行！</div>`;
+
+      // 若目前有 Web Serial 瀏覽器直連，先暫時中斷 Web Serial，以防佔用 USB 串列埠
+      if (isWebSerialConnected) {
+        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 暫時關閉 Web Serial 串列埠以供燒錄...</div>`;
+        toggleWebSerial();
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ 正在編譯與上傳燒錄中...';
+      }
+
+      fetch('/api/burn/compile_and_upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cppCode, port: port, fqbn: fqbn })
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.ok) {
+          logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:6px;">🎉🎉 燒錄大成功！板子韌體已更新完畢！</div>`;
+          logBox.innerHTML += `<div style="color:#BAC2DE; margin-top:4px;">現在您可以拔除電腦 USB 連接線，接上行動電源或 9V 電池，小板子即可完全自主獨立運作！</div>`;
+          log(`🔥 [離線燒錄成功] 程式已永久寫入 Arduino (${fqbn} @ ${port})！可離線自主運作！`);
+        } else {
+          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 燒錄失敗: ${data.error || '未知錯誤'}</div>`;
+          if (data.log) {
+            logBox.innerHTML += `<pre style="color:#F38BA8; font-size:10px; margin-top:4px; max-height:150px; overflow-y:auto;">${data.log}</pre>`;
+          }
+          log(`❌ [離線燒錄失敗]: ${data.error || ''}`);
+        }
+      })
+      .catch(err => {
+        logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 請求伺服器異常: ${err}</div>`;
+      })
+      .finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🔥 開始燒錄 (Burn to Board)';
+        }
+      });
+    }
+
+    function downloadInoSketch() {
+      const cppCode = convertToCpp(rawPythonCode);
+      const blob = new Blob([cppCode], { type: 'text/x-c;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'Sophia_Offline_Firmware.ino';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      log('📥 已成功下載 Arduino 離線原始碼: Sophia_Offline_Firmware.ino');
     }
 
     // ==========================================
@@ -4091,43 +4708,152 @@
     </div>
   </div>
 
-  <!-- Google OR-Tools CP-SAT 智慧排程對話框 -->
-  <div id="cpsatModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:440px; padding:22px; box-shadow:0 12px 36px rgba(0,0,0,0.6); border:1px solid #313244;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+  <!-- Google OR-Tools CP-SAT 智慧排程與歷程紀錄對話框 -->
+  <div id="cpsatModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:480px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; padding:20px; box-shadow:0 14px 40px rgba(0,0,0,0.7); border:1px solid #313244;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div style="font-size:16px; font-weight:bold; color:#A6E3A1; display:flex; align-items:center; gap:8px;">
           <span>🧠 Google OR-Tools CP-SAT 智慧排程</span>
         </div>
         <span style="cursor:pointer; font-size:18px; color:#A6ADC8;" onclick="closeCpsatModal()">✕</span>
       </div>
-      <div style="font-size:12px; color:#BAC2DE; line-height:1.6; margin-bottom:14px;">
-        使用 <b>Google OR-Tools CP-SAT (ortools.sat.python.cp_model)</b> 求解器，結合時長守恆、護眼防爆閃、功率積分約束，自動為您計算出最完美的 RGB 燈效時序並展開為原始積木！
+
+      <!-- 分頁切換 (設定 vs 歷程) -->
+      <div style="display:flex; background:#11111B; border-radius:6px; padding:3px; margin-bottom:14px; gap:4px;">
+        <button id="btnTabCpsatConfig" onclick="switchCpsatTab('config')" style="flex:1; background:#6366F1; color:white; border:none; padding:6px 0; border-radius:5px; font-size:12px; font-weight:bold; cursor:pointer;">
+          ✨ 求解參數設定
+        </button>
+        <button id="btnTabCpsatHistory" onclick="switchCpsatTab('history')" style="flex:1; background:transparent; color:#BAC2DE; border:none; padding:6px 0; border-radius:5px; font-size:12px; font-weight:bold; cursor:pointer;">
+          📊 歷程紀錄與小導師筆記
+        </button>
       </div>
 
-      <div style="margin-bottom:12px;">
-        <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">🎭 演出風格偏好 (Style):</label>
-        <select id="cpsatStyle" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
-          <option value="balanced">🌈 均衡全彩大秀 (動態多樣平衡)</option>
-          <option value="party">🪩 派對夜店狂歡 (快節奏與高興奮度)</option>
-          <option value="relax">🌌 寧靜極光療癒 (燭光跳火與極光深呼吸)</option>
-          <option value="cyberpunk">🛸 賽博龐克未來 (霓虹與互補強烈對撞)</option>
-          <option value="police">🚨 警車巡邏防衛 (紅藍爆閃與琥珀警示)</option>
-        </select>
+      <!-- 分頁 1: 求解設定 -->
+      <div id="tabCpsatConfig">
+        <div style="font-size:12px; color:#BAC2DE; line-height:1.6; margin-bottom:14px;">
+          使用 <b>Google OR-Tools CP-SAT (ortools.sat.python.cp_model)</b> 求解器，結合時長守恆、兒童護眼防爆閃、功率積分約束，自動為您計算出最完美的 RGB 燈效時序與點矩陣動畫，並展開為原始積木！
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">🎭 演出風格偏好 (Style):</label>
+          <select id="cpsatStyle" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
+            <option value="balanced">🌈 均衡全彩大秀 (動態多樣平衡)</option>
+            <option value="party">🪩 派對夜店狂歡 (快節奏與高興奮度)</option>
+            <option value="relax">🌌 寧靜極光療癒 (燭光跳火與極光深呼吸)</option>
+            <option value="cyberpunk">🛸 賽博龐克未來 (霓虹、雷達與駭客雨)</option>
+            <option value="police">🚨 警車巡邏防衛 (紅藍爆閃與琥珀警示)</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">⏱️ 目標總時長 (Total Seconds):</label>
+          <select id="cpsatDuration" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
+            <option value="20">20 秒循環</option>
+            <option value="30" selected>30 秒循環 (推薦)</option>
+            <option value="45">45 秒循環</option>
+            <option value="60">60 秒完整大秀</option>
+          </select>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button onclick="closeCpsatModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">取消</button>
+          <button onclick="runCpsatSolve()" style="background:linear-gradient(135deg, #00D166, #4C97FF); color:white; border:none; padding:8px 18px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 8px rgba(0,209,102,0.4);">🚀 啟動 CP-SAT 求解並展開積木</button>
+        </div>
       </div>
 
-      <div style="margin-bottom:16px;">
-        <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:6px; font-weight:bold;">⏱️ 目標總時長 (Total Seconds):</label>
-        <select id="cpsatDuration" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:8px; border-radius:6px; font-size:12px; outline:none;">
-          <option value="20">20 秒循環</option>
-          <option value="30" selected>30 秒循環 (推薦)</option>
-          <option value="45">45 秒循環</option>
-          <option value="60">60 秒完整大秀</option>
-        </select>
+      <!-- 分頁 2: 歷程紀錄與小導師筆記 -->
+      <div id="tabCpsatHistory" style="display:none; overflow-y:auto; flex:1; max-height:55vh;">
+        <div id="cpsatHistoryList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 👧 昕蓉小導師智慧闖關指引對話框 -->
+  <div id="learningGuideModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:14px; width:520px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; padding:22px; box-shadow:0 14px 44px rgba(0,0,0,0.7); border:1px solid #313244;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-size:16px; font-weight:bold; color:#F472B6; display:flex; align-items:center; gap:8px;">
+          <span>👧 昕蓉小導師智慧闖關指引</span>
+        </div>
+        <span style="cursor:pointer; font-size:18px; color:#A6ADC8;" onclick="closeLearningGuide()">✕</span>
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:10px;">
-        <button onclick="closeCpsatModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">取消</button>
-        <button onclick="runCpsatSolve()" style="background:linear-gradient(135deg, #00D166, #4C97FF); color:white; border:none; padding:8px 18px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 8px rgba(0,209,102,0.4);">🚀 啟動 CP-SAT 求解並展開積木</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#181825; border:1px solid #313244; border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+        <div>
+          <div style="font-size:11px; color:#BAC2DE; margin-bottom:2px;">🏆 小小工程師闖關進度:</div>
+          <div id="guideStarsDisplay"></div>
+        </div>
+        <div style="font-size:24px;">⭐</div>
+      </div>
+
+      <div id="guideBadgeBanner" style="display:none; background:linear-gradient(135deg, #10B981, #059669); color:white; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px; line-height:1.4;"></div>
+
+      <div style="font-size:12px; color:#A6ADC8; margin-bottom:10px;">
+        跟著昕蓉小導師的 5 大挑戰，輕鬆學會 Arduino 積木魔法、點矩陣與人工智慧排程！完成後點擊右側按鈕打勾領取星星！
+      </div>
+
+      <!-- 任務清單 -->
+      <div id="guideMissionList" style="overflow-y:auto; flex:1; max-height:50vh; margin-bottom:12px;"></div>
+
+      <div style="display:flex; justify-content:flex-end;">
+        <button onclick="closeLearningGuide()" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:8px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+          繼續冒險！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🔥 線上燒錄到板子 (離線運行模式) 對話框 -->
+  <div id="offlineBurnModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
+    <div style="background:#1E1E2E; color:#CDD6F4; border-radius:14px; width:520px; max-width:92vw; max-height:90vh; display:flex; flex-direction:column; padding:22px; box-shadow:0 14px 44px rgba(0,0,0,0.7); border:1px solid #313244;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <div style="font-size:16px; font-weight:bold; color:#FB923C; display:flex; align-items:center; gap:8px;">
+          <span>🔥 線上燒錄到板子 (離線獨立運行模式)</span>
+        </div>
+        <span style="cursor:pointer; font-size:18px; color:#A6ADC8;" onclick="closeBurnModal()">✕</span>
+      </div>
+
+      <!-- 離線概念解說 -->
+      <div style="background:#2A1A10; border:1px solid #EA580C; border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:#FED7AA; line-height:1.5;">
+        💡 <b>什麼是離線使用？</b><br>
+        平常綠旗執行需電腦連線。<b>「離線燒錄」</b> 會將您拼好的所有積木邏輯，直接編譯成 C++ 韌體並<b>永久寫入板子晶片</b>。<br>
+        燒錄完成後，<b>拔除電腦 USB 連接線，只要外接行動電源或 9V 電池</b>，小板子即可在完全沒有電腦的環境下自主開機運作！
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+        <div>
+          <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:4px; font-weight:bold;">🎯 目標開發板型號:</label>
+          <select id="burnBoardSelect" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:7px; border-radius:6px; font-size:12px; outline:none;">
+            <option value="arduino:avr:uno" selected>Arduino Uno (ATmega328P)</option>
+            <option value="arduino:avr:nano">Arduino Nano (新版 Bootloader)</option>
+            <option value="arduino:avr:nano:cpu=atmega328old">Arduino Nano (舊版 Old Bootloader)</option>
+            <option value="arduino:esp32:esp32">ESP32 Dev Module</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block; font-size:12px; color:#F9E2AF; margin-bottom:4px; font-weight:bold;">🔌 燒錄 USB 串列埠:</label>
+          <select id="burnPortSelect" style="width:100%; background:#181825; color:white; border:1px solid #45475A; padding:7px; border-radius:6px; font-size:12px; outline:none;">
+            <option value="COM4" selected>COM4 (Arduino Uno)</option>
+            <option value="COM3">COM3</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="burnCliStatus" style="font-size:11px; color:#A6ADC8; margin-bottom:12px;"></div>
+
+      <!-- 燒錄即時日誌視窗 -->
+      <div id="burnLogBox" style="display:none; background:#11111B; border:1px solid #313244; border-radius:8px; padding:10px; font-family:'Consolas', monospace; font-size:11px; color:#A6ADC8; max-height:160px; overflow-y:auto; margin-bottom:14px; line-height:1.4;"></div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <button onclick="downloadInoSketch()" style="background:#313244; color:#CDD6F4; border:1px solid #45475A; padding:8px 14px; border-radius:6px; font-size:12px; cursor:pointer;">
+          📥 下載 .ino 原始碼
+        </button>
+        <div style="display:flex; gap:10px;">
+          <button onclick="closeBurnModal()" style="background:#45475A; color:white; border:none; padding:8px 16px; border-radius:6px; font-size:12px; cursor:pointer;">關閉</button>
+          <button id="btnStartBurn" onclick="startOfflineBurn()" style="background:linear-gradient(135deg, #EA580C, #F97316); color:white; border:none; padding:8px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(234,88,12,0.45);">
+            🔥 開始燒錄 (Burn to Board)
+          </button>
+        </div>
       </div>
     </div>
   </div>
