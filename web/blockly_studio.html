@@ -1435,6 +1435,9 @@
       // 預設載入範例：Arduino 板載 LED 閃爍 (Pin 13)
       document.getElementById('exampleSelect').value = 'ex_arduino_blink';
       loadExample('ex_arduino_blink');
+
+      // 🌟 自動偵測先前已授權的 USB 連接埠並嘗試自動靜默連線
+      setTimeout(initAutoWebSerial, 600);
     });
 
     let rawPythonCode = '';
@@ -2275,21 +2278,11 @@
     // ==========================================
     // 🌐 Web Serial API 瀏覽器直連 USB (免後端、支援雲端 Render / 本機)
     // ==========================================
-    async function toggleWebSerial() {
-      if (isWebSerialConnected) {
-        await disconnectWebSerial();
-        return;
-      }
-
-      if (!('serial' in navigator)) {
-        alert('您的瀏覽器不支援 Web Serial API！\n請使用 Google Chrome、Microsoft Edge 或 Opera 瀏覽器開啟，以享有直接從網頁存取 USB Arduino 之功能。');
-        return;
-      }
-
+    async function openSerialPort(port) {
+      if (!port) return;
       try {
-        log('🔌 [Web Serial] 正在開啟 Chrome/Edge 原生裝置選取對話框...');
-        webSerialPort = await navigator.serial.requestPort();
-        log('⏳ 正在以波特率 115200 連線 USB 裝置...');
+        log('⏳ [Web Serial] 正在以波特率 115200 建立 USB 直連...');
+        webSerialPort = port;
         await webSerialPort.open({ baudRate: 115200 });
 
         // 嘗試啟動 DTR / RTS 信號
@@ -2313,14 +2306,64 @@
           await sendWebSerialCommand('PING');
           await sendWebSerialCommand('DWRITE,13,1');
           setTimeout(() => sendWebSerialCommand('DWRITE,13,0'), 400);
-          log('💡 已對 Pin 13 送出點燈訊號，若板載 LED 閃爍即代表通訊 100% 正常！');
+          log('💡 [Web Serial] 已對 Pin 13 發送通訊點燈訊號，通訊 100% 暢通！');
         }, 1800);
 
       } catch (err) {
-        log('⚠️ [Web Serial] 取消或連線失敗: ' + err.message);
+        log('⚠️ [Web Serial] 連線失敗或埠被佔用: ' + err.message);
         isWebSerialConnected = false;
         updateWebSerialUIState(false);
       }
+    }
+
+    async function toggleWebSerial() {
+      if (isWebSerialConnected) {
+        await disconnectWebSerial();
+        return;
+      }
+
+      if (!('serial' in navigator)) {
+        alert('您的瀏覽器不支援 Web Serial API！\n請使用 Google Chrome、Microsoft Edge 或 Opera 瀏覽器開啟，以享有直接從網頁存取 USB Arduino 之功能。');
+        return;
+      }
+
+      try {
+        log('🔌 [Web Serial] 正在開啟 Chrome/Edge 原生裝置選取對話框...');
+        const selectedPort = await navigator.serial.requestPort();
+        await openSerialPort(selectedPort);
+      } catch (err) {
+        log('⚠️ [Web Serial] 取消選取裝置: ' + err.message);
+      }
+    }
+
+    // 自動偵測與重連功能 (Auto-reconnect on Load & Hotplug Connect/Disconnect)
+    async function initAutoWebSerial() {
+      if (!('serial' in navigator)) return;
+
+      // 1. 頁面載入時：查詢瀏覽器先前已授權過的連接埠，若存在且目前未連線，自動靜默連線！
+      try {
+        const grantedPorts = await navigator.serial.getPorts();
+        if (grantedPorts.length > 0 && !isWebSerialConnected && !isUsbConnected) {
+          log('✨ [Web Serial] 偵測到先前已授權之 Arduino 設備，正在自動建立直連...');
+          await openSerialPort(grantedPorts[0]);
+        }
+      } catch (e) {
+        console.warn('Web Serial auto getPorts failed:', e);
+      }
+
+      // 2. 熱插拔監聽：當使用者將 USB 線插入電腦時，若已授權過即自動連線
+      navigator.serial.addEventListener('connect', async (event) => {
+        log('🔌 [Web Serial] 偵測到 Arduino USB 纜線已插入！正在自動建立直連...');
+        if (!isWebSerialConnected && !isUsbConnected) {
+          await openSerialPort(event.port);
+        }
+      });
+
+      // 3. 拔除監聽：當使用者拔除 USB 線時，自動更新 UI
+      navigator.serial.addEventListener('disconnect', (event) => {
+        log('🔌 [Web Serial] 偵測到 Arduino USB 纜線已拔除。');
+        disconnectWebSerial();
+      });
     }
 
     async function disconnectWebSerial() {
@@ -2352,7 +2395,7 @@
       const txt = document.getElementById('usbStatusText');
       if (connected) {
         if (btn) {
-          btn.textContent = '中斷 Web Serial';
+          btn.innerHTML = '<span style="font-size:12px;">⚡</span> 已直連 (點擊中斷)';
           btn.style.background = '#FF4D4D';
         }
         dot.style.background = '#00E5FF';
@@ -2360,8 +2403,8 @@
         txt.textContent = 'Web Serial: 已連線';
       } else {
         if (btn) {
-          btn.textContent = '🌐 Web Serial';
-          btn.style.background = 'linear-gradient(135deg, #4A00E0, #8E2DE2)';
+          btn.innerHTML = '<span style="font-size:12px;">⚡</span> Web Serial';
+          btn.style.background = 'linear-gradient(135deg, #7C3AED, #A855F7)';
         }
         dot.style.background = '#888';
         dot.style.boxShadow = 'none';
