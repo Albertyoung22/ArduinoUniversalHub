@@ -4142,6 +4142,18 @@ void loop() {
           gain.connect(ctx.destination);
           osc.start(now);
           osc.stop(now + 0.3);
+        } else if (type === 'pop') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(820, now + 0.08);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.1);
         } else if (type === 'magic') {
           const freqs = [523.25, 659.25, 783.99, 1046.5];
           freqs.forEach((f, i) => {
@@ -4174,6 +4186,25 @@ void loop() {
       } catch (e) {}
     }
 
+    let tutorialBlocks = {};
+
+    function resetTutorialWorkspace() {
+      workspace.clear();
+      tutorialBlocks = {};
+    }
+
+    function attachNumberBlock(parentBlock, inputName, val) {
+      const numBlock = workspace.newBlock('math_number');
+      numBlock.setFieldValue(String(val), 'NUM');
+      numBlock.initSvg();
+      numBlock.render();
+      const input = parentBlock.getInput(inputName);
+      if (input && input.connection) {
+        input.connection.connect(numBlock.outputConnection);
+      }
+      return numBlock;
+    }
+
     const LESSONS_DATA = [
       {
         id: 1,
@@ -4184,40 +4215,109 @@ void loop() {
         exampleKey: 'ex_arduino_blink',
         steps: [
           {
-            target: '#exampleSelect',
-            title: '選取閃爍積木範例',
-            text: '嗨！我是昕蓉小老師！首先我們在【範例清單】中，選取「💡 基礎：Arduino 板載 LED 閃爍 (Pin 13)」。',
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '嗨！今天我們一塊一塊來拼出閃爍程式！首先在畫布上放上一塊【🚩 當綠旗被點擊時】，它是所有程式的起跑線喔！',
             action: () => {
-              const sel = document.getElementById('exampleSelect');
-              if (sel) { sel.value = 'ex_arduino_blink'; loadExample('ex_arduino_blink'); }
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
+              tutorialBlocks.flag = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('pop');
             }
           },
           {
-            target: '#blocklyArea',
-            title: '認識視覺化積木',
-            text: '你看！工作區出現了「重複無限次」積木，裡面依序「開燈 ➔ 等待1秒 ➔ 關燈 ➔ 等待1秒」，就像心跳一樣規律！',
-            action: () => {}
-          },
-          {
-            target: '#rightSidebar',
-            title: '觀察即時 C++ 程式碼',
-            text: '看到右側視窗了嗎？你拼的積木已經即時轉譯成真正的 Arduino C++ 與 Python 程式碼囉！',
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '卡嗒！我們把【♾️ 重複無限次】扣在綠旗下方！只要放進裡面的積木，就會像心跳一樣一直循環執行！',
             action: () => {
-              const bar = document.getElementById('rightSidebar');
-              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('pop');
             }
           },
           {
-            target: '#btnRunBlocks',
-            title: '點擊綠旗施放魔法！',
-            text: '現在請點擊【🚩 執行】！積木指令會立刻發送到 Arduino 板子，板載小黃燈就會開始對你眨眼睛囉！',
-            action: () => { runBlocks(); }
+            target: 'current_block',
+            title: '第 3 步：放入開燈積木 (腳位 13 開啟)',
+            text: '放進第 1 塊執行積木：【💡 設定數位腳位 13 為 高電位 (開燈)】！這會發出開燈訊號點亮板載 LED！',
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const b = workspace.newBlock('arduino_digital_write');
+              b.setFieldValue('13', 'PIN');
+              b.setFieldValue('1', 'VAL');
+              b.initSvg(); b.render();
+              tutorialBlocks.loop.getInput('DO').connection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.ledOn = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：接上等待 1 秒積木',
+            text: '接上【⏱️ 等待 1 秒】！給板子一點時間維持發光，如果沒有等待，電腦一瞬間就跑完了，眼睛會看不清喔！',
+            action: () => {
+              if (!tutorialBlocks.ledOn) return;
+              const b = workspace.newBlock('control_wait');
+              b.initSvg(); b.render();
+              attachNumberBlock(b, 'SECONDS', 1);
+              tutorialBlocks.ledOn.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.wait1 = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：放入關燈積木 (腳位 13 關閉)',
+            text: '接著接上【🌑 設定數位腳位 13 為 低電位 (關燈)】！切斷電力讓小燈泡熄滅休息一下！',
+            action: () => {
+              if (!tutorialBlocks.wait1) return;
+              const b = workspace.newBlock('arduino_digital_write');
+              b.setFieldValue('13', 'PIN');
+              b.setFieldValue('0', 'VAL');
+              b.initSvg(); b.render();
+              tutorialBlocks.wait1.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.ledOff = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：再接上等待 1 秒完成循環',
+            text: '最後接上【⏱️ 等待 1 秒】！你看，開燈 ➔ 等待 ➔ 關燈 ➔ 等待，完整的閃爍程式積木一塊一塊親手拼好囉！',
+            action: () => {
+              if (!tutorialBlocks.ledOff) return;
+              const b = workspace.newBlock('control_wait');
+              b.initSvg(); b.render();
+              attachNumberBlock(b, 'SECONDS', 1);
+              tutorialBlocks.ledOff.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.wait2 = b;
+              tutorialBlocks.lastPlaced = b;
+              playSound('magic');
+            }
           },
           {
             target: '#codeViewContainer',
-            title: '流光光棒逐行追蹤！',
-            text: '太神奇了！右側代碼視窗有一條綠色霓虹光棒正在逐行跳動追蹤，跟著板子上的燈光節奏一起奔跑！',
-            action: () => {}
+            title: '第 7 步：綠旗啟動與流光光棒同步追蹤！',
+            text: '點擊綠旗執行！看右邊綠色霓虹流光光棒正在跟著你拼好的積木一行一行追蹤！Arduino 板上的小黃燈也跟著眨眼睛囉！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
           }
         ]
       },
@@ -4230,25 +4330,117 @@ void loop() {
         exampleKey: 'ex_rgb_rainbow',
         steps: [
           {
-            target: '#exampleSelect',
-            title: '載入雙模組彩虹燈光秀',
-            text: '現在我們要當小小調色大師！在範例清單選取「🌈 RGB：雙模組全彩虹霓虹燈光秀」。',
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '我們從空白畫布開始拼出彩虹調色積木！先放上【🚩 當綠旗被點擊時】！',
             action: () => {
-              const sel = document.getElementById('exampleSelect');
-              if (sel) { sel.value = 'ex_rgb_rainbow'; loadExample('ex_rgb_rainbow'); }
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
             }
           },
           {
-            target: '#blocklyArea',
-            title: '光的三原色原理',
-            text: '紅光(255)加上綠光(255)會混成溫暖的小鴨黃！紅光加藍光會變成夢幻紫色！三種全開就是純白光喔！',
-            action: () => {}
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '卡嗒！接上【♾️ 重複無限次】迴圈，讓色彩永遠循環流轉！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
           },
           {
-            target: '#btnRunBlocks',
-            title: '啟動彩虹極光！',
-            text: '點擊【🚩 執行】！看看兩顆 RGB 燈珠如彩虹瀑布一般七彩流動變色！',
-            action: () => { runBlocks(); }
+            target: 'current_block',
+            title: '第 3 步：加入紅色光 (R=255, G=0, B=0)',
+            text: '放入第 1 個顏色：【🎨 RGB 全彩 - 紅色光】並等待 0.6 秒！',
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const red = workspace.newBlock('arduino_rgb_color');
+              red.setFieldValue('ALL', 'TARGET');
+              attachNumberBlock(red, 'R', 255); attachNumberBlock(red, 'G', 0); attachNumberBlock(red, 'B', 0);
+              red.initSvg(); red.render();
+              tutorialBlocks.loop.getInput('DO').connection.connect(red.previousConnection);
+              const w1 = workspace.newBlock('control_wait');
+              w1.initSvg(); w1.render(); attachNumberBlock(w1, 'SECONDS', 0.6);
+              red.nextConnection.connect(w1.previousConnection);
+              w1.select();
+              tutorialBlocks.w1 = w1; tutorialBlocks.lastPlaced = red;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：加入翠綠色 (R=0, G=255, B=0)',
+            text: '接上第 2 個顏色：【🎨 RGB 全彩 - 翠綠色】並等待 0.6 秒！',
+            action: () => {
+              if (!tutorialBlocks.w1) return;
+              const green = workspace.newBlock('arduino_rgb_color');
+              green.setFieldValue('ALL', 'TARGET');
+              attachNumberBlock(green, 'R', 0); attachNumberBlock(green, 'G', 255); attachNumberBlock(green, 'B', 0);
+              green.initSvg(); green.render();
+              tutorialBlocks.w1.nextConnection.connect(green.previousConnection);
+              const w2 = workspace.newBlock('control_wait');
+              w2.initSvg(); w2.render(); attachNumberBlock(w2, 'SECONDS', 0.6);
+              green.nextConnection.connect(w2.previousConnection);
+              w2.select();
+              tutorialBlocks.w2 = w2; tutorialBlocks.lastPlaced = green;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 5 步：加入海洋藍 (R=0, G=0, B=255)',
+            text: '接上第 3 個顏色：【🎨 RGB 全彩 - 海洋藍】並等待 0.6 秒！',
+            action: () => {
+              if (!tutorialBlocks.w2) return;
+              const blue = workspace.newBlock('arduino_rgb_color');
+              blue.setFieldValue('ALL', 'TARGET');
+              attachNumberBlock(blue, 'R', 0); attachNumberBlock(blue, 'G', 0); attachNumberBlock(blue, 'B', 255);
+              blue.initSvg(); blue.render();
+              tutorialBlocks.w2.nextConnection.connect(blue.previousConnection);
+              const w3 = workspace.newBlock('control_wait');
+              w3.initSvg(); w3.render(); attachNumberBlock(w3, 'SECONDS', 0.6);
+              blue.nextConnection.connect(w3.previousConnection);
+              w3.select();
+              tutorialBlocks.w3 = w3; tutorialBlocks.lastPlaced = blue;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 6 步：混色魔法 - 溫暖小鴨黃！',
+            text: '最後施展混色魔法：【紅光255 + 綠光255 = 明亮小鴨黃】！三原色積木完整拼好囉！',
+            action: () => {
+              if (!tutorialBlocks.w3) return;
+              const yel = workspace.newBlock('arduino_rgb_color');
+              yel.setFieldValue('ALL', 'TARGET');
+              attachNumberBlock(yel, 'R', 255); attachNumberBlock(yel, 'G', 255); attachNumberBlock(yel, 'B', 0);
+              yel.initSvg(); yel.render();
+              tutorialBlocks.w3.nextConnection.connect(yel.previousConnection);
+              const w4 = workspace.newBlock('control_wait');
+              w4.initSvg(); w4.render(); attachNumberBlock(w4, 'SECONDS', 0.6);
+              yel.nextConnection.connect(w4.previousConnection);
+              w4.select();
+              tutorialBlocks.w4 = w4; tutorialBlocks.lastPlaced = yel;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 7 步：啟動彩虹極光燈光秀！',
+            text: '點擊綠旗！看 RGB LED 開始輪流綻放紅、綠、藍、黃色彩虹燈光秀！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
           }
         ]
       },
@@ -4261,25 +4453,75 @@ void loop() {
         exampleKey: 'ex_matrix_rocket',
         steps: [
           {
-            target: '#exampleSelect',
-            title: '選取火箭發射範例',
-            text: '讓我們在 8x8 LED 螢幕上放動畫！選取「🚀 點矩陣：像素太空火箭升空發射」。',
+            target: 'current_block',
+            title: '第 1 步：放上綠旗起點積木',
+            text: '我們來拼出點矩陣動畫！先放上【🚩 當綠旗被點擊時】！',
             action: () => {
-              const sel = document.getElementById('exampleSelect');
-              if (sel) { sel.value = 'ex_matrix_rocket'; loadExample('ex_matrix_rocket'); }
+              resetTutorialWorkspace();
+              const b = workspace.newBlock('event_when_flag_clicked');
+              b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
+              tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
             }
           },
           {
-            target: '#blocklyArea',
-            title: '點矩陣動畫積木',
-            text: '積木箱裡有火箭、吃豆人、太空外星人、愛心等多種生動動畫，還能自訂跑馬燈文字喔！',
-            action: () => {}
+            target: 'current_block',
+            title: '第 2 步：卡嗒！扣上重複無限次迴圈',
+            text: '卡嗒！接上【♾️ 重複無限次】迴圈！',
+            action: () => {
+              if (!tutorialBlocks.flag) return;
+              const b = workspace.newBlock('control_forever');
+              b.initSvg(); b.render();
+              tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
+              b.select();
+              tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
+              playSound('pop');
+            }
           },
           {
-            target: '#btnRunBlocks',
-            title: '火箭發射衝上太空！',
-            text: '點擊【🚩 執行】，看 8x8 點矩陣點火升空！你也可以自己手繪像素圖案喔！',
-            action: () => { runBlocks(); }
+            target: 'current_block',
+            title: '第 3 步：放入火箭點火升空動畫',
+            text: '放進【🚀 播放動畫: rocket (重複2次)】積木！這會逐幀刷新 8x8 點矩陣顯示火箭點火衝刺！',
+            action: () => {
+              if (!tutorialBlocks.loop) return;
+              const rk = workspace.newBlock('matrix_play_animation');
+              rk.setFieldValue('rocket', 'ANIM');
+              attachNumberBlock(rk, 'REPEAT', 2);
+              attachNumberBlock(rk, 'SPEED', 0.1);
+              rk.initSvg(); rk.render();
+              tutorialBlocks.loop.getInput('DO').connection.connect(rk.previousConnection);
+              rk.select();
+              tutorialBlocks.rk = rk; tutorialBlocks.lastPlaced = rk;
+              playSound('pop');
+            }
+          },
+          {
+            target: 'current_block',
+            title: '第 4 步：放入怦怦跳動大愛心動畫',
+            text: '接著接上【❤️ 播放動畫: heart (重複3次)】積木！火箭飛走後會跳出怦怦跳動的大愛心！',
+            action: () => {
+              if (!tutorialBlocks.rk) return;
+              const ht = workspace.newBlock('matrix_play_animation');
+              ht.setFieldValue('heart', 'ANIM');
+              attachNumberBlock(ht, 'REPEAT', 3);
+              attachNumberBlock(ht, 'SPEED', 0.15);
+              ht.initSvg(); ht.render();
+              tutorialBlocks.rk.nextConnection.connect(ht.previousConnection);
+              ht.select();
+              tutorialBlocks.ht = ht; tutorialBlocks.lastPlaced = ht;
+              playSound('magic');
+            }
+          },
+          {
+            target: '#codeViewContainer',
+            title: '第 5 步：發射火箭與愛心！',
+            text: '點擊綠旗！在 8x8 LED 螢幕上看見火箭升空與愛心跳動的像素奇蹟！',
+            action: () => {
+              const bar = document.getElementById('rightSidebar');
+              if (bar && bar.classList.contains('collapsed')) toggleSidebar();
+              runBlocks();
+              playSound('victory');
+            }
           }
         ]
       },
@@ -4477,9 +4719,27 @@ void loop() {
       const card = document.getElementById('tutorialCompanionCard');
       if (!box || !selector) return;
 
-      const el = document.querySelector(selector);
-      if (el) {
-        const rect = el.getBoundingClientRect();
+      let rect = null;
+      if (selector === 'current_block' && tutorialBlocks.lastPlaced) {
+        const svgRoot = tutorialBlocks.lastPlaced.getSvgRoot();
+        if (svgRoot) {
+          try {
+            if (workspace && typeof workspace.centerOnBlock === 'function') {
+              workspace.centerOnBlock(tutorialBlocks.lastPlaced.id);
+            }
+          } catch (_) {}
+          rect = svgRoot.getBoundingClientRect();
+        }
+      } else if (selector.startsWith('block:')) {
+        const key = selector.split(':')[1];
+        const b = tutorialBlocks[key];
+        if (b && b.getSvgRoot) rect = b.getSvgRoot().getBoundingClientRect();
+      } else {
+        const el = document.querySelector(selector);
+        if (el) rect = el.getBoundingClientRect();
+      }
+
+      if (rect) {
         box.style.display = 'block';
         box.style.left = (rect.left - 6) + 'px';
         box.style.top = (rect.top - 6) + 'px';
