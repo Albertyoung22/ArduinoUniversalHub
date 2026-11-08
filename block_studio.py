@@ -30,7 +30,6 @@ import serial
 import serial.tools.list_ports
 import json
 from flask import Flask, request, jsonify, send_from_directory
-
 try:
     from ortools.sat.python import cp_model
     HAS_ORTOOLS = True
@@ -1111,7 +1110,7 @@ def launch_desktop_window(app_url: str):
     return True
 
 
-def is_running_in_cloud():
+def run_server(port=5050):
     return bool(
         os.environ.get("RENDER")
         or os.environ.get("DYNO")
@@ -1144,7 +1143,7 @@ def main():
         print("☁️ 正在雲端環境 (Render/Cloud) 運行，健康檢查路由: /healthz", flush=True)
     print("=================================================================", flush=True)
 
-    # 啟動時自動尋找並連線 Arduino USB (本地硬體有連線時)
+    # 啟動時自動尋找並連線 Arduino USB
     threading.Thread(target=arduino_serial.auto_connect, daemon=True).start()
 
     if not in_cloud:
