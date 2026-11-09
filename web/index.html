@@ -711,11 +711,14 @@
       if (eventSource) {
         try { eventSource.close(); } catch (e) {}
       }
-      eventSource = new EventSource('/events');
+      try {
+        eventSource = new EventSource('/events');
+      } catch (e) {
+        return;
+      }
 
       eventSource.onopen = () => {
         log('🟢 即時事件串流通訊已建立 (SSE + Waitress)');
-        refreshStatus();
       };
 
       eventSource.onmessage = (event) => {
@@ -728,7 +731,7 @@
       };
 
       eventSource.onerror = () => {
-        // 瀏覽器會自動依照 SSE 規範定期重連
+        // 瀏覽器會依照 SSE 規範自主排程重連，不重複銷毀物件
       };
     }
 
@@ -763,20 +766,22 @@
           if (data.active_effect !== undefined) {
             if (data.active_effect) {
               const fx = DUAL_FX_LIST.find(x => x[0] === data.active_effect);
-              document.getElementById('activeFxName').innerText = fx ? `[正在執行: ${fx[1]}]` : `[正在執行: ${data.active_effect}]`;
-              document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+              const txt = fx ? `[正在執行: ${fx[1]}]` : `[正在執行: ${data.active_effect}]`;
+              const lbl = document.getElementById('activeFxName');
+              if (lbl && lbl.innerText !== txt) lbl.innerText = txt;
               const btn = document.getElementById(`fx_btn_${data.active_effect}`);
-              if (btn) btn.classList.add('active-fx');
+              if (btn && !btn.classList.contains('active-fx')) {
+                document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
+                btn.classList.add('active-fx');
+              }
             } else {
-              document.getElementById('activeFxName').innerText = '';
+              const lbl = document.getElementById('activeFxName');
+              if (lbl && lbl.innerText !== '') lbl.innerText = '';
               document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
             }
           }
-          if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
-            initEventStream();
-          }
         } catch (e) {}
-      }, 800);
+      }, 3000);
     }
 
     function handleServerMessage(msg) {
@@ -1743,6 +1748,7 @@
     }
 
     // Status & Ports
+    let _cardsRendered = false;
     async function refreshStatus() {
       try {
         const res = await fetch('/api/status');
@@ -1755,27 +1761,32 @@
         }
         if (data.tunnel_url) updateTunnelStatus(data.tunnel_url);
         renderPorts(data.ports, data.port);
-        renderCards();
-        renderWorkflowList();
+        if (!_cardsRendered) {
+          renderCards();
+          renderWorkflowList();
+          _cardsRendered = true;
+        }
       } catch (e) {
         // 後端伺服器離線 (例如純前端託管於 Render / 靜態網站)
-        const local = localStorage.getItem('arduino_universal_profile');
-        if (local) {
-          try {
-            const parsed = JSON.parse(local);
-            components = parsed.components || DEFAULT_COMPONENTS;
-            workflows = parsed.workflows || [];
-          } catch(err) {
+        if (!_cardsRendered) {
+          const local = localStorage.getItem('arduino_universal_profile');
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              components = parsed.components || DEFAULT_COMPONENTS;
+              workflows = parsed.workflows || [];
+            } catch(err) {
+              components = JSON.parse(JSON.stringify(DEFAULT_COMPONENTS));
+            }
+          } else {
             components = JSON.parse(JSON.stringify(DEFAULT_COMPONENTS));
           }
-        } else {
-          components = JSON.parse(JSON.stringify(DEFAULT_COMPONENTS));
+          renderCards();
+          renderWorkflowList();
+          _cardsRendered = true;
+          const pSel = document.getElementById('portSelect');
+          if (pSel) pSel.innerHTML = '<option value="">(離線/瀏覽器直連模式)</option>';
         }
-        renderCards();
-        renderWorkflowList();
-        const pSel = document.getElementById('portSelect');
-        if (pSel) pSel.innerHTML = '<option value="">(瀏覽器直連模式)</option>';
-        log('💡 [純前端/雲端模式] 系統已就緒，請點擊上方「⚡ 瀏覽器 USB 直連」直接存取本機 Arduino！');
       }
     }
 
@@ -1800,7 +1811,11 @@
       }
     }
 
+    let _lastPortsKey = '';
     function renderPorts(ports, current) {
+      const key = (ports || []).join(',') + '|' + (current || '');
+      if (key === _lastPortsKey) return;
+      _lastPortsKey = key;
       const sel = document.getElementById('portSelect');
       if (!sel) return;
       sel.innerHTML = '';
