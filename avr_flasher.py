@@ -110,7 +110,7 @@ def compile_sketch(ino_path: str, build_dir: str = None, log_cb=print) -> str:
 
     # 4. 產出 HEX
     hex_path = os.path.join(build_dir, "firmware.hex")
-    subprocess.run([OBJCOPY_EXE, "-O", "ihex", "-R", ".eeprom", elf, hex_path], check=True)
+    subprocess.run([OBJCOPY_EXE, "-O", "ihex", "-R", ".eeprom", elf, hex_path], check=True, timeout=10)
     log_cb(f"✅ 編譯成功！二進位檔案大小: {os.path.getsize(hex_path)} bytes")
     return hex_path
 
@@ -132,12 +132,16 @@ def upload_hex(hex_path: str, port: str = "COM4", log_cb=print) -> bool:
         "-D",
         "-U", f"flash:w:{hex_path}:i"
     ]
-    res = subprocess.run(cmd, capture_output=True, text=True, errors="replace")
-    if res.returncode != 0:
-        log_cb(f"❌ 燒錄失敗:\n{res.stderr}")
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=25)
+        if res.returncode != 0:
+            log_cb(f"❌ 燒錄失敗:\n{res.stderr}")
+            return False
+        log_cb("🎉 燒錄成功！韌體已固化至 ATmega328P Flash 晶片。")
+        return True
+    except subprocess.TimeoutExpired:
+        log_cb(f"❌ 燒錄超時 (25 秒): 序列埠 {port} 無回應，可能被其他軟體佔用！")
         return False
-    log_cb("🎉 燒錄成功！韌體已固化至 ATmega328P Flash 晶片。")
-    return True
 
 
 def compile_and_upload(ino_path: str, port: str = "COM4", log_cb=print) -> bool:

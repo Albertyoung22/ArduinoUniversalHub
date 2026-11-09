@@ -1254,8 +1254,8 @@ def run_standalone(host="0.0.0.0", port=None):
         print("☁️ 正在雲端環境 (Render) 運行，健康檢查路由: /healthz", flush=True)
     print("=" * 65, flush=True)
 
-    # 以 Waitress 正式生產伺服器運行
-    waitress.serve(app, host=host, port=port, threads=8)
+    # 以 Waitress 正式生產伺服器運行 (增加執行緒池至 32 防範 SSE 併發佔滿)
+    waitress.serve(app, host=host, port=port, threads=32, connection_limit=200)
 
 
 def start_web_server_thread(gui_app, host="0.0.0.0", port=5000):
@@ -1279,7 +1279,7 @@ def start_web_server_thread(gui_app, host="0.0.0.0", port=5000):
 
     # 啟動 Waitress 執行緒
     def _serve():
-        waitress.serve(app, host=host, port=port, threads=8, _quiet=True)
+        waitress.serve(app, host=host, port=port, threads=32, connection_limit=200, _quiet=True)
 
     t = threading.Thread(target=_serve, daemon=True)
     t.start()

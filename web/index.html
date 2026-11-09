@@ -661,6 +661,51 @@
     let activeWfRunning = false;
     let tunnelUrl = "";
 
+    // ==========================================
+    // 非阻塞式浮動通知 Toast 系統 (防範瀏覽器原生 alert 導致執行緒卡死無回應)
+    // ==========================================
+    function showToast(message, type = 'info', duration = 5000) {
+      let tc = document.getElementById('toastContainer');
+      if (!tc) {
+        tc = document.createElement('div');
+        tc.id = 'toastContainer';
+        tc.style.cssText = 'position:fixed; top:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:10px; pointer-events:none;';
+        document.body.appendChild(tc);
+      }
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        padding: 12px 18px; border-radius: 8px; font-size: 0.88rem; font-weight: 600;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.45); pointer-events: auto; cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); transform: translateY(-10px); opacity: 0;
+        max-width: 380px; line-height: 1.45; white-space: pre-line; word-break: break-all;
+      `;
+      if (type === 'success') {
+        toast.style.background = '#A6E3A1';
+        toast.style.color = '#11111B';
+        toast.style.border = '1px solid #94E2D5';
+      } else if (type === 'error') {
+        toast.style.background = '#F38BA8';
+        toast.style.color = '#11111B';
+        toast.style.border = '1px solid #EBA0AC';
+      } else {
+        toast.style.background = '#89B4FA';
+        toast.style.color = '#11111B';
+        toast.style.border = '1px solid #B4BEFE';
+      }
+      toast.innerText = message;
+      toast.onclick = () => toast.remove();
+      tc.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 350);
+      }, duration);
+    }
+
     // Connect SSE (Server-Sent Events) for Waitress + Flask
     function initEventStream() {
       if (eventSource) {
@@ -820,11 +865,11 @@
         }
         if (msg.ok) {
           log(`🎉 [燒錄成功] ${msg.message}`);
-          alert(`🎉 燒錄成功！\n\n${msg.message}`);
+          showToast(`🎉 萬能韌體燒錄成功！\n${msg.message}`, 'success', 6000);
           setTimeout(scanPorts, 1200);
         } else {
           log(`❌ [燒錄失敗] ${msg.message}`);
-          alert(`❌ 燒錄失敗:\n${msg.message}`);
+          showToast(`❌ 燒錄失敗:\n${msg.message}`, 'error', 7000);
         }
       } else if (msg.type === 'profile_update') {
         if (msg.components) {
@@ -1200,7 +1245,12 @@
         try { await serialReader.cancel(); } catch(e){}
       }
       if (serialPort) {
-        try { await serialPort.close(); } catch(e){}
+        try {
+          await Promise.race([
+            serialPort.close(),
+            new Promise((_, reject) => setTimeout(() => reject('timeout'), 600))
+          ]);
+        } catch(e){}
         serialPort = null;
       }
       updateConnStatus(false, '');
@@ -2838,14 +2888,14 @@
       }).then(r => r.json()).then(res => {
         if (res.ok) {
           log(`⏳ ${res.message}，正在編譯上傳中...`);
-          alert(`已啟動脫機流程燒錄程序！\n\n系統正在後台調用 arduino-cli 進行編譯與上傳，請稍候並查看日誌。\n燒錄完成後晶片將會獨立執行！`);
+          showToast(`⏳ 已啟動脫機流程燒錄程序！\n系統正在後台編譯與上傳，請稍候並查看日誌。`, 'info', 5000);
         } else {
           log(`❌ 燒錄請求失敗: ` + (res.error || res.message));
-          alert(`燒錄請求失敗: ` + (res.error || res.message));
+          showToast(`❌ 燒錄請求失敗: ` + (res.error || res.message), 'error', 6000);
         }
       }).catch(err => {
         log(`❌ 網路請求錯誤: ` + err);
-        alert(`網路請求錯誤: ` + err);
+        showToast(`❌ 網路連線錯誤: ` + err, 'error', 6000);
       });
     }
 
@@ -2876,6 +2926,8 @@
       }
 
       log(`🚀 [Web] 開始請求後端重刷萬能韌體 (目標 COM: ${port || '預設'})...`);
+      showToast(`🚀 已啟動背景編譯與燒錄程序 (目標 COM: ${port || '自動偵測'})，請稍候...`, 'info', 4000);
+
       fetch('/api/flash_firmware', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2885,7 +2937,7 @@
           log(`⏳ ${res.message}`);
         } else {
           log(`❌ 萬能韌體燒錄請求失敗: ` + (res.error || res.message));
-          alert(`萬能韌體燒錄請求失敗:\n` + (res.error || res.message));
+          showToast(`❌ 萬能韌體燒錄失敗:\n` + (res.error || res.message), 'error', 6000);
           if (btn) {
             btn.disabled = false;
             btn.innerHTML = '⚡ 重刷萬能韌體';
@@ -2893,7 +2945,7 @@
         }
       }).catch(err => {
         log(`❌ 網路請求錯誤: ` + err);
-        alert(`網路請求錯誤:\n` + err);
+        showToast(`❌ 網路連線錯誤:\n` + err, 'error', 6000);
         if (btn) {
           btn.disabled = false;
           btn.innerHTML = '⚡ 重刷萬能韌體';
