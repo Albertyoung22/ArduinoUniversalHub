@@ -238,6 +238,8 @@ class UniversalWebHub:
                 break
 
     def handle_incoming_line(self, line: str):
+        if line.startswith("OK:RGB") or line.startswith("OK:MATRIX") or line.startswith("OK:PWM"):
+            return  # 濾除高頻致動器應答，防範每秒數十次 SSE 日誌塞滿前端造成網頁凍結
         self.broadcast({"type": "log", "data": f"<< {line}"})
         parts = line.split(",")
         tag = parts[0].upper()

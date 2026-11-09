@@ -185,15 +185,6 @@ void handleCommand(String line) {
     analogWrite(rPin, isAnode ? 255 - r : r);
     analogWrite(gPin, isAnode ? 255 - g : g);
     analogWrite(bPin, isAnode ? 255 - b : b);
-
-    Serial.print(F("OK:RGB,"));
-    Serial.print(rPin);
-    Serial.print(F(","));
-    Serial.print(r);
-    Serial.print(F(","));
-    Serial.print(g);
-    Serial.print(F(","));
-    Serial.println(b);
     return;
   }
 

@@ -947,8 +947,10 @@
       if (activeBtn) activeBtn.classList.add('active-fx');
       document.getElementById('activeFxName').innerText = `[正在執行: ${name}]`;
       log(`✨ 觸發雙燈特效: ${name}`);
-      runClientDualEffect(key);
-      if (!isWebSerialMode) {
+      if (isWebSerialMode) {
+        runClientDualEffect(key);
+      } else {
+        stopClientDualEffect(false);
         sendAction({ action: 'dual_rgb_effect', effect: key });
       }
     }
@@ -1711,18 +1713,33 @@
     }
     const sendWs = sendAction;
 
-    // Logging
+    // Logging (Buffered & Throttled to prevent DOM freeze)
+    let _logBuffer = [];
+    let _logFlushScheduled = false;
+
     function log(msg) {
-      const logBox = document.getElementById('logBox');
       const time = new Date().toLocaleTimeString();
-      logBox.textContent += `[${time}] ${msg}\n`;
-      if (logBox.textContent.length > 20000) {
-        logBox.textContent = logBox.textContent.slice(-10000);
+      _logBuffer.push(`[${time}] ${msg}\n`);
+      if (!_logFlushScheduled) {
+        _logFlushScheduled = true;
+        requestAnimationFrame(() => {
+          const logBox = document.getElementById('logBox');
+          if (logBox && _logBuffer.length > 0) {
+            logBox.textContent += _logBuffer.join('');
+            _logBuffer = [];
+            if (logBox.textContent.length > 25000) {
+              logBox.textContent = logBox.textContent.slice(-12000);
+            }
+            logBox.scrollTop = logBox.scrollHeight;
+          }
+          _logFlushScheduled = false;
+        });
       }
-      logBox.scrollTop = logBox.scrollHeight;
     }
     function clearLog() {
-      document.getElementById('logBox').textContent = '';
+      _logBuffer = [];
+      const logBox = document.getElementById('logBox');
+      if (logBox) logBox.textContent = '';
     }
 
     // Status & Ports

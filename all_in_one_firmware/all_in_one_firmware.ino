@@ -187,14 +187,12 @@ void processCommand(char* cmd) {
       analogWrite(rp, anode ? 255 - r : r);
       analogWrite(gp, anode ? 255 - g : g);
       analogWrite(bp, anode ? 255 - b : b);
-      Serial.println(F("OK:RGB"));
       return;
     } else if (sscanf(parseBuf + 3, "%d %d %d %d %d %d", &rp, &gp, &bp, &r, &g, &b) == 6) {
       pinMode(rp, OUTPUT); pinMode(gp, OUTPUT); pinMode(bp, OUTPUT);
       analogWrite(rp, r);
       analogWrite(gp, g);
       analogWrite(bp, b);
-      Serial.println(F("OK"));
       return;
     } else {
       Serial.println(F("ERR:PARSE"));
