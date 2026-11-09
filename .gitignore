@@ -13,8 +13,11 @@ venv/
 build/
 dist/
 build_firmware/
+build_cache/
 *.o
 *.elf
+*.eep
+*.with_bootloader.*
 *.egg-info/
 cloudflared.exe
 ArduinoController.exe

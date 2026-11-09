@@ -429,7 +429,9 @@ class UniversalControllerApp:
         ttk.Button(row1, text="🔄 重新整理", command=self.scan_ports).pack(side=tk.LEFT, padx=(0, 6))
 
         self.btn_connect = ttk.Button(row1, text="🔌 連線設備", style="Primary.TButton", command=self.toggle_connection)
-        self.btn_connect.pack(side=tk.LEFT, padx=(0, 12))
+        self.btn_connect.pack(side=tk.LEFT, padx=(0, 6))
+
+        ttk.Button(row1, text="⚡ 重刷萬能韌體", style="Primary.TButton", command=self.flash_firmware).pack(side=tk.LEFT, padx=(0, 10))
 
         self.lbl_status = tk.Label(row1, text="● 未連線", bg=self.BG_TOP, fg="#F38BA8", font=("Segoe UI", 9, "bold"))
         self.lbl_status.pack(side=tk.LEFT, padx=(0, 10))
@@ -1567,23 +1569,33 @@ class UniversalControllerApp:
 
         def worker():
             self.log("🚀 開始編譯萬能韌體 (arduino:avr:uno)...")
-            cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
             try:
-                res_comp = subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
-                self.log("✅ 編譯成功！開始上傳韌體...")
-                cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
-                res_up = subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
-                self.log("🎉 韌體燒錄大功告成！正在自動重新連線...")
+                if os.path.exists(ARDUINO_CLI_PATH):
+                    cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
+                    subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                    self.log("✅ 編譯成功！開始上傳韌體...")
+                    cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
+                    subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                else:
+                    import avr_flasher
+                    firmware_ino = os.path.join(FIRMWARE_DIR, "universal_firmware.ino")
+                    ok = avr_flasher.compile_and_upload(firmware_ino, port=port, log_cb=self.log)
+                    if not ok:
+                        raise RuntimeError("AVR 工具鏈燒錄失敗，請確認 COM 埠未被其他程式佔用！")
+
+                self.log("🎉 萬能韌體燒錄大功告成！正在自動重新連線...")
                 time.sleep(1.5)
                 self.root.after(0, self.connect)
-                messagebox.showinfo("燒錄完成", "萬能韌體已成功燒錄！系統已就緒。")
+                messagebox.showinfo("燒錄完成", f"萬能韌體已成功燒錄至 {port}！\n系統已就緒。")
             except subprocess.CalledProcessError as err:
                 err_text = err.stderr or err.stdout or str(err)
                 self.log(f"❌ 燒錄失敗: {err_text}")
                 messagebox.showerror("燒錄失敗", f"編譯或燒錄時發生錯誤：\n{err_text}")
+                self.root.after(0, self.connect)
             except Exception as ex:
                 self.log(f"❌ 錯誤: {ex}")
                 messagebox.showerror("錯誤", f"發生未知例外：\n{ex}")
+                self.root.after(0, self.connect)
 
         threading.Thread(target=worker, daemon=True).start()
 
@@ -1638,14 +1650,20 @@ class UniversalControllerApp:
                 sketch_file = os.path.join(out_dir, "standalone_sketch.ino")
                 with open(sketch_file, "w", encoding="utf-8") as f:
                     f.write(sketch_code)
-                self.log(f"📄 獨立原始碼生成完成 ({len(sketch_code)} 位元組)，調用 arduino-cli 開始編譯...")
+                self.log(f"📄 獨立原始碼生成完成 ({len(sketch_code)} 位元組)，開始編譯...")
 
-                cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", out_dir]
-                res_comp = subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
-                self.log("✅ 編譯成功！開始上傳脫機自訂流程韌體至 Arduino Uno...")
+                if os.path.exists(ARDUINO_CLI_PATH):
+                    cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", out_dir]
+                    subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                    self.log("✅ 編譯成功！開始上傳脫機自訂流程韌體至 Arduino Uno...")
+                    cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", out_dir]
+                    subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                else:
+                    import avr_flasher
+                    ok = avr_flasher.compile_and_upload(sketch_file, port=port, log_cb=self.log)
+                    if not ok:
+                        raise RuntimeError("AVR 工具鏈脫機燒錄失敗，請確認 COM 埠未被其他程式佔用！")
 
-                cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", out_dir]
-                res_up = subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
                 self.log(f"🎉 自訂流程【{wf_name}】脫機獨立燒錄成功！")
 
                 time.sleep(1.5)

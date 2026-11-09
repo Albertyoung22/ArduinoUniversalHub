@@ -484,6 +484,7 @@
       <button onclick="scanPorts()">🔄 重新整理</button>
       <button class="primary" id="btnConnect" onclick="toggleConnect()">🔌 連線 (Python)</button>
       <button id="btnWebSerial" onclick="toggleWebSerial()" title="僅當此電腦直接插有 USB 線時使用；遠端控制時主機已連線，無需點擊此鈕" style="background:#A6E3A1; color:#11111B; font-weight:700; border:none; border-radius:6px; padding:6px 12px; cursor:pointer;">⚡ 瀏覽器 USB 直連</button>
+      <button id="btnFlashFirmware" onclick="flashUniversalFirmwareWeb()" title="一鍵編譯並重刷 Arduino 萬能韌體 (解決換板或脫機後無法聯機問題)" style="background:linear-gradient(135deg, #F38BA8, #EBA0AC); color:#11111B; font-weight:750; border:none; border-radius:6px; padding:6px 12px; cursor:pointer;">⚡ 重刷萬能韌體</button>
     </div>
 
     <div class="header-actions">
@@ -812,12 +813,18 @@
         document.querySelectorAll('#fxGrid .pill-btn').forEach(b => b.classList.remove('active-fx'));
         stopClientDualEffect(false);
       } else if (msg.type === 'flash_result') {
+        const btnFlash = document.getElementById('btnFlashFirmware');
+        if (btnFlash) {
+          btnFlash.disabled = false;
+          btnFlash.innerHTML = '⚡ 重刷萬能韌體';
+        }
         if (msg.ok) {
           log(`🎉 [燒錄成功] ${msg.message}`);
-          alert(`🎉 脫機流程燒錄成功！\n\n${msg.message}\n現在您可以拔除 USB 線，接上 5V 行動電源獨立運作！`);
+          alert(`🎉 燒錄成功！\n\n${msg.message}`);
+          setTimeout(scanPorts, 1200);
         } else {
           log(`❌ [燒錄失敗] ${msg.message}`);
-          alert(`❌ 脫機燒錄失敗:\n${msg.message}`);
+          alert(`❌ 燒錄失敗:\n${msg.message}`);
         }
       } else if (msg.type === 'profile_update') {
         if (msg.components) {
@@ -2841,6 +2848,59 @@
         alert(`網路請求錯誤: ` + err);
       });
     }
+
+    async function flashUniversalFirmwareWeb() {
+      const pSel = document.getElementById('portSelect');
+      const port = pSel ? pSel.value : '';
+
+      const conf = confirm(
+        `⚡【一鍵重刷萬能韌體】\n\n` +
+        `目標序列埠: ${port || '已連線 / 系統自動偵測'}\n\n` +
+        `• 系統將會使用本機編譯工具鏈，將最新萬能通訊韌體 (universal_firmware) 編譯並直接燒錄至 Arduino Uno。\n` +
+        `• 燒錄前會自動暫時釋放序列埠，燒錄完成後自動重新連線。\n` +
+        `• 此功能可立即解決換板子後殘留舊程式、或脫機流程改回連線控制的問題！\n\n` +
+        `確定要開始編譯並重刷萬能韌體嗎？`
+      );
+      if (!conf) return;
+
+      // 若當前正開啟 WebSerial 直連，先主動關閉避免佔用序列埠
+      if (typeof isWebSerialMode !== 'undefined' && isWebSerialMode && typeof disconnectWebSerial === 'function') {
+        log(`ℹ️ [Web] 偵測到瀏覽器 USB 直連，主動斷開以釋放序列埠...`);
+        try { await disconnectWebSerial(); } catch (e) {}
+      }
+
+      const btn = document.getElementById('btnFlashFirmware');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ 正在重刷韌體...';
+      }
+
+      log(`🚀 [Web] 開始請求後端重刷萬能韌體 (目標 COM: ${port || '預設'})...`);
+      fetch('/api/flash_firmware', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port: port })
+      }).then(r => r.json()).then(res => {
+        if (res.ok) {
+          log(`⏳ ${res.message}`);
+        } else {
+          log(`❌ 萬能韌體燒錄請求失敗: ` + (res.error || res.message));
+          alert(`萬能韌體燒錄請求失敗:\n` + (res.error || res.message));
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '⚡ 重刷萬能韌體';
+          }
+        }
+      }).catch(err => {
+        log(`❌ 網路請求錯誤: ` + err);
+        alert(`網路請求錯誤:\n` + err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '⚡ 重刷萬能韌體';
+        }
+      });
+    }
+
     function addWorkflowPrompt() {
       const name = prompt('請輸入新流程名稱：');
       if (name && name.trim()) {

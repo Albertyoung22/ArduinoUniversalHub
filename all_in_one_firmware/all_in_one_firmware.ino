@@ -148,14 +148,14 @@ char cmdBuffer[128];
 uint8_t cmdIdx = 0;
 
 void processCommand(char* cmd) {
-  while (*cmd == ' ' || *cmd == '\r' || *cmd == '\t') cmd++;
+  while (*cmd == ' ' || *cmd == '\r' || *cmd == '\t' || *cmd == '\n') cmd++;
   if (strlen(cmd) == 0) return;
 
-  // 1. 握手連線
+  // 1. 握手連線 (相容兩種軟體的 PING 回應)
   if (strcmp(cmd, "PING") == 0) {
     isInteractiveMode = true;
     lastSerialCmdTime = millis();
-    Serial.println("PONG");
+    Serial.println(F("PONG:UNIVERSAL_V1"));
     return;
   }
 
@@ -163,53 +163,105 @@ void processCommand(char* cmd) {
   if (strcmp(cmd, "OFFLINE") == 0) {
     isInteractiveMode = false;
     stepStartTime = millis();
-    Serial.println("OK:OFFLINE");
+    Serial.println(F("OK:OFFLINE"));
     return;
   }
 
-  // 3. 即時 RGB 輸出: RGB <r_pin> <g_pin> <b_pin> <r> <g> <b>
-  if (strncmp(cmd, "RGB", 3) == 0) {
+  // 將逗號轉為空格，使逗號格式與空格格式完全通用
+  char parseBuf[128];
+  strncpy(parseBuf, cmd, sizeof(parseBuf) - 1);
+  parseBuf[sizeof(parseBuf) - 1] = '\0';
+  for (int i = 0; parseBuf[i]; i++) {
+    if (parseBuf[i] == ',') parseBuf[i] = ' ';
+  }
+
+  // 3. 即時 RGB 輸出 (同時支援 7 參數逗號格式 與 6 參數空格格式):
+  // 格式 A (universal_gui): RGB <rPin> <gPin> <bPin> <anode_flag> <r> <g> <b>
+  // 格式 B (gui_controller): RGB <rPin> <gPin> <bPin> <r> <g> <b>
+  if (strncmp(parseBuf, "RGB", 3) == 0) {
     isInteractiveMode = true;
     lastSerialCmdTime = millis();
-    int rp, gp, bp, r, g, b;
-    if (sscanf(cmd + 3, "%d %d %d %d %d %d", &rp, &gp, &bp, &r, &g, &b) == 6) {
+    int rp, gp, bp, anode, r, g, b;
+    if (sscanf(parseBuf + 3, "%d %d %d %d %d %d %d", &rp, &gp, &bp, &anode, &r, &g, &b) == 7) {
+      pinMode(rp, OUTPUT); pinMode(gp, OUTPUT); pinMode(bp, OUTPUT);
+      analogWrite(rp, anode ? 255 - r : r);
+      analogWrite(gp, anode ? 255 - g : g);
+      analogWrite(bp, anode ? 255 - b : b);
+      Serial.println(F("OK:RGB"));
+      return;
+    } else if (sscanf(parseBuf + 3, "%d %d %d %d %d %d", &rp, &gp, &bp, &r, &g, &b) == 6) {
+      pinMode(rp, OUTPUT); pinMode(gp, OUTPUT); pinMode(bp, OUTPUT);
       analogWrite(rp, r);
       analogWrite(gp, g);
       analogWrite(bp, b);
-      Serial.println("OK");
+      Serial.println(F("OK"));
+      return;
     } else {
-      Serial.println("ERR:PARSE");
+      Serial.println(F("ERR:PARSE"));
+      return;
     }
-    return;
   }
 
-  // 4. 即時點陣位圖顯示: MATRIX <b0> <b1> <b2> <b3> <b4> <b5> <b6> <b7>
-  if (strncmp(cmd, "MATRIX", 6) == 0) {
+  // 4. 即時點陣位圖顯示:
+  // 格式 A: MATRIX_ALL <din> <cs> <clk> <b0> ... <b7>
+  // 格式 B: MATRIX <b0> ... <b7>
+  if (strncmp(parseBuf, "MATRIX_ALL", 10) == 0) {
+    isInteractiveMode = true;
+    lastSerialCmdTime = millis();
+    int din, cs, clk, b[8];
+    if (sscanf(parseBuf + 10, "%d %d %d %d %d %d %d %d %d %d %d",
+               &din, &cs, &clk, &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7]) == 11) {
+      uint8_t bmp[8];
+      for (int i = 0; i < 8; i++) bmp[i] = (uint8_t)b[i];
+      displayMatrixBitmap(bmp);
+      Serial.println(F("OK:MATRIX"));
+      return;
+    }
+  }
+  if (strncmp(parseBuf, "MATRIX", 6) == 0) {
     isInteractiveMode = true;
     lastSerialCmdTime = millis();
     int b[8];
-    if (sscanf(cmd + 6, "%d %d %d %d %d %d %d %d",
+    if (sscanf(parseBuf + 6, "%d %d %d %d %d %d %d %d",
                &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7]) == 8) {
       uint8_t bmp[8];
       for (int i = 0; i < 8; i++) bmp[i] = (uint8_t)b[i];
       displayMatrixBitmap(bmp);
-      Serial.println("OK:MATRIX");
-    } else {
-      Serial.println("ERR:MATRIX");
+      Serial.println(F("OK:MATRIX"));
+      return;
     }
-    return;
   }
 
-  // 5. 點陣清空: CLEAR_MATRIX
-  if (strcmp(cmd, "CLEAR_MATRIX") == 0) {
+  // 5. 點陣清空 (支援 CLEAR_MATRIX 與 MATRIX_CLEAR)
+  if (strncmp(parseBuf, "CLEAR_MATRIX", 12) == 0 || strncmp(parseBuf, "MATRIX_CLEAR", 12) == 0) {
     isInteractiveMode = true;
     lastSerialCmdTime = millis();
     clearMatrix();
-    Serial.println("OK:CLEAR");
+    Serial.println(F("OK:CLEAR"));
     return;
   }
 
-  Serial.println("ERR:UNKNOWN");
+  // 6. 數位與類比通用寫入
+  if (strncmp(parseBuf, "DWRITE", 6) == 0) {
+    int pin, val;
+    if (sscanf(parseBuf + 6, "%d %d", &pin, &val) == 2) {
+      pinMode(pin, OUTPUT);
+      digitalWrite(pin, val > 0 ? HIGH : LOW);
+      Serial.println(F("OK:DWRITE"));
+      return;
+    }
+  }
+  if (strncmp(parseBuf, "AWRITE", 6) == 0) {
+    int pin, val;
+    if (sscanf(parseBuf + 6, "%d %d", &pin, &val) == 2) {
+      pinMode(pin, OUTPUT);
+      analogWrite(pin, constrain(val, 0, 255));
+      Serial.println(F("OK:AWRITE"));
+      return;
+    }
+  }
+
+  Serial.println(F("ERR:UNKNOWN"));
 }
 
 void setup() {

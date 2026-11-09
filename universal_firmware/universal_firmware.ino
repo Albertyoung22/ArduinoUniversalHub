@@ -80,9 +80,12 @@ void handleCommand(String line) {
     return;
   }
 
-  // 分割逗點參數
+  // 分割逗點或空格參數 (通用相容空格與逗點協定)
   char buf[128];
   line.toCharArray(buf, sizeof(buf));
+  for (int i = 0; buf[i]; i++) {
+    if (buf[i] == ' ') buf[i] = ',';
+  }
   char* parts[16];
   int count = 0;
   char* tok = strtok(buf, ",");
@@ -157,15 +160,23 @@ void handleCommand(String line) {
     return;
   }
 
-  // 5. RGB LED: RGB,rPin,gPin,bPin,commonAnode(0|1),r,g,b
-  if (cmd == "RGB" && count >= 8) {
+  // 5. RGB LED: RGB,rPin,gPin,bPin,commonAnode(0|1),r,g,b 或 RGB,rPin,gPin,bPin,r,g,b
+  if (cmd == "RGB" && count >= 7) {
     uint8_t rPin = atoi(parts[1]);
     uint8_t gPin = atoi(parts[2]);
     uint8_t bPin = atoi(parts[3]);
-    bool isAnode = (atoi(parts[4]) == 1);
-    uint8_t r = constrain(atoi(parts[5]), 0, 255);
-    uint8_t g = constrain(atoi(parts[6]), 0, 255);
-    uint8_t b = constrain(atoi(parts[7]), 0, 255);
+    bool isAnode = false;
+    uint8_t r = 0, g = 0, b = 0;
+    if (count >= 8) {
+      isAnode = (atoi(parts[4]) == 1);
+      r = constrain(atoi(parts[5]), 0, 255);
+      g = constrain(atoi(parts[6]), 0, 255);
+      b = constrain(atoi(parts[7]), 0, 255);
+    } else {
+      r = constrain(atoi(parts[4]), 0, 255);
+      g = constrain(atoi(parts[5]), 0, 255);
+      b = constrain(atoi(parts[6]), 0, 255);
+    }
 
     pinMode(rPin, OUTPUT);
     pinMode(gPin, OUTPUT);
@@ -184,6 +195,24 @@ void handleCommand(String line) {
     Serial.print(F(","));
     Serial.println(b);
     return;
+  }
+
+  // 5b. 點陣相容 (MATRIX <b0>...<b7> 或 CLEAR_MATRIX)
+  if ((cmd == "MATRIX" || cmd == "CLEAR_MATRIX") && count >= 1) {
+    uint8_t din = 12, cs = 8, clk = 7;
+    max7219_init(din, cs, clk);
+    if (cmd == "CLEAR_MATRIX") {
+      for (int r = 1; r <= 8; r++) max7219_write(din, cs, clk, r, 0x00);
+      Serial.println(F("OK:CLEAR"));
+      return;
+    } else if (count >= 9) {
+      for (int r = 0; r < 8; r++) {
+        uint8_t val = (uint8_t)strtoul(parts[1 + r], NULL, 0);
+        max7219_write(din, cs, clk, r + 1, val);
+      }
+      Serial.println(F("OK:MATRIX"));
+      return;
+    }
   }
 
   // 6. MAX7219 全矩陣繪製: MATRIX_ALL,din,cs,clk,b0,b1,b2,b3,b4,b5,b6,b7

@@ -1397,10 +1397,17 @@ def safe_run_process(args, timeout=60):
 @app.route("/api/burn/compile_and_upload", methods=["POST"])
 def api_burn_compile_and_upload():
     cli_path = find_arduino_cli()
-    if not cli_path:
+    has_avr_flasher = False
+    try:
+        import avr_flasher
+        has_avr_flasher = avr_flasher.check_toolchain()[0]
+    except Exception:
+        pass
+
+    if not cli_path and not has_avr_flasher:
         return jsonify({
             "ok": False,
-            "error": "伺服器未找到 arduino-cli 編譯器。請確認已安裝 Arduino IDE 2 或手動將 arduino-cli 加入環境變數。"
+            "error": "伺服器未找到 arduino-cli 編譯器或本機 AVR 工具鏈。請確認已安裝 Arduino IDE 2 或本機 AVR 工具鏈。"
         }), 400
 
     data = request.get_json(silent=True) or {}
@@ -1428,43 +1435,57 @@ def api_burn_compile_and_upload():
         with open(ino_path, "w", encoding="utf-8") as f:
             f.write(code)
 
-        arduino_serial.log(f"🛠️ [離線燒錄] 正在啟動編譯 (FQBN: {fqbn})...")
-        # 1. Compile
-        ret, comp_stdout, comp_stderr = safe_run_process(
-            [cli_path, "compile", "--fqbn", fqbn, sketch_dir],
-            timeout=60
-        )
-        if ret != 0:
-            err_msg = comp_stderr or comp_stdout
-            arduino_serial.log(f"❌ [離線燒錄] 編譯失敗:\n{err_msg}")
-            return jsonify({
-                "ok": False,
-                "stage": "compile",
-                "error": "Arduino 編譯失敗，請檢查語法或設定",
-                "log": (comp_stdout or "") + "\n" + (comp_stderr or "")
-            }), 400
+        if cli_path:
+            arduino_serial.log(f"🛠️ [離線燒錄] 正在啟動編譯 (FQBN: {fqbn})...")
+            # 1. Compile
+            ret, comp_stdout, comp_stderr = safe_run_process(
+                [cli_path, "compile", "--fqbn", fqbn, sketch_dir],
+                timeout=60
+            )
+            if ret != 0:
+                err_msg = comp_stderr or comp_stdout
+                arduino_serial.log(f"❌ [離線燒錄] 編譯失敗:\n{err_msg}")
+                return jsonify({
+                    "ok": False,
+                    "stage": "compile",
+                    "error": "Arduino 編譯失敗，請檢查語法或設定",
+                    "log": (comp_stdout or "") + "\n" + (comp_stderr or "")
+                }), 400
 
-        arduino_serial.log(f"✅ [離線燒錄] 編譯成功！正在上傳韌體至 {port}...")
-        # 2. Upload
-        ret, upload_stdout, upload_stderr = safe_run_process(
-            [cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir],
-            timeout=60
-        )
-        if ret != 0:
-            err_msg = upload_stderr or upload_stdout
-            arduino_serial.log(f"❌ [離線燒錄] 上傳失敗:\n{err_msg}")
-            return jsonify({
-                "ok": False,
-                "stage": "upload",
-                "error": f"韌體上傳失敗，請確認板子連接在 {port} 且未被其他軟體佔用",
-                "log": (upload_stdout or "") + "\n" + (upload_stderr or "")
-            }), 400
+            arduino_serial.log(f"✅ [離線燒錄] 編譯成功！正在上傳韌體至 {port}...")
+            # 2. Upload
+            ret, upload_stdout, upload_stderr = safe_run_process(
+                [cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir],
+                timeout=60
+            )
+            if ret != 0:
+                err_msg = upload_stderr or upload_stdout
+                arduino_serial.log(f"❌ [離線燒錄] 上傳失敗:\n{err_msg}")
+                return jsonify({
+                    "ok": False,
+                    "stage": "upload",
+                    "error": f"韌體上傳失敗，請確認板子連接在 {port} 且未被其他軟體佔用",
+                    "log": (upload_stdout or "") + "\n" + (upload_stderr or "")
+                }), 400
+            run_log = (comp_stdout or "") + "\n" + (upload_stdout or "")
+        else:
+            arduino_serial.log(f"🛠️ [離線燒錄] 調用本機 AVR 工具鏈編譯並上傳至 {port}...")
+            import avr_flasher
+            ok = avr_flasher.compile_and_upload(ino_path, port=port, log_cb=arduino_serial.log)
+            if not ok:
+                return jsonify({
+                    "ok": False,
+                    "stage": "upload",
+                    "error": f"AVR 工具鏈燒錄失敗，請確認板子連接在 {port} 且未被其他軟體佔用",
+                    "log": "AVR-GCC / avrdude upload failed."
+                }), 400
+            run_log = f"AVR-GCC 編譯與 avrdude 燒錄成功 ({port})"
 
         arduino_serial.log(f"🎉🎉 [離線燒錄] 燒錄大成功！板子已完成重置，可拔除電腦 USB，以行動電源或電池獨立離線運作！")
         return jsonify({
             "ok": True,
             "message": "燒錄成功！現在板子已可完全離線自主運行！",
-            "log": (comp_stdout or "") + "\n" + (upload_stdout or "")
+            "log": run_log
         })
 
     except Exception as e:
@@ -1480,8 +1501,15 @@ def api_burn_compile_and_upload():
 @app.route("/api/burn/restore_interactive_firmware", methods=["POST"])
 def api_burn_restore_interactive_firmware():
     cli_path = find_arduino_cli()
-    if not cli_path:
-        return jsonify({"ok": False, "error": "伺服器未找到 arduino-cli 編譯器"}), 400
+    has_avr_flasher = False
+    try:
+        import avr_flasher
+        has_avr_flasher = avr_flasher.check_toolchain()[0]
+    except Exception:
+        pass
+
+    if not cli_path and not has_avr_flasher:
+        return jsonify({"ok": False, "error": "伺服器未找到 arduino-cli 編譯器或本機 AVR 工具鏈"}), 400
 
     data = request.get_json(silent=True) or {}
     port = data.get("port") or arduino_serial.port or "COM4"
@@ -1498,16 +1526,25 @@ def api_burn_restore_interactive_firmware():
 
     try:
         arduino_serial.log(f"🛠️ [還原互動韌體] 正在為 {port} 上傳萬能積木互動韌體 (universal_firmware)...")
-        ret, out, err = safe_run_process([cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir], timeout=60)
-        if ret != 0:
-            err_msg = err or out
-            arduino_serial.log(f"❌ [還原互動韌體] 上傳失敗:\n{err_msg}")
-            return jsonify({"ok": False, "error": f"韌體上傳失敗: {err_msg}", "log": out + "\n" + err}), 400
+        if cli_path:
+            ret, out, err = safe_run_process([cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir], timeout=60)
+            if ret != 0:
+                err_msg = err or out
+                arduino_serial.log(f"❌ [還原互動韌體] 上傳失敗:\n{err_msg}")
+                return jsonify({"ok": False, "error": f"韌體上傳失敗: {err_msg}", "log": out + "\n" + err}), 400
+            run_log = out
+        else:
+            import avr_flasher
+            firmware_ino = os.path.join(sketch_dir, "universal_firmware.ino")
+            ok = avr_flasher.compile_and_upload(firmware_ino, port=port, log_cb=arduino_serial.log)
+            if not ok:
+                return jsonify({"ok": False, "error": f"AVR 工具鏈上傳失敗，請確認 {port} 未被佔用！"}), 400
+            run_log = f"AVR-GCC 編譯與 avrdude 燒錄成功 ({port})"
 
         arduino_serial.log(f"🎉🎉 [還原互動韌體] 成功還原萬能積木互動韌體！現在板子已重新支援即時積木互動點燈！")
         # 自動恢復後端序列埠連線
         threading.Thread(target=lambda: (time.sleep(2.0), arduino_serial.connect(port)), daemon=True).start()
-        return jsonify({"ok": True, "message": "成功還原萬能積木互動韌體！板子已就緒即時控制！", "log": out})
+        return jsonify({"ok": True, "message": "成功還原萬能積木互動韌體！板子已就緒即時控制！", "log": run_log})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 

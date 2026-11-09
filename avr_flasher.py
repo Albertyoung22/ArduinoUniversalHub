@@ -57,7 +57,7 @@ def compile_sketch(ino_path: str, build_dir: str = None, log_cb=print) -> str:
 
     objs = []
 
-    # 1. 編譯 Core C/CPP
+    # 1. 編譯 Core C/CPP/S
     for c_file in glob.glob(os.path.join(CORE_DIR, "*.c")):
         obj = os.path.join(build_dir, os.path.basename(c_file) + ".o")
         if not os.path.exists(obj):
@@ -70,10 +70,28 @@ def compile_sketch(ino_path: str, build_dir: str = None, log_cb=print) -> str:
             subprocess.run([GPP_EXE] + cpp_flags + [cpp_file, "-o", obj], check=True, capture_output=True)
         objs.append(obj)
 
-    # 2. 將 .ino 轉為 cpp 並編譯
-    sketch_cpp = os.path.join(build_dir, "sketch.cpp")
+    for s_file in glob.glob(os.path.join(CORE_DIR, "*.S")):
+        obj = os.path.join(build_dir, os.path.basename(s_file) + ".o")
+        if not os.path.exists(obj):
+            subprocess.run([GCC_EXE] + c_flags + ["-x", "assembler-with-cpp", s_file, "-o", obj], check=True, capture_output=True)
+        objs.append(obj)
+
+    # 檢查是否有用到 Servo 庫
     with open(ino_path, "r", encoding="utf-8", errors="replace") as fin:
         content = fin.read()
+
+    servo_src = os.path.expandvars(r"%LOCALAPPDATA%\Arduino15\libraries\Servo\src")
+    if "<Servo.h>" in content or '"Servo.h"' in content:
+        servo_avr = os.path.join(servo_src, "avr")
+        cpp_flags.extend([f"-I{servo_src}", f"-I{servo_avr}"])
+        servo_cpp = os.path.join(servo_avr, "Servo.cpp")
+        if os.path.exists(servo_cpp):
+            servo_obj = os.path.join(build_dir, "Servo.o")
+            subprocess.run([GPP_EXE] + cpp_flags + [servo_cpp, "-o", servo_obj], check=True, capture_output=True)
+            objs.append(servo_obj)
+
+    # 2. 將 .ino 轉為 cpp 並編譯
+    sketch_cpp = os.path.join(build_dir, "sketch.cpp")
     with open(sketch_cpp, "w", encoding="utf-8") as fout:
         fout.write("#include <Arduino.h>\n" + content)
 

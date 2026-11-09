@@ -13,6 +13,7 @@ import math
 import random
 import queue
 import threading
+import subprocess
 from typing import List, Dict, Any, Optional
 
 if sys.platform.startswith("win"):
@@ -33,7 +34,9 @@ from universal_shared import (
     PRESET_ANIMATIONS,
     text_to_matrix_frames,
     DEFAULT_PROFILE_PATH,
-    WORKSPACE_DIR
+    WORKSPACE_DIR,
+    FIRMWARE_DIR,
+    ARDUINO_CLI_PATH
 )
 from cloudflare_tunnel import CloudflareTunnelManager
 
@@ -897,6 +900,49 @@ class UniversalWebHub:
                 "workflows": self.workflows
             })
 
+    def flash_universal_firmware(self, port: Optional[str] = None) -> dict:
+        """編譯並燒錄萬能韌體 (universal_firmware.ino) 至 Arduino Uno"""
+        target_port = port or self.port or (self.list_ports()[0] if self.list_ports() else "")
+        if not target_port:
+            return {"ok": False, "error": "尚未選擇或連接任何 COM 埠，無法燒錄！"}
+
+        self.disconnect()
+
+        def worker():
+            self.log(f"🚀 [Web] 開始為 {target_port} 編譯萬能韌體 (universal_firmware)...")
+            try:
+                if os.path.exists(ARDUINO_CLI_PATH):
+                    cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
+                    subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                    self.log("✅ 編譯成功！開始上傳韌體至 Arduino Uno...")
+                    cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", target_port, "--fqbn", "arduino:avr:uno", FIRMWARE_DIR]
+                    subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                else:
+                    import avr_flasher
+                    firmware_ino = os.path.join(FIRMWARE_DIR, "universal_firmware.ino")
+                    ok = avr_flasher.compile_and_upload(firmware_ino, port=target_port, log_cb=self.log)
+                    if not ok:
+                        raise RuntimeError("AVR 工具鏈燒錄失敗，請確認 COM 埠未被其他程式佔用！")
+
+                self.log(f"🎉 萬能韌體已成功燒錄至 {target_port}！正在自動重新連線...")
+                self.broadcast({"type": "flash_result", "ok": True, "message": f"萬能韌體已成功燒錄至 {target_port}！系統已就緒。"})
+                time.sleep(1.5)
+                self.connect(target_port)
+            except subprocess.CalledProcessError as err:
+                err_text = err.stderr or err.stdout or str(err)
+                self.log(f"❌ 萬能韌體燒錄失敗: {err_text}")
+                self.broadcast({"type": "flash_result", "ok": False, "message": err_text})
+                time.sleep(1.0)
+                self.connect(target_port)
+            except Exception as e:
+                self.log(f"❌ 萬能韌體燒錄失敗: {e}")
+                self.broadcast({"type": "flash_result", "ok": False, "message": str(e)})
+                time.sleep(1.0)
+                self.connect(target_port)
+
+        threading.Thread(target=worker, daemon=True).start()
+        return {"ok": True, "message": f"已啟動萬能韌體燒錄程序 (目標 COM: {target_port})，請稍候..."}
+
     def flash_standalone_workflow(self, wf_idx: int) -> dict:
         """將指定自訂流程編譯生成獨立脫機韌體並直接燒錄至 Arduino Uno"""
         if wf_idx < 0 or wf_idx >= len(self.workflows):
@@ -919,16 +965,28 @@ class UniversalWebHub:
                 sketch_file = os.path.join(out_dir, "standalone_sketch.ino")
                 with open(sketch_file, "w", encoding="utf-8") as f:
                     f.write(sketch_code)
-                self.log(f"📄 原始碼已生成 ({len(sketch_code)} 字元)，開始調用 arduino-cli 編譯...")
-                ARDUINO_CLI_PATH = r"C:\Program Files\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe"
-                cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", out_dir]
-                subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
-                self.log("✅ 編譯成功！正在上傳脫機自訂流程韌體至 Arduino Uno...")
-                cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", out_dir]
-                subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                self.log(f"📄 原始碼已生成 ({len(sketch_code)} 字元)，開始編譯...")
+
+                if os.path.exists(ARDUINO_CLI_PATH):
+                    cmd_compile = [ARDUINO_CLI_PATH, "compile", "--fqbn", "arduino:avr:uno", out_dir]
+                    subprocess.run(cmd_compile, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                    self.log("✅ 編譯成功！正在上傳脫機自訂流程韌體至 Arduino Uno...")
+                    cmd_upload = [ARDUINO_CLI_PATH, "upload", "-p", port, "--fqbn", "arduino:avr:uno", out_dir]
+                    subprocess.run(cmd_upload, capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+                else:
+                    import avr_flasher
+                    ok = avr_flasher.compile_and_upload(sketch_file, port=port, log_cb=self.log)
+                    if not ok:
+                        raise RuntimeError("AVR 工具鏈脫機燒錄失敗，請確認 COM 埠未被其他程式佔用！")
+
                 self.log(f"🎉 脫機獨立自訂流程【{wf_name}】已成功燒錄！")
                 self.broadcast({"type": "flash_result", "ok": True, "message": f"自訂流程【{wf_name}】脫機燒錄成功！已獨立運行。"})
                 time.sleep(1.5)
+                self.connect(port)
+            except subprocess.CalledProcessError as err:
+                err_text = err.stderr or err.stdout or str(err)
+                self.log(f"❌ 脫機燒錄失敗: {err_text}")
+                self.broadcast({"type": "flash_result", "ok": False, "message": err_text})
                 self.connect(port)
             except Exception as e:
                 self.log(f"❌ 脫機燒錄失敗: {e}")
@@ -1059,6 +1117,15 @@ def api_flash_workflow():
     data = request.get_json(silent=True) or {}
     wf_idx = data.get("workflow_index", 0)
     res = hub.flash_standalone_workflow(wf_idx)
+    return jsonify(res)
+
+
+@app.route("/api/flash_firmware", methods=["POST"])
+def api_flash_firmware():
+    """萬能韌體一鍵重刷燒錄入口"""
+    data = request.get_json(silent=True) or {}
+    port = data.get("port") or None
+    res = hub.flash_universal_firmware(port)
     return jsonify(res)
 
 
