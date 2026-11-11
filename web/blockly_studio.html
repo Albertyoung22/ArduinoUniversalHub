@@ -36,14 +36,14 @@
     header {
       height: 52px;
       min-height: 52px;
-      background: linear-gradient(90deg, #0A0F1D 0%, #111E38 25%, #1A365D 60%, #1E40AF 100%);
+      background: linear-gradient(135deg, #182848 0%, #1E3A8A 32%, #2563EB 70%, #3B82F6 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.18);
       display: flex;
       align-items: center;
       justify-content: space-between;
       padding: 0 16px;
       color: white;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
       z-index: 100;
       white-space: nowrap;
       flex-shrink: 0;
@@ -61,7 +61,7 @@
     .nav-left-group {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       flex-shrink: 0;
     }
 
@@ -80,15 +80,15 @@
 
     .brand-avatar-box {
       position: relative;
-      width: 36px;
-      height: 36px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 12px rgba(244, 114, 182, 0.5);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
       background: white;
-      padding: 1px;
+      padding: 1.5px;
       flex-shrink: 0;
     }
 
@@ -106,9 +106,9 @@
 
     .avatar-sparkle {
       position: absolute;
-      top: -3px;
-      right: -3px;
-      font-size: 12px;
+      top: -4px;
+      right: -4px;
+      font-size: 13px;
       animation: sparkleGlow 2s infinite ease-in-out;
       pointer-events: none;
     }
@@ -122,219 +122,188 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
-      line-height: 1.15;
+      line-height: 1.2;
     }
 
     .brand-title {
-      font-size: 16px;
+      font-size: 17px;
       font-weight: 900;
-      letter-spacing: 0.5px;
-      background: linear-gradient(135deg, #FFFFFF 20%, #FED7AA 70%, #FECDD3 100%);
+      letter-spacing: 0.6px;
+      background: linear-gradient(135deg, #FFFFFF, #FED7AA 60%, #FECDD3 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-      white-space: nowrap;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
     }
 
     .brand-tagline {
-      display: none !important;
+      display: block;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      letter-spacing: 0.4px;
     }
 
     .nav-divider {
       width: 1px;
-      height: 22px;
-      background: rgba(255, 255, 255, 0.18);
+      height: 28px;
+      background: rgba(255, 255, 255, 0.22);
       flex-shrink: 0;
     }
 
     .action-btn-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
-    /* 綠旗與停止按鈕 (Scratch / mBlock 鮮亮風格) */
+    /* 綠旗與停止按鈕 (立體晶瑩圓角按鈕) */
     .btn-flag {
-      background: linear-gradient(135deg, #10B981, #059669);
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
       color: white;
-      border: none;
+      border: 1px solid #34D399;
       border-radius: 20px;
-      padding: 0 14px;
-      height: 32px;
-      font-size: 12.5px;
-      font-weight: bold;
+      padding: 0 16px;
+      font-size: 13.5px;
+      font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 5px;
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
       transition: all 0.15s ease;
       white-space: nowrap !important;
       flex-shrink: 0 !important;
+      height: 34px;
       line-height: 1;
     }
 
     .btn-flag:hover {
-      background: linear-gradient(135deg, #34D399, #10B981);
+      background: linear-gradient(135deg, #34D399 0%, #10B981 100%);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.55);
     }
 
     .btn-flag:active {
       transform: translateY(1px);
+      box-shadow: 0 1px 4px rgba(16, 185, 129, 0.3);
     }
 
     .btn-stop {
-      background: linear-gradient(135deg, #EF4444, #DC2626);
+      background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
       color: white;
-      border: none;
+      border: 1px solid #F87171;
       border-radius: 20px;
-      padding: 0 14px;
-      height: 32px;
-      font-size: 12.5px;
-      font-weight: bold;
+      padding: 0 16px;
+      font-size: 13.5px;
+      font-weight: 800;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 5px;
-      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+      gap: 6px;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
       transition: all 0.15s ease;
       white-space: nowrap !important;
       flex-shrink: 0 !important;
+      height: 34px;
       line-height: 1;
     }
 
     .btn-stop:hover {
-      background: linear-gradient(135deg, #F87171, #EF4444);
+      background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.55);
     }
 
     .btn-stop:active {
       transform: translateY(1px);
-    }
-
-    .example-select {
-      background: rgba(15, 23, 42, 0.65);
-      color: #F8FAFC;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      border-radius: 8px;
-      padding: 0 10px;
-      height: 32px;
-      font-size: 12px;
-      font-weight: 600;
-      outline: none;
-      max-width: 155px;
-      cursor: pointer;
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
-      transition: all 0.2s ease;
-    }
-
-    .example-select:hover, .example-select:focus {
-      border-color: #60A5FA;
-      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 1px 4px rgba(239, 68, 68, 0.3);
     }
 
     /* 中間：連線中樞 (Connection Hub) */
     .nav-center-group {
       display: flex;
       align-items: center;
-      justify-content: center;
-      flex-shrink: 1;
+      flex-shrink: 0;
     }
 
     .connection-hub {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(15, 23, 42, 0.6);
+      background: rgba(15, 23, 42, 0.5);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 24px;
-      padding: 3px 10px;
+      padding: 4px 12px;
+      height: 38px;
       backdrop-filter: blur(12px);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.15);
-      transition: all 0.25s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.1);
     }
 
     .hub-divider {
       width: 1px;
-      height: 18px;
-      background: rgba(255, 255, 255, 0.16);
+      height: 20px;
+      background: rgba(255, 255, 255, 0.2);
       flex-shrink: 0;
     }
 
     .btn-web-serial {
-      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      background: linear-gradient(135deg, #8B5CF6, #6D28D9);
       color: white;
-      border: none;
-      border-radius: 12px;
-      padding: 4px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 14px;
+      padding: 0 12px;
       height: 28px;
       font-size: 11.5px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      gap: 5px;
-      box-shadow: 0 2px 6px rgba(124, 58, 237, 0.4);
+      gap: 4px;
+      box-shadow: 0 2px 6px rgba(109, 40, 217, 0.4);
       transition: all 0.15s ease;
       white-space: nowrap;
     }
 
     .btn-web-serial:hover {
-      background: linear-gradient(135deg, #8B5CF6, #C084FC);
+      background: linear-gradient(135deg, #A78BFA, #7C3AED);
       transform: translateY(-1px);
-    }
-
-    .btn-web-serial-cta {
-      background: linear-gradient(135deg, #6366F1, #8B5CF6) !important;
-      box-shadow: 0 0 12px rgba(139, 92, 246, 0.5) !important;
-      padding: 4px 14px !important;
-    }
-
-    .btn-web-serial-disconnect {
-      background: rgba(239, 68, 68, 0.25) !important;
-      color: #FECACA !important;
-      border: 1px solid #EF4444 !important;
-      box-shadow: none !important;
-      padding: 2px 8px !important;
-      height: 24px !important;
-      font-size: 11px !important;
-    }
-
-    .btn-web-serial-disconnect:hover {
-      background: #EF4444 !important;
-      color: white !important;
+      box-shadow: 0 3px 10px rgba(124, 58, 237, 0.6);
     }
 
     .com-selector-wrapper {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
     }
 
     .com-select {
       background: #0F172A;
       color: #F8FAFC;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      padding: 2px 6px;
-      height: 26px;
-      font-size: 11px;
+      border: 1px solid #475569;
+      border-radius: 8px;
+      padding: 0 8px;
+      height: 28px;
+      font-size: 12px;
+      font-weight: 600;
       outline: none;
-      max-width: 135px;
+      max-width: 155px;
       cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .com-select:focus {
+      border-color: #60A5FA;
     }
 
     .btn-com-connect {
       background: #10B981;
       color: #064E3B;
       border: none;
-      border-radius: 6px;
-      padding: 3px 8px;
-      height: 26px;
-      font-size: 11px;
+      border-radius: 8px;
+      padding: 0 10px;
+      height: 28px;
+      font-size: 11.5px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -347,33 +316,38 @@
     .btn-refresh-icon {
       background: rgba(255, 255, 255, 0.12);
       color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 3px 7px;
-      height: 26px;
-      font-size: 11px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: all 0.2s;
     }
 
     .btn-refresh-icon:hover {
       background: rgba(255, 255, 255, 0.25);
+      transform: rotate(90deg);
     }
 
     .btn-com-flash {
       background: linear-gradient(135deg, #F59E0B, #EA580C);
       color: white;
       border: 1px solid #FDBA74;
-      border-radius: 6px;
-      padding: 3px 8px;
-      height: 26px;
-      font-size: 11px;
+      border-radius: 8px;
+      padding: 0 10px;
+      height: 28px;
+      font-size: 11.5px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 3px;
-      box-shadow: 0 1px 6px rgba(234, 88, 12, 0.45);
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
       transition: all 0.15s ease;
       white-space: nowrap;
     }
@@ -381,23 +355,28 @@
     .btn-com-flash:hover {
       background: linear-gradient(135deg, #FBBF24, #F97316);
       transform: translateY(-1px);
+      box-shadow: 0 3px 12px rgba(249, 115, 22, 0.6);
     }
 
     .status-capsule {
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 3px 8px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.08);
+      padding: 0 10px;
+      height: 28px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       cursor: pointer;
       font-size: 11.5px;
-      transition: background 0.15s;
+      font-weight: 600;
+      transition: all 0.15s;
       white-space: nowrap;
     }
 
     .status-capsule:hover {
-      background: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     .status-dot {
@@ -405,117 +384,203 @@
       height: 8px;
       border-radius: 50%;
       background: #94A3B8;
+      box-shadow: none;
       flex-shrink: 0;
       transition: background 0.3s, box-shadow 0.3s;
     }
 
-    /* 右側工具列 */
+    /* 右側：工具與視圖切換區 */
     .nav-right-group {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
-    .btn-tool-guide, .btn-tool-cpsat, .btn-tool-burn, .btn-tool-hw, .btn-tool-code {
-      height: 32px;
-      padding: 0 11px;
-      font-size: 12px;
-      font-weight: 700;
+    .tool-select {
+      background: rgba(15, 23, 42, 0.55);
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 8px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      padding: 0 10px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: 600;
+      outline: none;
+      max-width: 170px;
       cursor: pointer;
-      transition: all 0.18s ease;
-      white-space: nowrap;
-      border: none;
+      transition: all 0.15s ease;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    .tool-select:hover {
+      border-color: rgba(255, 255, 255, 0.45);
+      background: rgba(15, 23, 42, 0.7);
     }
 
     .btn-tool-guide {
       background: linear-gradient(135deg, #EC4899, #F43F5E);
       color: white;
-      box-shadow: 0 2px 8px rgba(244, 63, 94, 0.38);
+      border: 1px solid #FDA4AF;
+      border-radius: 8px;
+      padding: 0 11px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
 
     .btn-tool-guide:hover {
-      background: linear-gradient(135deg, #F472B6, #FB7185);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.55);
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.6);
     }
 
     .btn-tool-cpsat {
       background: linear-gradient(135deg, #6366F1, #8B5CF6);
       color: white;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.32);
+      border: 1px solid #C4B5FD;
+      border-radius: 8px;
+      padding: 0 11px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
 
     .btn-tool-cpsat:hover {
-      background: linear-gradient(135deg, #818CF8, #A78BFA);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.55);
     }
 
     .btn-tool-burn {
       background: linear-gradient(135deg, #EA580C, #F97316);
       color: white;
-      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.38);
+      border: 1px solid #FDBA74;
+      border-radius: 8px;
+      padding: 0 11px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
 
     .btn-tool-burn:hover {
-      background: linear-gradient(135deg, #F97316, #FB923C);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.55);
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.65);
     }
 
     .btn-tool-hw {
       background: linear-gradient(135deg, #059669, #10B981);
       color: white;
+      border: 1px solid #6EE7B7;
+      border-radius: 8px;
+      padding: 0 11px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
       box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
 
     .btn-tool-hw:hover {
-      background: linear-gradient(135deg, #10B981, #34D399);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.55);
     }
 
     .btn-tool-code {
-      background: rgba(255, 255, 255, 0.12);
-      color: #E2E8F0;
-      border: 1px solid rgba(255, 255, 255, 0.22);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 8px;
+      padding: 0 11px;
+      height: 32px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      transition: all 0.15s;
     }
 
     .btn-tool-code:hover {
-      background: rgba(255, 255, 255, 0.22);
-      color: #FFFFFF;
-      transform: translateY(-1px);
-      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.26);
+      border-color: rgba(255, 255, 255, 0.45);
     }
 
-    @media (max-width: 1400px) {
-      .brand-title {
-        font-size: 15px !important;
+    .btn-tool-fullscreen {
+      background: rgba(255, 255, 255, 0.12);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .btn-tool-fullscreen:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    @media (max-width: 1450px) {
+      .brand-tagline {
+        display: none !important;
       }
-      .example-select {
-        max-width: 135px !important;
-      }
-      .btn-tool-guide, .btn-tool-cpsat, .btn-tool-burn, .btn-tool-hw, .btn-tool-code {
-        padding: 0 9px !important;
-        font-size: 11.5px !important;
+      .tool-select {
+        max-width: 130px !important;
       }
     }
 
-    @media (max-width: 1150px) {
-      .tool-btn-text {
-        display: none !important; /* Narrow screen: icons only (🎓 🧠 🔥 ⚙️ 💻) */
+    @media (max-width: 1220px) {
+      #btnWebSerialText {
+        display: none !important;
+      }
+      .com-select {
+        max-width: 120px !important;
+      }
+      .tool-select {
+        max-width: 110px !important;
+      }
+      header {
+        padding: 0 10px !important;
+        gap: 6px !important;
+      }
+      .nav-left-group, .nav-right-group {
+        gap: 6px !important;
       }
       .btn-tool-guide, .btn-tool-cpsat, .btn-tool-burn, .btn-tool-hw, .btn-tool-code {
         padding: 0 8px !important;
       }
-      .example-select {
-        max-width: 110px !important;
+    }
+
+    @media (max-width: 1040px) {
+      .tool-btn-text {
+        display: none !important;
       }
       #btnQuickFlashHubText {
         display: none !important;
@@ -523,18 +588,17 @@
       .brand-title {
         font-size: 14px !important;
       }
+      .tool-select {
+        max-width: 95px !important;
+      }
       .com-select {
         max-width: 95px !important;
       }
-      header {
-        padding: 0 8px !important;
-        gap: 8px !important;
-      }
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 880px) {
       .right-sidebar {
-        width: 260px !important;
+        width: 270px !important;
       }
       .nav-divider {
         display: none !important;
@@ -542,8 +606,8 @@
       .hub-divider {
         display: none !important;
       }
-      .example-select {
-        max-width: 85px !important;
+      .tool-select {
+        max-width: 80px !important;
       }
       .com-select {
         max-width: 80px !important;
@@ -551,21 +615,24 @@
       #usbStatusText {
         display: none !important;
       }
+      .status-capsule {
+        padding: 0 6px !important;
+      }
       .btn-flag, .btn-stop {
         padding: 0 10px !important;
-        font-size: 11.5px !important;
+        font-size: 12px !important;
       }
     }
 
-    @media (max-width: 740px) {
+    @media (max-width: 720px) {
       .right-sidebar {
         width: 220px !important;
       }
       .brand-title {
         display: none !important;
       }
-      .example-select {
-        max-width: 70px !important;
+      .tool-select {
+        max-width: 65px !important;
       }
       .com-select {
         max-width: 65px !important;
@@ -594,20 +661,48 @@
       will-change: transform;
     }
 
+    /* Blockly 與右側側欄之間的可拖曳調整分割線 */
+    .sidebar-resizer {
+      width: 6px;
+      background: #181825;
+      cursor: col-resize;
+      flex-shrink: 0;
+      position: relative;
+      transition: background 0.15s, box-shadow 0.15s;
+      z-index: 20;
+    }
+
+    .sidebar-resizer:hover, .sidebar-resizer.dragging {
+      background: #3B82F6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.7);
+    }
+
+    .sidebar-resizer::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 1.5px;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.35);
+      border-radius: 2px;
+    }
+
     /* 右側代碼預覽與終端機側欄 */
     .right-sidebar {
-      width: 310px;
+      width: clamp(340px, 22vw, 480px);
       flex-shrink: 0;
       background: #1E1E2E;
       display: flex;
       flex-direction: column;
-      border-left: 2px solid #313244;
-      transition: width 0.3s ease;
+      border-left: 1px solid #313244;
+      transition: width 0.25s ease;
     }
 
     .right-sidebar.collapsed {
-      width: 0;
-      display: none;
+      width: 0 !important;
+      display: none !important;
     }
 
     .sidebar-header {
@@ -620,6 +715,7 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid #313244;
+      flex-shrink: 0;
     }
 
     .tab-group {
@@ -692,41 +788,6 @@
     @keyframes floatBob {
       0%, 100% { transform: translateY(0px); }
       50% { transform: translateY(-5px); }
-    }
-
-    /* 昕蓉小老師擬真指引與魔法游標動態特效 */
-    .magic-teacher-wand {
-      position: fixed;
-      pointer-events: none;
-      z-index: 99999;
-      font-size: 28px;
-      filter: drop-shadow(0 4px 12px rgba(255, 105, 180, 0.85));
-      transition: all 0.75s cubic-bezier(0.25, 1, 0.5, 1);
-      display: none;
-      transform-origin: 20% 80%;
-      animation: wandSparkle 1.2s infinite alternate ease-in-out;
-    }
-
-    @keyframes wandSparkle {
-      0% { transform: scale(1) rotate(0deg); }
-      100% { transform: scale(1.15) rotate(-15deg); }
-    }
-
-    .ghost-block-indicator {
-      position: absolute;
-      border: 2px dashed #00E670;
-      background: rgba(0, 230, 112, 0.15);
-      border-radius: 8px;
-      pointer-events: none;
-      z-index: 9975;
-      display: none;
-      box-shadow: 0 0 16px rgba(0, 230, 112, 0.5);
-      animation: ghostPulse 1s infinite alternate;
-    }
-
-    @keyframes ghostPulse {
-      0% { border-color: #00E670; box-shadow: 0 0 10px rgba(0, 230, 112, 0.4); }
-      100% { border-color: #FBBF24; box-shadow: 0 0 22px rgba(251, 191, 36, 0.8); }
     }
 
     .code-line {
@@ -881,7 +942,7 @@
 
   <!-- 頂部現代化導航欄 (昕蓉Sophia 智慧兒童程式工作室) -->
   <header>
-    <!-- 左側：小女孩品牌標誌、執行按鈕與特效範例 -->
+    <!-- 左側：可愛小女孩品牌標誌與核心執行按鈕 -->
     <div class="nav-left-group">
       <div class="brand" title="👧 昕蓉Sophia - 智慧兒童積木程式設計工作室">
         <div class="brand-avatar-box">
@@ -929,6 +990,7 @@
         </div>
         <div class="brand-text">
           <div class="brand-title">昕蓉Sophia</div>
+          <div class="brand-tagline">智慧兒童積木程式設計工作室</div>
         </div>
       </div>
 
@@ -937,17 +999,51 @@
       <!-- 綠旗執行與停止按鈕 -->
       <div class="action-btn-group">
         <button class="btn-flag" id="btnRun" onclick="runProgram()" title="啟動並執行積木程式">
-          <span style="font-size: 13px;">🚩</span> 執行
+          <span style="font-size: 14px;">🚩</span> 執行
         </button>
         <button class="btn-stop" id="btnStop" onclick="stopProgram()" title="停止所有積木並安全歸位硬體">
           <span style="font-size: 13px;">🛑</span> 停止
         </button>
       </div>
+    </div>
 
-      <div class="nav-divider"></div>
+    <!-- 中間：硬體連線中樞 (現代化整合膠囊) -->
+    <div class="nav-center-group">
+      <div class="connection-hub">
+        <!-- Web Serial 瀏覽器直連 (雲端與本機通用) -->
+        <button id="btnWebSerial" class="btn-web-serial" onclick="toggleWebSerial()" title="Chrome/Edge 瀏覽器原生直連 USB (超低延遲、雲端 Render 免後端直連)">
+          <span style="font-size: 12px;">⚡</span> <span id="btnWebSerialText">Web Serial</span>
+        </button>
 
-      <!-- 範例積木選單 (歸屬專案區) -->
-      <select id="exampleSelect" onchange="loadExample(this.value)" class="example-select" title="選擇預設特效範例，一鍵展開積木">
+        <div class="hub-divider" id="localComDivider"></div>
+
+        <!-- 本地 COM 埠選擇與連線 (僅在 localhost 顯示，雲端 Render 自動隱藏) -->
+        <div class="com-selector-wrapper" id="localComWrapper">
+          <span style="font-size: 12px;" title="USB 串列埠">🔌</span>
+          <select id="comPortSelect" class="com-select" title="選取本地 Arduino COM 埠">
+            <option value="">搜尋 COM 埠中...</option>
+          </select>
+          <button id="btnConnectUSB" class="btn-com-connect" onclick="toggleUSBConnection()" title="連線或中斷選取的 COM 埠">連線</button>
+          <button class="btn-refresh-icon" onclick="refreshUsbPorts()" title="重新掃描所有 USB 連接埠">🔄</button>
+          <button id="btnQuickFlashHub" class="btn-com-flash" onclick="quickFlashUniversalFirmware()" title="⚡ 一鍵重刷萬能韌體 (含即時進度表與結果通知)">
+            <span>⚡</span> <span id="btnQuickFlashHubText">重刷韌體</span>
+          </button>
+        </div>
+
+        <div class="hub-divider"></div>
+
+        <!-- 即時連線狀態標籤 (點擊可快速測試 Pin 13) -->
+        <div class="status-capsule" id="usbBadge" onclick="testPin13()" title="點擊可即時閃爍板載 Pin 13 LED 測試通訊">
+          <div class="status-dot" id="usbDot"></div>
+          <span id="usbStatusText" style="font-size: 11px;">USB: 未連線</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側：創作工具箱與視圖切換 -->
+    <div class="nav-right-group">
+      <!-- 範例積木選單 -->
+      <select id="exampleSelect" onchange="loadExample(this.value)" class="tool-select" title="選擇預設特效範例，一鍵展開積木">
         <option value="">📂 特效範例...</option>
         <optgroup label="🌈 雙 RGB LED 炫彩特效 (展開原始積木)">
           <option value="ex_rgb_rainbow">🌈 雙燈七彩虹霓流光 (紅橙黃綠青藍紫)</option>
@@ -979,43 +1075,7 @@
           <option value="ex_smart_light">🌟 繼電器：智慧夜燈 (開啟 3 秒後熄滅)</option>
         </optgroup>
       </select>
-    </div>
 
-    <!-- 中間：硬體連線中樞 (現代化玻璃擬態膠囊) -->
-    <div class="nav-center-group">
-      <div class="connection-hub">
-        <!-- Web Serial 瀏覽器直連 (雲端與本機通用) -->
-        <button id="btnWebSerial" class="btn-web-serial" onclick="toggleWebSerial()" title="Chrome/Edge 瀏覽器原生直連 USB (超低延遲、雲端 Render 免後端直連)">
-          <span style="font-size: 12px;">⚡</span> <span id="btnWebSerialText">Web Serial</span>
-        </button>
-
-        <div class="hub-divider" id="localComDivider"></div>
-
-        <!-- 本地 COM 埠選擇與連線 (僅在 localhost 顯示，雲端 Render 自動隱藏) -->
-        <div class="com-selector-wrapper" id="localComWrapper">
-          <span style="font-size: 12px;" title="USB 串列埠">🔌</span>
-          <select id="comPortSelect" class="com-select" title="選取本地 Arduino COM 埠">
-            <option value="">搜尋 COM 埠中...</option>
-          </select>
-          <button id="btnConnectUSB" class="btn-com-connect" onclick="toggleUSBConnection()" title="連線或中斷選取的 COM 埠">連線</button>
-          <button class="btn-refresh-icon" onclick="refreshUsbPorts()" title="重新掃描所有 USB 連接埠">🔄</button>
-          <button id="btnQuickFlashHub" class="btn-com-flash" onclick="quickFlashUniversalFirmware()" title="⚡ 一鍵重刷萬能韌體 (含即時進度表與結果通知)">
-            <span>⚡</span> <span id="btnQuickFlashHubText">重刷韌體</span>
-          </button>
-        </div>
-
-        <div class="hub-divider" id="usbBadgeDivider"></div>
-
-        <!-- 即時連線狀態標籤 (點擊可快速測試 Pin 13) -->
-        <div class="status-capsule" id="usbBadge" onclick="testPin13()" title="點擊可即時閃爍板載 Pin 13 LED 測試通訊">
-          <div class="status-dot" id="usbDot"></div>
-          <span id="usbStatusText" style="font-size: 11px;">USB: 未連線</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- 右側：創作工具箱與視圖切換 (5大核心工具鈕，統一高質感風格) -->
-    <div class="nav-right-group">
       <!-- 👧 昕蓉小導師智慧教學模式 -->
       <button class="btn-tool-guide" onclick="openLearningGuide()" title="👧 昕蓉小老師 - 自動教小朋友操作與互動闖關 (支援一鍵自動示範與音效引導)">
         <span>🎓</span> <span class="tool-btn-text">教學模式</span>
@@ -1023,7 +1083,7 @@
 
       <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
       <button class="btn-tool-cpsat" onclick="openCpsatModal()" title="Google OR-Tools CP-SAT 智慧排程求解器">
-        <span>🧠</span> <span class="tool-btn-text">AI排程</span>
+        <span>🧠</span> <span class="tool-btn-text">AI 排程</span>
       </button>
 
       <!-- 🔥 線上編譯燒錄到板子 (離線運行模式) -->
@@ -1033,12 +1093,15 @@
 
       <!-- ⚙️ 硬體腳位設定 (M1/M2/極性) -->
       <button class="btn-tool-hw" onclick="openHwConfigModal()" title="自訂 M1 / M2 / 點矩陣 / 舵機 / 繼電器 腳位">
-        <span>⚙️</span> <span class="tool-btn-text">腳位設定</span>
+        <span>⚙️</span> <span class="tool-btn-text">硬體腳位</span>
       </button>
 
-      <!-- 💻 代碼視窗切換 -->
       <button class="btn-tool-code" onclick="toggleSidebar()" title="切換顯示/隱藏右側代碼視窗">
         <span>💻</span> <span id="toggleSidebarText" class="tool-btn-text">代碼視窗</span>
+      </button>
+
+      <button class="btn-tool-fullscreen" onclick="toggleFullscreen()" title="切換全螢幕模式 (F11)">
+        <span id="fullscreenIcon">⛶</span>
       </button>
     </div>
   </header>
@@ -1049,6 +1112,9 @@
 
     <!-- Blockly 畫布 -->
     <div id="blocklyDiv"></div>
+
+    <!-- Blockly 與右側側欄之間的可拖曳調整分割線 -->
+    <div class="sidebar-resizer" id="sidebarResizer" title="左右拖動可調整代碼與終端機寬度"></div>
 
     <!-- 右側 Python 代碼預覽與終端機日誌 -->
     <div class="right-sidebar" id="rightSidebar">
@@ -1714,6 +1780,9 @@
       // 預設載入範例：Arduino 板載 LED 閃爍 (Pin 13)
       document.getElementById('exampleSelect').value = 'ex_arduino_blink';
       loadExample('ex_arduino_blink');
+
+      // 初始化側欄寬度拖曳手柄
+      initSidebarResizer();
     });
 
     let rawPythonCode = '';
@@ -2074,10 +2143,92 @@ void loop() {
 
     function toggleSidebar() {
       const sb = document.getElementById('rightSidebar');
+      const resizer = document.getElementById('sidebarResizer');
       sb.classList.toggle('collapsed');
       const isCol = sb.classList.contains('collapsed');
-      document.getElementById('toggleSidebarText').textContent = isCol ? '代碼' : '收合';
-      Blockly.svgResize(workspace);
+      if (resizer) resizer.style.display = isCol ? 'none' : 'block';
+      const textSpan = document.getElementById('toggleSidebarText');
+      if (textSpan) textSpan.textContent = isCol ? '代碼視窗' : '收合側欄';
+      if (typeof workspace !== 'undefined' && workspace) {
+        Blockly.svgResize(workspace);
+      }
+    }
+
+    function toggleFullscreen() {
+      const icon = document.getElementById('fullscreenIcon');
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          if (icon) icon.textContent = '🗗';
+        }).catch(err => {
+          console.warn('全螢幕請求被阻止:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().then(() => {
+            if (icon) icon.textContent = '⛶';
+          }).catch(err => {
+            console.warn('退出全螢幕失敗:', err);
+          });
+        }
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const icon = document.getElementById('fullscreenIcon');
+      if (icon) {
+        icon.textContent = document.fullscreenElement ? '🗗' : '⛶';
+      }
+      setTimeout(() => {
+        if (typeof workspace !== 'undefined' && workspace) {
+          Blockly.svgResize(workspace);
+        }
+      }, 100);
+    });
+
+    function initSidebarResizer() {
+      const resizer = document.getElementById('sidebarResizer');
+      const sidebar = document.getElementById('rightSidebar');
+      if (!resizer || !sidebar) return;
+
+      let isDragging = false;
+      let startX = 0;
+      let startWidth = 0;
+
+      resizer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX;
+        startWidth = sidebar.getBoundingClientRect().width;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = startX - e.clientX;
+        let newWidth = startWidth + dx;
+        const minW = 260;
+        const maxW = Math.min(window.innerWidth * 0.6, 960);
+        if (newWidth < minW) newWidth = minW;
+        if (newWidth > maxW) newWidth = maxW;
+        sidebar.style.width = `${newWidth}px`;
+        if (typeof workspace !== 'undefined' && workspace) {
+          Blockly.svgResize(workspace);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          resizer.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          if (typeof workspace !== 'undefined' && workspace) {
+            Blockly.svgResize(workspace);
+          }
+        }
+      });
     }
 
     function log(msg) {
@@ -2708,42 +2859,21 @@ void loop() {
       if (isCloudHost) {
         const comWrapper = document.getElementById('localComWrapper');
         const comDivider = document.getElementById('localComDivider');
-        const badgeDivider = document.getElementById('usbBadgeDivider');
         if (comWrapper) comWrapper.style.display = 'none';
         if (comDivider) comDivider.style.display = 'none';
 
         const btnWebSerial = document.getElementById('btnWebSerial');
-        const usbBadge = document.getElementById('usbBadge');
-
-        if (!isWebSerialConnected) {
-          // 未連線狀態：只保留單一吸睛的 Web Serial 連接按鈕，隱藏冗餘的灰色未連線 badge
-          if (btnWebSerial) {
-            btnWebSerial.innerHTML = '<span style="font-size:13px;">⚡</span> 連接 Arduino (Web Serial)';
-            btnWebSerial.style.background = 'linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)';
-            btnWebSerial.style.color = '#FFFFFF';
-            btnWebSerial.style.boxShadow = '0 2px 10px rgba(124, 58, 237, 0.4)';
-          }
-          if (badgeDivider) badgeDivider.style.display = 'none';
-          if (usbBadge) usbBadge.style.display = 'none';
-        } else {
-          // 已連線狀態：顯示已連線徽章 + 簡潔的「✕ 中斷」按鈕
-          if (badgeDivider) badgeDivider.style.display = 'block';
-          if (usbBadge) {
-            usbBadge.style.display = 'inline-flex';
-            const dot = document.getElementById('usbDot');
-            const txt = document.getElementById('usbStatusText');
-            if (dot) {
-              dot.style.background = '#00E5FF';
-              dot.style.boxShadow = '0 0 8px #00E5FF';
-            }
-            if (txt) txt.textContent = 'Web Serial: 已連線';
-          }
-          if (btnWebSerial) {
-            btnWebSerial.innerHTML = '<span style="font-size:12px;">✕</span> 中斷';
-            btnWebSerial.style.background = 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)';
-            btnWebSerial.style.color = '#FFFFFF';
-            btnWebSerial.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
-          }
+        const txtWebSerial = document.getElementById('btnWebSerialText');
+        if (txtWebSerial && !isWebSerialConnected) {
+          txtWebSerial.innerText = 'USB 瀏覽器直連 (Web Serial)';
+        }
+        if (btnWebSerial) {
+          btnWebSerial.style.padding = '6px 14px';
+          btnWebSerial.style.fontSize = '12px';
+        }
+        const txt = document.getElementById('usbStatusText');
+        if (txt && !isWebSerialConnected) {
+          txt.textContent = 'USB: 請點 Web Serial 直連';
         }
       }
     }
@@ -2751,6 +2881,21 @@ void loop() {
     function updateUsbUI(connected, current_port, ports) {
       if (isCloudHost) {
         checkCloudEnvironment();
+        const dot = document.getElementById('usbDot');
+        const txt = document.getElementById('usbStatusText');
+        if (isWebSerialConnected) {
+          if (dot) {
+            dot.style.background = '#00E5FF';
+            dot.style.boxShadow = '0 0 8px #00E5FF';
+          }
+          if (txt) txt.textContent = 'Web Serial: 已連線';
+        } else {
+          if (dot) {
+            dot.style.background = '#888';
+            dot.style.boxShadow = 'none';
+          }
+          if (txt) txt.textContent = 'USB: 請點 Web Serial 直連';
+        }
         return;
       }
 
@@ -2970,10 +3115,6 @@ void loop() {
     }
 
     function updateWebSerialUIState(connected) {
-      if (isCloudHost) {
-        checkCloudEnvironment();
-        return;
-      }
       const btn = document.getElementById('btnWebSerial');
       const dot = document.getElementById('usbDot');
       const txt = document.getElementById('usbStatusText');
@@ -4419,88 +4560,6 @@ void loop() {
     function resetTutorialWorkspace() {
       workspace.clear();
       tutorialBlocks = {};
-      const ghost = document.getElementById('tutorialGhostBox');
-      if (ghost) ghost.style.display = 'none';
-      hideMagicWand();
-    }
-
-    function showMagicWandAt(x, y) {
-      const wand = document.getElementById('magicTeacherWand');
-      if (!wand) return;
-      wand.style.display = 'block';
-      wand.style.left = (x - 8) + 'px';
-      wand.style.top = (y - 8) + 'px';
-    }
-
-    function moveMagicWandTo(x, y, durationMs = 700) {
-      const wand = document.getElementById('magicTeacherWand');
-      if (!wand) return;
-      wand.style.display = 'block';
-      wand.style.transition = `all ${durationMs}ms cubic-bezier(0.25, 1, 0.5, 1)`;
-      wand.style.left = (x - 8) + 'px';
-      wand.style.top = (y - 8) + 'px';
-    }
-
-    function hideMagicWand() {
-      const wand = document.getElementById('magicTeacherWand');
-      if (wand) wand.style.display = 'none';
-    }
-
-    // 🌟 昕蓉小老師魔法拖曳平滑動畫：從抽屜/起始位置平滑飄入畫布並扣合
-    async function animateBlockFlyIn(createdBlock, categoryHint = null, customStartRect = null) {
-      if (!createdBlock || !createdBlock.getSvgRoot) return;
-      const svgRoot = createdBlock.getSvgRoot();
-      if (!svgRoot) return;
-
-      // 取得起點：若有指定分類抽屜，以抽屜按鈕位置為起點；否則以左側工作列為起點
-      let startX = 60, startY = 160;
-      if (categoryHint) {
-        try {
-          const rows = document.querySelectorAll('.blocklyTreeRow');
-          for (const r of rows) {
-            if (r.textContent && r.textContent.includes(categoryHint)) {
-              const rect = r.getBoundingClientRect();
-              startX = rect.left + rect.width / 2;
-              startY = rect.top + rect.height / 2;
-              break;
-            }
-          }
-        } catch(_) {}
-      } else if (customStartRect) {
-        startX = customStartRect.left;
-        startY = customStartRect.top;
-      }
-
-      // 取得終點（積木放置後的位置）
-      const endRect = svgRoot.getBoundingClientRect();
-      const endX = endRect.left;
-      const endY = endRect.top;
-
-      // 先展示小老師魔法棒引導移動
-      showMagicWandAt(startX, startY);
-      svgRoot.style.transition = 'none';
-      svgRoot.style.opacity = '0';
-      svgRoot.style.transform = `translate3d(${startX - endX}px, ${startY - endY}px, 0) scale(0.65)`;
-
-      await new Promise(r => setTimeout(r, 60));
-      moveMagicWandTo(endX + 30, endY + 20, 600);
-
-      svgRoot.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.4s ease';
-      svgRoot.style.opacity = '1';
-      svgRoot.style.transform = 'translate3d(0, 0, 0) scale(1)';
-
-      await new Promise(r => setTimeout(r, 620));
-      svgRoot.style.transition = '';
-      svgRoot.style.transform = '';
-      svgRoot.style.opacity = '';
-
-      // 卡嗒！發出清脆拼裝扣合音效與微光特效
-      playSound('pop');
-      if (typeof highlightBlockVisual === 'function') {
-        highlightBlockVisual(createdBlock.id);
-        setTimeout(() => highlightBlockVisual(null), 900);
-      }
-      setTimeout(() => hideMagicWand(), 400);
     }
 
     function attachNumberBlock(parentBlock, inputName, val) {
@@ -4550,16 +4609,11 @@ void loop() {
       if (workspace && typeof workspace.centerOnBlock === 'function') {
         try { workspace.centerOnBlock(rgb.id); } catch (_) {}
       }
-      // 老師拖曳飄入動畫
-      animateBlockFlyIn(rgb, '燈光與硬體');
+      playSound('pop');
       return { rgbBlock: rgb, waitBlock: waitBlock, tailBlock: tail };
     }
 
     function snapDualRgbBlock(parentBlock, target1, r1, g1, b1, target2, r2, g2, b2, waitSec, isLoopRoot = false) {
-      const res1 = snapRgbBlock(parentBlock, target1, r1, g1, b1, null, isLoopRoot);
-      const res2 = snapRgbBlock(res1.rgbBlock, target2, r2, g2, b2, waitSec, false);
-      return { firstRgb: res1.rgbBlock, secondRgb: res2.rgbBlock, waitBlock: res2.waitBlock, tailBlock: res2.tailBlock };
-    }
       const res1 = snapRgbBlock(parentBlock, target1, r1, g1, b1, null, isLoopRoot);
       const res2 = snapRgbBlock(res1.rgbBlock, target2, r2, g2, b2, waitSec, false);
       return { firstRgb: res1.rgbBlock, secondRgb: res2.rgbBlock, waitBlock: res2.waitBlock, tailBlock: res2.tailBlock };
@@ -4577,8 +4631,6 @@ void loop() {
         steps: [
           {
             target: 'current_block',
-            category: '🔂 事件',
-            expectedBlockType: 'event_when_flag_clicked',
             title: '第 1 步：放上綠旗起點積木',
             text: '嗨！今天我們一塊一塊來拼出閃爍程式！首先在畫布上放上一塊【🚩 當綠旗被點擊時】，它是所有程式的起跑線喔！',
             action: () => {
@@ -4587,13 +4639,11 @@ void loop() {
               b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
               tutorialBlocks.flag = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '事件');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '⏱️ 控制與時間',
-            expectedBlockType: 'control_forever',
             title: '第 2 步：卡嗒！扣上重複無限次迴圈',
             text: '卡嗒！我們把【♾️ 重複無限次】扣在綠旗下方！只要放進裡面的積木，就會像心跳一樣一直循環執行！',
             action: () => {
@@ -4604,13 +4654,11 @@ void loop() {
               b.select();
               tutorialBlocks.loop = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '控制與時間');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '💡 燈光與硬體',
-            expectedBlockType: 'arduino_digital_write',
             title: '第 3 步：放入開燈積木 (腳位 13 開啟)',
             text: '放進第 1 塊執行積木：【💡 設定數位腳位 13 為 高電位 (開燈)】！這會發出開燈訊號點亮板載 LED！',
             action: () => {
@@ -4623,13 +4671,11 @@ void loop() {
               b.select();
               tutorialBlocks.ledOn = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '燈光與硬體');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '⏱️ 控制與時間',
-            expectedBlockType: 'control_wait',
             title: '第 4 步：接上等待 1 秒積木',
             text: '接上【⏱️ 等待 1 秒】！給板子一點時間維持發光，如果沒有等待，電腦一瞬間就跑完了，眼睛會看不清喔！',
             action: () => {
@@ -4641,13 +4687,11 @@ void loop() {
               b.select();
               tutorialBlocks.wait1 = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '控制與時間');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '💡 燈光與硬體',
-            expectedBlockType: 'arduino_digital_write',
             title: '第 5 步：放入關燈積木 (腳位 13 關閉)',
             text: '接著接上【🌑 設定數位腳位 13 為 低電位 (關燈)】！切斷電力讓小燈泡熄滅休息一下！',
             action: () => {
@@ -4660,13 +4704,11 @@ void loop() {
               b.select();
               tutorialBlocks.ledOff = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '燈光與硬體');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '⏱️ 控制與時間',
-            expectedBlockType: 'control_wait',
             title: '第 6 步：再接上等待 1 秒完成循環',
             text: '最後接上【⏱️ 等待 1 秒】！你看，開燈 ➔ 等待 ➔ 關燈 ➔ 等待，完整的閃爍程式積木一塊一塊親手拼好囉！',
             action: () => {
@@ -4678,7 +4720,7 @@ void loop() {
               b.select();
               tutorialBlocks.wait2 = b;
               tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '控制與時間');
+              playSound('magic');
             }
           },
           {
@@ -5309,8 +5351,6 @@ void loop() {
         steps: [
           {
             target: 'current_block',
-            category: '🔂 事件',
-            expectedBlockType: 'event_when_flag_clicked',
             title: '第 1 步：放上綠旗起點積木',
             text: '我們來拼出點矩陣動畫！先放上【🚩 當綠旗被點擊時】！',
             action: () => {
@@ -5318,13 +5358,11 @@ void loop() {
               const b = workspace.newBlock('event_when_flag_clicked');
               b.initSvg(); b.render(); b.moveBy(100, 40); b.select();
               tutorialBlocks.flag = b; tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '事件');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '⏱️ 控制與時間',
-            expectedBlockType: 'control_forever',
             title: '第 2 步：卡嗒！扣上重複無限次迴圈',
             text: '卡嗒！接上【♾️ 重複無限次】迴圈！',
             action: () => {
@@ -5334,13 +5372,11 @@ void loop() {
               tutorialBlocks.flag.nextConnection.connect(b.previousConnection);
               b.select();
               tutorialBlocks.loop = b; tutorialBlocks.lastPlaced = b;
-              animateBlockFlyIn(b, '控制與時間');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '📟 點矩陣字幕',
-            expectedBlockType: 'matrix_play_animation',
             title: '第 3 步：放入火箭點火升空動畫',
             text: '放進【🚀 播放動畫: rocket (重複2次)】積木！這會逐幀刷新 8x8 點矩陣顯示火箭點火衝刺！',
             action: () => {
@@ -5353,13 +5389,11 @@ void loop() {
               tutorialBlocks.loop.getInput('DO').connection.connect(rk.previousConnection);
               rk.select();
               tutorialBlocks.rk = rk; tutorialBlocks.lastPlaced = rk;
-              animateBlockFlyIn(rk, '點矩陣字幕');
+              playSound('pop');
             }
           },
           {
             target: 'current_block',
-            category: '📟 點矩陣字幕',
-            expectedBlockType: 'matrix_play_animation',
             title: '第 4 步：放入怦怦跳動大愛心動畫',
             text: '接著接上【❤️ 播放動畫: heart (重複3次)】積木！火箭飛走後會跳出怦怦跳動的大愛心！',
             action: () => {
@@ -5372,7 +5406,7 @@ void loop() {
               tutorialBlocks.rk.nextConnection.connect(ht.previousConnection);
               ht.select();
               tutorialBlocks.ht = ht; tutorialBlocks.lastPlaced = ht;
-              animateBlockFlyIn(ht, '點矩陣字幕');
+              playSound('magic');
             }
           },
           {
@@ -5439,19 +5473,7 @@ void loop() {
           }
         }
       });
-
-      // 🌟 瞬間切換 CSS display，免除反覆銷毀重建 DOM，消除切換卡頓
-      const cards = document.querySelectorAll('.guide-mission-card');
-      cards.forEach(card => {
-        const cat = card.getAttribute('data-category');
-        if (tab === 'all') {
-          card.style.display = 'block';
-        } else if (tab === 'rgb') {
-          card.style.display = (cat === 'rgb') ? 'block' : 'none';
-        } else if (tab === 'general') {
-          card.style.display = (cat !== 'rgb') ? 'block' : 'none';
-        }
-      });
+      renderGuideModal();
     }
 
     let currentTutLesson = null;
@@ -5517,15 +5539,16 @@ void loop() {
       }
 
       if (listDiv) {
-        // 渲染所有課程卡片並賦予 guide-mission-card 類別與 data-category
-        listDiv.innerHTML = LESSONS_DATA.map(lesson => {
-          const isDone = done.includes(lesson.id);
-          let isVisible = true;
-          if (currentGuideTab === 'rgb') isVisible = (lesson.category === 'rgb');
-          else if (currentGuideTab === 'general') isVisible = (lesson.category !== 'rgb');
+        const filtered = LESSONS_DATA.filter(lesson => {
+          if (currentGuideTab === 'rgb') return lesson.category === 'rgb';
+          if (currentGuideTab === 'general') return lesson.category !== 'rgb';
+          return true;
+        });
 
+        listDiv.innerHTML = filtered.map(lesson => {
+          const isDone = done.includes(lesson.id);
           return `
-            <div class="guide-mission-card" data-category="${lesson.category}" style="display:${isVisible ? 'block' : 'none'}; background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
+            <div style="background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px;">
                 <div style="font-size:13.5px; font-weight:bold; color:${isDone ? '#00E670' : '#CDD6F4'}; display:flex; align-items:center; gap:6px;">
                   <span>${isDone ? '✅' : '🎯'}</span>
@@ -5555,9 +5578,6 @@ void loop() {
       }
     }
 
-    let isInteractiveMode = false;
-    let tutWorkspaceChangeListener = null;
-
     // 啟動教學模式 (可選自動播放示範或親手跟著做)
     function startTutorial(lessonId, isAutoPlay = false) {
       closeLearningGuide();
@@ -5577,56 +5597,13 @@ void loop() {
       currentTutLesson = lesson;
       currentTutStepIdx = 0;
       isTutAutoPlaying = isAutoPlay;
-      isInteractiveMode = !isAutoPlay;
 
       const overlay = document.getElementById('tutorialSpotlightOverlay');
       const card = document.getElementById('tutorialCompanionCard');
       if (overlay) overlay.style.display = 'block';
       if (card) card.style.display = 'block';
 
-      // 綁定 Blockly 工作區事件監聽器，即時判定使用者親手拼放積木
-      initTutorialWorkspaceListener();
-
-      // 🌟 將工作區與積木渲染延遲至下一幀排程，讓選關對話框能立即平滑關閉，完全不卡頓
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          renderTutorialStep();
-        }, 40);
-      });
-    }
-
-    function initTutorialWorkspaceListener() {
-      if (!workspace) return;
-      if (tutWorkspaceChangeListener) {
-        workspace.removeChangeListener(tutWorkspaceChangeListener);
-      }
-      tutWorkspaceChangeListener = (event) => {
-        if (!isInteractiveMode || !currentTutLesson) return;
-        const step = currentTutLesson.steps[currentTutStepIdx];
-        if (!step) return;
-
-        // 當使用者在畫布上建立或拖曳新積木時，檢查是否達成步驟要求
-        if (event.type === Blockly.Events.BLOCK_CREATE || event.type === Blockly.Events.BLOCK_MOVE) {
-          if (step.expectedBlockType) {
-            const blocks = workspace.getAllBlocks(false);
-            const matchingBlock = blocks.find(b => b.type === step.expectedBlockType && b.id !== (tutorialBlocks.lastPlaced && tutorialBlocks.lastPlaced.id));
-            if (matchingBlock) {
-              tutorialBlocks.lastPlaced = matchingBlock;
-              playSound('magic');
-              speakTutorialMessage('太棒了！拼得完全正確！繼續加油！', () => {
-                setTimeout(() => {
-                  if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
-                    nextTutorialStep();
-                  } else {
-                    finishTutorialLesson();
-                  }
-                }, 800);
-              });
-            }
-          }
-        }
-      };
-      workspace.addChangeListener(tutWorkspaceChangeListener);
+      renderTutorialStep();
     }
 
     let voiceTutorialEnabled = true;
@@ -5780,9 +5757,8 @@ void loop() {
       const btnPrev = document.getElementById('btnTutPrev');
       const btnNext = document.getElementById('btnTutNext');
 
-      const modeLabel = isTutAutoPlaying ? '• 🎬 老師示範中' : '• 👣 動手跟著拼';
       if (cardHeader) cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step.title}`;
-      if (cardStep) cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${modeLabel}`;
+      if (cardStep) cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${isTutAutoPlaying ? '• 🎬 自動示範中' : '• 👣 互動中'}`;
       if (cardMsg) {
         let chipHtml = '';
         if (step.colorChip) {
@@ -5796,15 +5772,9 @@ void loop() {
             </div>
           `;
         }
-
-        let taskGuideText = step.text;
-        if (isInteractiveMode && step.category) {
-          taskGuideText = `👉 <b>請試著從左側【${step.category}】抽屜拿出積木拖過來喔！</b><br>${step.text}`;
-        }
-
         cardMsg.innerHTML = `
           <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px; font-size:13.5px;">${step.title}</div>
-          <div style="color:#CDD6F4; font-size:12px; line-height:1.45;">${taskGuideText}</div>
+          <div style="color:#CDD6F4; font-size:12px; line-height:1.45;">${step.text}</div>
           ${chipHtml}
         `;
       }
@@ -5820,38 +5790,16 @@ void loop() {
         btnNext.innerHTML = (currentTutStepIdx === currentTutLesson.steps.length - 1) ? '🎉 完成關卡' : '下一步 ⏭️';
       }
 
-      // 在自動示範模式下，執行步驟預定義動作（自帶魔法棒與飄入動畫）
-      if (isTutAutoPlaying && typeof step.action === 'function') {
-        try {
-          if (typeof Blockly !== 'undefined' && Blockly.Events) {
-            Blockly.Events.disable();
-          }
-          step.action();
-        } catch (e) {
-          console.warn('Tutorial step action error:', e);
-        } finally {
-          if (typeof Blockly !== 'undefined' && Blockly.Events) {
-            Blockly.Events.enable();
-          }
-          if (typeof updateCodeView === 'function') {
-            updateCodeView();
-          }
-        }
+      // 執行步驟預定義動作
+      if (typeof step.action === 'function') {
+        try { step.action(); } catch (e) { console.warn('Tutorial step action error:', e); }
       }
 
-      // 聚焦並高亮目標元件（若為互動模式且指定了抽屜，指引高亮該抽屜）
-      if (isInteractiveMode && step.category) {
-        highlightToolboxCategory(step.category);
-      } else {
-        highlightElement(step.target);
-      }
+      // 聚焦並高亮目標 DOM 元件
+      highlightElement(step.target);
 
-      // 語音親切解說
-      const speechPrompt = (isInteractiveMode && step.category) 
-        ? `${step.title}。請從左側${step.category}抽屜，拿出積木拼過來喔！`
-        : `${step.title}。${step.text}`;
-
-      speakTutorialMessage(speechPrompt, () => {
+      // 🌟 核心防搶拍機制：語音完全朗讀完畢後，預留 1.2 秒自然緩衝讓孩子觀察積木，再進入下一步驟！
+      speakTutorialMessage(`${step.title}。${step.text}`, () => {
         if (!isTutAutoPlaying) return;
         tutAutoPlayTimer = setTimeout(() => {
           if (!isTutAutoPlaying) return;
@@ -5864,87 +5812,51 @@ void loop() {
       });
     }
 
-    function highlightToolboxCategory(categoryName) {
-      const box = document.getElementById('tutorialHighlightBox');
-      if (!box) return;
-      try {
-        const rows = document.querySelectorAll('.blocklyTreeRow');
-        let matchedRow = null;
-        for (const row of rows) {
-          if (row.textContent.includes(categoryName) || categoryName.includes(row.textContent.trim())) {
-            matchedRow = row;
-            break;
-          }
-        }
-        if (matchedRow) {
-          const rect = matchedRow.getBoundingClientRect();
-          box.style.display = 'block';
-          box.style.left = (rect.left - 4) + 'px';
-          box.style.top = (rect.top - 4) + 'px';
-          box.style.width = (rect.width + 8) + 'px';
-          box.style.height = (rect.height + 8) + 'px';
-          showMagicWandAt(rect.right + 10, rect.top + rect.height / 2);
-          return;
-        }
-      } catch(_) {}
-      highlightElement('current_block');
-    }
-
     function highlightElement(selector) {
       const box = document.getElementById('tutorialHighlightBox');
       const card = document.getElementById('tutorialCompanionCard');
       if (!box || !selector) return;
 
+      let rect = null;
       if (selector === 'current_block' && tutorialBlocks.lastPlaced) {
-        try {
-          if (workspace && typeof workspace.centerOnBlock === 'function') {
-            workspace.centerOnBlock(tutorialBlocks.lastPlaced.id);
-          }
-        } catch (_) {}
+        const svgRoot = tutorialBlocks.lastPlaced.getSvgRoot();
+        if (svgRoot) {
+          try {
+            if (workspace && typeof workspace.centerOnBlock === 'function') {
+              workspace.centerOnBlock(tutorialBlocks.lastPlaced.id);
+            }
+          } catch (_) {}
+          rect = svgRoot.getBoundingClientRect();
+        }
+      } else if (selector.startsWith('block:')) {
+        const key = selector.split(':')[1];
+        const b = tutorialBlocks[key];
+        if (b && b.getSvgRoot) rect = b.getSvgRoot().getBoundingClientRect();
+      } else {
+        const el = document.querySelector(selector);
+        if (el) rect = el.getBoundingClientRect();
       }
 
-      // 🌟 使用 requestAnimationFrame 避開 workspace.centerOnBlock 後立刻強制同步排版造成的卡頓
-      requestAnimationFrame(() => {
-        let rect = null;
-        if (selector === 'current_block' && tutorialBlocks.lastPlaced) {
-          const b = tutorialBlocks.lastPlaced;
-          if (b && typeof b.getSvgRoot === 'function') {
-            const svgRoot = b.getSvgRoot();
-            if (svgRoot) rect = svgRoot.getBoundingClientRect();
-          }
-        } else if (selector.startsWith('block:')) {
-          const key = selector.split(':')[1];
-          const b = tutorialBlocks[key];
-          if (b && typeof b.getSvgRoot === 'function') {
-            const svgRoot = b.getSvgRoot();
-            if (svgRoot) rect = svgRoot.getBoundingClientRect();
-          }
-        } else {
-          const el = document.querySelector(selector);
-          if (el) rect = el.getBoundingClientRect();
-        }
+      if (rect) {
+        box.style.display = 'block';
+        box.style.left = (rect.left - 6) + 'px';
+        box.style.top = (rect.top - 6) + 'px';
+        box.style.width = (rect.width + 12) + 'px';
+        box.style.height = (rect.height + 12) + 'px';
 
-        if (rect && rect.width > 0 && rect.height > 0) {
-          box.style.display = 'block';
-          box.style.left = (rect.left - 6) + 'px';
-          box.style.top = (rect.top - 6) + 'px';
-          box.style.width = (rect.width + 12) + 'px';
-          box.style.height = (rect.height + 12) + 'px';
-
-          // 避免懸浮解說卡片擋到高亮元素
-          if (card) {
-            if (rect.right > window.innerWidth - 420 && rect.bottom > window.innerHeight - 250) {
-              card.style.right = 'auto';
-              card.style.left = '24px';
-            } else {
-              card.style.left = 'auto';
-              card.style.right = '24px';
-            }
+        // 避免懸浮解說卡片擋到高亮元素
+        if (card) {
+          if (rect.right > window.innerWidth - 420 && rect.bottom > window.innerHeight - 250) {
+            card.style.right = 'auto';
+            card.style.left = '24px';
+          } else {
+            card.style.left = 'auto';
+            card.style.right = '24px';
           }
-        } else {
-          box.style.display = 'none';
         }
-      });
+      } else {
+        box.style.display = 'none';
+      }
     }
 
     function nextTutorialStep() {
@@ -5953,7 +5865,7 @@ void loop() {
       if (!currentTutLesson) return;
       if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
         currentTutStepIdx++;
-        requestAnimationFrame(() => renderTutorialStep());
+        renderTutorialStep();
       } else {
         finishTutorialLesson();
       }
@@ -5964,7 +5876,7 @@ void loop() {
       stopTutorialAudio();
       if (currentTutStepIdx > 0) {
         currentTutStepIdx--;
-        requestAnimationFrame(() => renderTutorialStep());
+        renderTutorialStep();
       }
     }
 
@@ -6000,22 +5912,14 @@ void loop() {
     function stopTutorial() {
       clearTimeout(tutAutoPlayTimer);
       stopTutorialAudio();
-      hideMagicWand();
       isTutAutoPlaying = false;
-      isInteractiveMode = false;
-      if (workspace && tutWorkspaceChangeListener) {
-        workspace.removeChangeListener(tutWorkspaceChangeListener);
-        tutWorkspaceChangeListener = null;
-      }
       currentTutLesson = null;
       currentTutStepIdx = 0;
 
       const overlay = document.getElementById('tutorialSpotlightOverlay');
       const card = document.getElementById('tutorialCompanionCard');
-      const ghost = document.getElementById('tutorialGhostBox');
       if (overlay) overlay.style.display = 'none';
       if (card) card.style.display = 'none';
-      if (ghost) ghost.style.display = 'none';
     }
 
     function toggleTutorialAutoPlay() {
@@ -7372,17 +7276,12 @@ void loop() {
 
   <!-- 🎓 互動教學 Spotlight 聚光燈遮罩 -->
   <div id="tutorialSpotlightOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9980; pointer-events:none; transition:all 0.3s ease;">
-    <!-- 聚光燈外框 (使用 GPU 加速 transition 與 will-change，消除逐幀重繪負載) -->
-    <div id="tutorialHighlightBox" style="position:absolute; border:3px solid #F59E0B; border-radius:10px; box-shadow:0 0 16px rgba(245,158,11,0.7); pointer-events:none; transition:left 0.22s ease-out, top 0.22s ease-out, width 0.22s ease-out, height 0.22s ease-out; will-change:left, top, width, height;"></div>
-    <!-- 虛線目標提示框 -->
-    <div id="tutorialGhostBox" class="ghost-block-indicator"></div>
+    <!-- 聚光燈外框與跳動黃色流光 -->
+    <div id="tutorialHighlightBox" style="position:absolute; border:3px solid #F59E0B; border-radius:10px; box-shadow:0 0 25px rgba(245,158,11,0.85), inset 0 0 15px rgba(245,158,11,0.3); pointer-events:none; transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1); animation:pulseGlow 1.4s infinite alternate;"></div>
   </div>
 
-  <!-- 🪄 昕蓉小老師手勢魔法游標 -->
-  <div id="magicTeacherWand" class="magic-teacher-wand">🪄</div>
-
   <!-- 👧 昕蓉小導師懸浮解說卡片 -->
-  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite; will-change:transform;">
+  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:24px;">👧</span>
