@@ -4456,12 +4456,14 @@ void loop() {
       let startX = 60, startY = 160;
       if (categoryHint) {
         try {
-          const catItem = document.querySelector(`.blocklyTreeRow[aria-label*="${categoryHint}"]`) 
-                       || document.querySelector(`.blocklyTreeLabel:contains("${categoryHint}")`);
-          if (catItem) {
-            const r = catItem.getBoundingClientRect();
-            startX = r.left + r.width / 2;
-            startY = r.top + r.height / 2;
+          const rows = document.querySelectorAll('.blocklyTreeRow');
+          for (const r of rows) {
+            if (r.textContent && r.textContent.includes(categoryHint)) {
+              const rect = r.getBoundingClientRect();
+              startX = rect.left + rect.width / 2;
+              startY = rect.top + rect.height / 2;
+              break;
+            }
           }
         } catch(_) {}
       } else if (customStartRect) {
@@ -5437,7 +5439,19 @@ void loop() {
           }
         }
       });
-      renderGuideModal();
+
+      // 🌟 瞬間切換 CSS display，免除反覆銷毀重建 DOM，消除切換卡頓
+      const cards = document.querySelectorAll('.guide-mission-card');
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-category');
+        if (tab === 'all') {
+          card.style.display = 'block';
+        } else if (tab === 'rgb') {
+          card.style.display = (cat === 'rgb') ? 'block' : 'none';
+        } else if (tab === 'general') {
+          card.style.display = (cat !== 'rgb') ? 'block' : 'none';
+        }
+      });
     }
 
     let currentTutLesson = null;
@@ -5503,16 +5517,15 @@ void loop() {
       }
 
       if (listDiv) {
-        const filtered = LESSONS_DATA.filter(lesson => {
-          if (currentGuideTab === 'rgb') return lesson.category === 'rgb';
-          if (currentGuideTab === 'general') return lesson.category !== 'rgb';
-          return true;
-        });
-
-        listDiv.innerHTML = filtered.map(lesson => {
+        // 渲染所有課程卡片並賦予 guide-mission-card 類別與 data-category
+        listDiv.innerHTML = LESSONS_DATA.map(lesson => {
           const isDone = done.includes(lesson.id);
+          let isVisible = true;
+          if (currentGuideTab === 'rgb') isVisible = (lesson.category === 'rgb');
+          else if (currentGuideTab === 'general') isVisible = (lesson.category !== 'rgb');
+
           return `
-            <div style="background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
+            <div class="guide-mission-card" data-category="${lesson.category}" style="display:${isVisible ? 'block' : 'none'}; background:${isDone ? '#1B2B28' : '#181825'}; border:1px solid ${isDone ? '#00E670' : '#313244'}; border-radius:10px; padding:12px 14px; margin-bottom:10px; transition:border 0.2s;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:4px;">
                 <div style="font-size:13.5px; font-weight:bold; color:${isDone ? '#00E670' : '#CDD6F4'}; display:flex; align-items:center; gap:6px;">
                   <span>${isDone ? '✅' : '🎯'}</span>
@@ -5574,7 +5587,12 @@ void loop() {
       // 綁定 Blockly 工作區事件監聽器，即時判定使用者親手拼放積木
       initTutorialWorkspaceListener();
 
-      renderTutorialStep();
+      // 🌟 將工作區與積木渲染延遲至下一幀排程，讓選關對話框能立即平滑關閉，完全不卡頓
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          renderTutorialStep();
+        }, 40);
+      });
     }
 
     function initTutorialWorkspaceListener() {
@@ -5804,7 +5822,21 @@ void loop() {
 
       // 在自動示範模式下，執行步驟預定義動作（自帶魔法棒與飄入動畫）
       if (isTutAutoPlaying && typeof step.action === 'function') {
-        try { step.action(); } catch (e) { console.warn('Tutorial step action error:', e); }
+        try {
+          if (typeof Blockly !== 'undefined' && Blockly.Events) {
+            Blockly.Events.disable();
+          }
+          step.action();
+        } catch (e) {
+          console.warn('Tutorial step action error:', e);
+        } finally {
+          if (typeof Blockly !== 'undefined' && Blockly.Events) {
+            Blockly.Events.enable();
+          }
+          if (typeof updateCodeView === 'function') {
+            updateCodeView();
+          }
+        }
       }
 
       // 聚焦並高亮目標元件（若為互動模式且指定了抽屜，指引高亮該抽屜）
@@ -5863,46 +5895,56 @@ void loop() {
       const card = document.getElementById('tutorialCompanionCard');
       if (!box || !selector) return;
 
-      let rect = null;
       if (selector === 'current_block' && tutorialBlocks.lastPlaced) {
-        const svgRoot = tutorialBlocks.lastPlaced.getSvgRoot();
-        if (svgRoot) {
-          try {
-            if (workspace && typeof workspace.centerOnBlock === 'function') {
-              workspace.centerOnBlock(tutorialBlocks.lastPlaced.id);
-            }
-          } catch (_) {}
-          rect = svgRoot.getBoundingClientRect();
-        }
-      } else if (selector.startsWith('block:')) {
-        const key = selector.split(':')[1];
-        const b = tutorialBlocks[key];
-        if (b && b.getSvgRoot) rect = b.getSvgRoot().getBoundingClientRect();
-      } else {
-        const el = document.querySelector(selector);
-        if (el) rect = el.getBoundingClientRect();
-      }
-
-      if (rect) {
-        box.style.display = 'block';
-        box.style.left = (rect.left - 6) + 'px';
-        box.style.top = (rect.top - 6) + 'px';
-        box.style.width = (rect.width + 12) + 'px';
-        box.style.height = (rect.height + 12) + 'px';
-
-        // 避免懸浮解說卡片擋到高亮元素
-        if (card) {
-          if (rect.right > window.innerWidth - 420 && rect.bottom > window.innerHeight - 250) {
-            card.style.right = 'auto';
-            card.style.left = '24px';
-          } else {
-            card.style.left = 'auto';
-            card.style.right = '24px';
+        try {
+          if (workspace && typeof workspace.centerOnBlock === 'function') {
+            workspace.centerOnBlock(tutorialBlocks.lastPlaced.id);
           }
-        }
-      } else {
-        box.style.display = 'none';
+        } catch (_) {}
       }
+
+      // 🌟 使用 requestAnimationFrame 避開 workspace.centerOnBlock 後立刻強制同步排版造成的卡頓
+      requestAnimationFrame(() => {
+        let rect = null;
+        if (selector === 'current_block' && tutorialBlocks.lastPlaced) {
+          const b = tutorialBlocks.lastPlaced;
+          if (b && typeof b.getSvgRoot === 'function') {
+            const svgRoot = b.getSvgRoot();
+            if (svgRoot) rect = svgRoot.getBoundingClientRect();
+          }
+        } else if (selector.startsWith('block:')) {
+          const key = selector.split(':')[1];
+          const b = tutorialBlocks[key];
+          if (b && typeof b.getSvgRoot === 'function') {
+            const svgRoot = b.getSvgRoot();
+            if (svgRoot) rect = svgRoot.getBoundingClientRect();
+          }
+        } else {
+          const el = document.querySelector(selector);
+          if (el) rect = el.getBoundingClientRect();
+        }
+
+        if (rect && rect.width > 0 && rect.height > 0) {
+          box.style.display = 'block';
+          box.style.left = (rect.left - 6) + 'px';
+          box.style.top = (rect.top - 6) + 'px';
+          box.style.width = (rect.width + 12) + 'px';
+          box.style.height = (rect.height + 12) + 'px';
+
+          // 避免懸浮解說卡片擋到高亮元素
+          if (card) {
+            if (rect.right > window.innerWidth - 420 && rect.bottom > window.innerHeight - 250) {
+              card.style.right = 'auto';
+              card.style.left = '24px';
+            } else {
+              card.style.left = 'auto';
+              card.style.right = '24px';
+            }
+          }
+        } else {
+          box.style.display = 'none';
+        }
+      });
     }
 
     function nextTutorialStep() {
@@ -5911,7 +5953,7 @@ void loop() {
       if (!currentTutLesson) return;
       if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
         currentTutStepIdx++;
-        renderTutorialStep();
+        requestAnimationFrame(() => renderTutorialStep());
       } else {
         finishTutorialLesson();
       }
@@ -5922,7 +5964,7 @@ void loop() {
       stopTutorialAudio();
       if (currentTutStepIdx > 0) {
         currentTutStepIdx--;
-        renderTutorialStep();
+        requestAnimationFrame(() => renderTutorialStep());
       }
     }
 
@@ -7330,8 +7372,8 @@ void loop() {
 
   <!-- 🎓 互動教學 Spotlight 聚光燈遮罩 -->
   <div id="tutorialSpotlightOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; z-index:9980; pointer-events:none; transition:all 0.3s ease;">
-    <!-- 聚光燈外框與跳動黃色流光 -->
-    <div id="tutorialHighlightBox" style="position:absolute; border:3px solid #F59E0B; border-radius:10px; box-shadow:0 0 25px rgba(245,158,11,0.85), inset 0 0 15px rgba(245,158,11,0.3); pointer-events:none; transition:all 0.4s cubic-bezier(0.4, 0, 0.2, 1); animation:pulseGlow 1.4s infinite alternate;"></div>
+    <!-- 聚光燈外框 (使用 GPU 加速 transition 與 will-change，消除逐幀重繪負載) -->
+    <div id="tutorialHighlightBox" style="position:absolute; border:3px solid #F59E0B; border-radius:10px; box-shadow:0 0 16px rgba(245,158,11,0.7); pointer-events:none; transition:left 0.22s ease-out, top 0.22s ease-out, width 0.22s ease-out, height 0.22s ease-out; will-change:left, top, width, height;"></div>
     <!-- 虛線目標提示框 -->
     <div id="tutorialGhostBox" class="ghost-block-indicator"></div>
   </div>
@@ -7340,7 +7382,7 @@ void loop() {
   <div id="magicTeacherWand" class="magic-teacher-wand">🪄</div>
 
   <!-- 👧 昕蓉小導師懸浮解說卡片 -->
-  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite;">
+  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite; will-change:transform;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:24px;">👧</span>
