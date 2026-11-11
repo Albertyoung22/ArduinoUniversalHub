@@ -5417,6 +5417,16 @@ void loop() {
       const lesson = LESSONS_DATA.find(l => l.id === lessonId);
       if (!lesson) return;
 
+      // 🌟 解鎖 Web 瀏覽器音訊與語音播放權限 (在使用者手動點擊當下預先啟動音訊許可)
+      try {
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.resume();
+        }
+        const unlockAudio = new Audio();
+        unlockAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+        unlockAudio.play().catch(() => {});
+      } catch(_) {}
+
       currentTutLesson = lesson;
       currentTutStepIdx = 0;
       isTutAutoPlaying = isAutoPlay;
@@ -5458,9 +5468,18 @@ void loop() {
       if ('speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
+          window.speechSynthesis.resume();
           const u = new SpeechSynthesisUtterance(clean);
           u.lang = 'zh-TW';
-          u.rate = 1.0;
+          u.rate = 1.05;
+
+          const voices = window.speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            const twVoice = voices.find(v => v.lang === 'zh-TW' || v.lang === 'cmn-Hant-TW' || v.name.includes('Taiwan') || v.name.includes('Hsiao') || v.name.includes('Yating') || v.name.includes('Hanhan'))
+                         || voices.find(v => v.lang && v.lang.startsWith('zh'));
+            if (twVoice) u.voice = twVoice;
+          }
+
           let done = false;
           const finish = () => {
             if (!done) {
@@ -5472,7 +5491,9 @@ void loop() {
           u.onerror = finish;
           window.speechSynthesis.speak(u);
           return;
-        } catch(e) {}
+        } catch(e) {
+          console.warn('SpeechSynthesis error:', e);
+        }
       }
       const fallbackMs = Math.max(2500, clean.length * 180 + 1000);
       tutAutoPlayTimer = setTimeout(() => { if (typeof onComplete === 'function') onComplete(); }, fallbackMs);

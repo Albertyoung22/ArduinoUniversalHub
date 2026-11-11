@@ -25,7 +25,6 @@ ArduinoController.exe
 # Temporary files
 *.tmp
 *.log
-web/cache/
 *_crop.*
 *_contrast.*
 *_zoom.*
