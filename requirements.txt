@@ -3,5 +3,6 @@ waitress>=3.0.0
 pyserial>=3.5
 gunicorn>=21.2.0
 ortools>=9.8.0
+edge-tts>=7.2.8
 
 

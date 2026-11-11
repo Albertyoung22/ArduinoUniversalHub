@@ -309,6 +309,58 @@ def serve_blockly(filename):
     return send_from_directory(BLOCKLY_DIR, filename)
 
 
+# ==========================================
+# 👧 昕蓉小老師 Edge-TTS 雲端高擬真語音生成
+# ==========================================
+TTS_CACHE_DIR = os.path.join(BASE_DIR, "web", "cache", "tts")
+os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+
+@app.route("/api/tts", methods=["GET", "POST"])
+def api_tts():
+    """調用 edge-tts (7.2.8+) 生成自然流暢的台灣國語語音 (zh-TW-HsiaoChenNeural)"""
+    if request.method == "POST":
+        data = request.get_json(silent=True) or {}
+        text = data.get("text", "")
+        voice = data.get("voice", "zh-TW-HsiaoChenNeural")
+        rate = data.get("rate", "+5%")
+    else:
+        text = request.args.get("text", "")
+        voice = request.args.get("voice", "zh-TW-HsiaoChenNeural")
+        rate = request.args.get("rate", "+5%")
+
+    text = text.strip()
+    if not text:
+        return jsonify({"ok": False, "error": "無語音文字內容"}), 400
+
+    import hashlib
+    cache_key = hashlib.md5(f"{text}_{voice}_{rate}".encode("utf-8")).hexdigest()
+    cache_file = os.path.join(TTS_CACHE_DIR, f"{cache_key}.mp3")
+
+    if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
+        return send_file(cache_file, mimetype="audio/mpeg")
+
+    try:
+        import edge_tts
+        import asyncio
+        import concurrent.futures
+
+        async def generate_speech():
+            communicate = edge_tts.Communicate(text, voice, rate=rate)
+            await communicate.save(cache_file)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(lambda: asyncio.run(generate_speech()))
+            future.result(timeout=12)
+
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 0:
+            return send_file(cache_file, mimetype="audio/mpeg")
+        else:
+            return jsonify({"ok": False, "error": "語音檔案未能成功產出"}), 500
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Edge-TTS 生成異常: {e}"}), 500
+
+
 @app.route("/api/serial/ports", methods=["GET"])
 def api_serial_ports():
     return jsonify({
@@ -1352,6 +1404,13 @@ def find_arduino_cli():
 @app.route("/api/burn/boards", methods=["GET"])
 def api_burn_boards():
     cli_path = find_arduino_cli()
+    has_avr_flasher = False
+    try:
+        import avr_flasher
+        has_avr_flasher = avr_flasher.check_toolchain()[0]
+    except Exception:
+        pass
+
     detected_boards = []
     if cli_path:
         try:
@@ -1369,8 +1428,9 @@ def api_burn_boards():
     ]
     return jsonify({
         "ok": True,
-        "has_cli": bool(cli_path),
-        "cli_path": cli_path,
+        "has_cli": bool(cli_path) or has_avr_flasher,
+        "cli_path": cli_path or (avr_flasher.AVRDUDE_EXE if has_avr_flasher else None),
+        "flasher_type": "arduino-cli" if cli_path else ("avr_toolchain" if has_avr_flasher else "none"),
         "presets": presets,
         "detected_raw": detected_boards,
         "current_port": arduino_serial.port
@@ -1499,6 +1559,7 @@ def api_burn_compile_and_upload():
 
 
 @app.route("/api/burn/restore_interactive_firmware", methods=["POST"])
+@app.route("/api/flash_firmware", methods=["POST"])
 def api_burn_restore_interactive_firmware():
     cli_path = find_arduino_cli()
     has_avr_flasher = False
@@ -1525,26 +1586,45 @@ def api_burn_restore_interactive_firmware():
         time.sleep(1.0)
 
     try:
-        arduino_serial.log(f"🛠️ [還原互動韌體] 正在為 {port} 上傳萬能積木互動韌體 (universal_firmware)...")
+        arduino_serial.log(f"🛠️ [萬能韌體一鍵重刷] 正在為 {port} 重刷萬能互動韌體 (universal_firmware)...")
         if cli_path:
+            arduino_serial.log(f"🔨 [萬能韌體重刷] 正在調用 arduino-cli 編譯 (FQBN: {fqbn})...")
+            ret_c, comp_out, comp_err = safe_run_process([cli_path, "compile", "--fqbn", fqbn, sketch_dir], timeout=60)
+            if ret_c != 0:
+                err_msg = comp_err or comp_out
+                arduino_serial.log(f"❌ [萬能韌體重刷] 編譯失敗:\n{err_msg}")
+                return jsonify({"ok": False, "error": f"韌體編譯失敗: {err_msg}", "log": comp_out + "\n" + comp_err}), 400
+
+            arduino_serial.log(f"⚡ [萬能韌體重刷] 正在上傳韌體至 {port}...")
             ret, out, err = safe_run_process([cli_path, "upload", "-p", port, "--fqbn", fqbn, sketch_dir], timeout=60)
             if ret != 0:
                 err_msg = err or out
-                arduino_serial.log(f"❌ [還原互動韌體] 上傳失敗:\n{err_msg}")
+                arduino_serial.log(f"❌ [萬能韌體重刷] 上傳失敗:\n{err_msg}")
                 return jsonify({"ok": False, "error": f"韌體上傳失敗: {err_msg}", "log": out + "\n" + err}), 400
-            run_log = out
+            run_log = (comp_out or "") + "\n" + (out or "")
         else:
             import avr_flasher
             firmware_ino = os.path.join(sketch_dir, "universal_firmware.ino")
+            arduino_serial.log(f"🔨 [萬能韌體重刷] 調用本機 AVR-GCC 編譯並透過 avrdude 寫入 {port}...")
             ok = avr_flasher.compile_and_upload(firmware_ino, port=port, log_cb=arduino_serial.log)
             if not ok:
                 return jsonify({"ok": False, "error": f"AVR 工具鏈上傳失敗，請確認 {port} 未被佔用！"}), 400
             run_log = f"AVR-GCC 編譯與 avrdude 燒錄成功 ({port})"
 
-        arduino_serial.log(f"🎉🎉 [還原互動韌體] 成功還原萬能積木互動韌體！現在板子已重新支援即時積木互動點燈！")
+        # 同步更新 web/firmware 中的 hex 備份，供 WebSerial 直刷使用
+        try:
+            cached_hex = os.path.join(sketch_dir, "build_cache", "firmware.hex")
+            web_hex = os.path.join(WEB_DIR, "firmware", "universal_firmware.ino.hex")
+            if os.path.exists(cached_hex):
+                os.makedirs(os.path.dirname(web_hex), exist_ok=True)
+                shutil.copy2(cached_hex, web_hex)
+        except Exception:
+            pass
+
+        arduino_serial.log(f"🎉🎉 [萬能韌體一鍵重刷] 成功重刷萬能積木互動韌體！現在板子已重新支援即時積木互動點燈！")
         # 自動恢復後端序列埠連線
         threading.Thread(target=lambda: (time.sleep(2.0), arduino_serial.connect(port)), daemon=True).start()
-        return jsonify({"ok": True, "message": "成功還原萬能積木互動韌體！板子已就緒即時控制！", "log": run_log})
+        return jsonify({"ok": True, "message": f"成功重刷萬能韌體至 {port}！板子已就緒即時控制！", "log": run_log})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -1670,6 +1750,42 @@ def launch_desktop_window(app_url: str):
         r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
     ]
+    profile_dir = os.path.expandvars(r"%LOCALAPPDATA%\ArduinoBlockStudio\Profile")
+    try:
+        os.makedirs(profile_dir, exist_ok=True)
+    except Exception:
+        pass
+
+    def _auto_maximize_app_window():
+        """在 Windows 下自動搜尋並將工作室 App 視窗全螢幕最大化並置頂喚起"""
+        try:
+            import ctypes
+            from ctypes import wintypes
+            user32 = ctypes.windll.user32
+            SW_MAXIMIZE = 3
+
+            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+
+            def enum_cb(hwnd, lparam):
+                if not user32.IsWindowVisible(hwnd):
+                    return True
+                length = user32.GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buff = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buff, length + 1)
+                    title = buff.value
+                    if "昕蓉" in title or "Sophia" in title or "Block" in title:
+                        user32.ShowWindow(hwnd, SW_MAXIMIZE)
+                        user32.SetForegroundWindow(hwnd)
+                        return False
+                return True
+
+            for _ in range(12):
+                time.sleep(0.35)
+                user32.EnumWindows(WNDENUMPROC(enum_cb), 0)
+        except Exception:
+            pass
+
     for b_path in browser_candidates:
         if os.path.exists(b_path):
             try:
@@ -1677,10 +1793,12 @@ def launch_desktop_window(app_url: str):
                 subprocess.Popen([
                     b_path,
                     f"--app={app_url}",
+                    f"--user-data-dir={profile_dir}",
                     "--start-maximized",
-                    "--window-size=1400,900",
-                    "--window-position=50,50"
+                    "--no-first-run",
+                    "--no-default-browser-check"
                 ])
+                threading.Thread(target=_auto_maximize_app_window, daemon=True).start()
                 print(f"🚀 已成功以獨立桌面視窗啟動工作室: {os.path.basename(b_path)}", flush=True)
                 return True
             except Exception:

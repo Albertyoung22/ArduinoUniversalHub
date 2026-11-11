@@ -24,21 +24,23 @@
       display: flex;
       flex-direction: column;
       height: 100vh;
-      min-width: 960px;
+      width: 100vw;
+      max-width: 100vw;
+      min-width: 0;
       background: #EBF0F8;
-      overflow-x: auto;
+      overflow-x: hidden;
       overflow-y: hidden;
     }
 
     /* 頂部現代化導航欄 */
     header {
-      height: 54px;
-      min-height: 54px;
+      height: 48px;
+      min-height: 48px;
       background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 55%, #3B82F6 100%);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
+      padding: 0 8px;
       color: white;
       box-shadow: 0 3px 12px rgba(0,0,0,0.22);
       z-index: 100;
@@ -46,7 +48,12 @@
       flex-shrink: 0;
       overflow-x: auto;
       overflow-y: hidden;
-      gap: 12px;
+      scrollbar-width: none;
+      gap: 6px;
+    }
+
+    header::-webkit-scrollbar {
+      display: none;
     }
 
     /* 左側品牌與核心執行組 */
@@ -128,6 +135,7 @@
     }
 
     .brand-tagline {
+      display: none !important;
       font-size: 10px;
       color: rgba(255, 255, 255, 0.85);
       font-weight: 500;
@@ -306,11 +314,128 @@
       background: rgba(255, 255, 255, 0.25);
     }
 
+    .btn-com-flash {
+      background: linear-gradient(135deg, #F59E0B, #EA580C);
+      color: white;
+      border: 1px solid #FDBA74;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      box-shadow: 0 1px 6px rgba(234, 88, 12, 0.45);
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-com-flash:hover {
+      background: linear-gradient(135deg, #FBBF24, #F97316);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.6);
+    }
+
+    @media (max-width: 1350px) {
+      .brand-tagline {
+        display: none !important;
+      }
+      #btnWebSerialText {
+        display: none !important;
+      }
+      .tool-select {
+        max-width: 120px !important;
+      }
+      .com-select {
+        max-width: 115px !important;
+      }
+      header {
+        padding: 0 6px !important;
+        gap: 5px !important;
+      }
+      .nav-left-group, .nav-right-group {
+        gap: 5px !important;
+      }
+      .btn-tool-guide, .btn-tool-cpsat, .btn-tool-burn, .btn-tool-hw, .btn-tool-code {
+        padding: 4px 7px !important;
+        font-size: 11.5px !important;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .tool-btn-text {
+        display: none !important;
+      }
+      #btnQuickFlashHubText {
+        display: none !important;
+      }
+      .btn-com-flash {
+        padding: 4px 6px !important;
+      }
+      .brand-title {
+        font-size: 13px !important;
+      }
+      .tool-select {
+        max-width: 100px !important;
+      }
+      .com-select {
+        max-width: 95px !important;
+      }
+      header {
+        padding: 0 4px !important;
+        gap: 4px !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .right-sidebar {
+        width: 260px !important;
+      }
+      .nav-divider {
+        display: none !important;
+      }
+      .hub-divider {
+        display: none !important;
+      }
+      .tool-select {
+        max-width: 80px !important;
+      }
+      .com-select {
+        max-width: 80px !important;
+      }
+      #usbStatusText {
+        display: none !important;
+      }
+      .status-capsule {
+        padding: 3px 6px !important;
+      }
+      .btn-flag, .btn-stop {
+        padding: 4px 8px !important;
+        font-size: 12px !important;
+      }
+    }
+
+    @media (max-width: 740px) {
+      .right-sidebar {
+        width: 220px !important;
+      }
+      .brand-title {
+        display: none !important;
+      }
+      .tool-select {
+        max-width: 65px !important;
+      }
+      .com-select {
+        max-width: 65px !important;
+      }
+    }
+
     .status-capsule {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 3px 8px;
+      gap: 5px;
+      padding: 2px 7px;
       border-radius: 10px;
       background: rgba(255, 255, 255, 0.08);
       cursor: pointer;
@@ -324,8 +449,8 @@
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: #94A3B8;
       box-shadow: none;
@@ -337,7 +462,7 @@
     .nav-right-group {
       display: flex;
       align-items: center;
-      gap: 7px;
+      gap: 5px;
       flex-shrink: 0;
     }
 
@@ -346,10 +471,10 @@
       color: white;
       border: 1px solid #475569;
       border-radius: 6px;
-      padding: 5px 9px;
-      font-size: 12px;
+      padding: 3px 7px;
+      font-size: 11px;
       outline: none;
-      max-width: 210px;
+      max-width: 125px;
       cursor: pointer;
     }
 
@@ -358,14 +483,14 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
-      box-shadow: 0 2px 8px rgba(244, 63, 94, 0.4);
+      gap: 3px;
+      box-shadow: 0 2px 6px rgba(244, 63, 94, 0.35);
       transition: transform 0.1s, opacity 0.1s;
     }
 
@@ -379,13 +504,13 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       box-shadow: 0 2px 6px rgba(99, 102, 241, 0.3);
       transition: transform 0.1s, opacity 0.1s;
     }
@@ -400,14 +525,14 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
-      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+      gap: 3px;
+      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);
       transition: transform 0.1s, opacity 0.1s;
     }
 
@@ -421,13 +546,13 @@
       color: white;
       border: none;
       border-radius: 6px;
-      padding: 5px 10px;
-      font-size: 12px;
+      padding: 4px 8px;
+      font-size: 11px;
       font-weight: bold;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
       transition: transform 0.1s, opacity 0.1s;
     }
@@ -438,6 +563,19 @@
     }
 
     .btn-tool-code {
+      background: rgba(255, 255, 255, 0.14);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      transition: background 0.15s;
+    }
       background: rgba(255, 255, 255, 0.14);
       color: white;
       border: 1px solid rgba(255, 255, 255, 0.25);
@@ -460,13 +598,16 @@
     .main-container {
       display: flex;
       flex: 1;
-      height: calc(100vh - 52px);
+      min-height: 0;
+      height: 0;
       position: relative;
+      overflow: hidden;
     }
 
     /* Blockly 畫布區域 */
     #blocklyDiv {
       flex: 1;
+      min-width: 0;
       height: 100%;
       position: relative;
     }
@@ -775,7 +916,6 @@
         </div>
         <div class="brand-text">
           <div class="brand-title">昕蓉Sophia</div>
-          <div class="brand-tagline">智慧兒童積木程式工作室</div>
         </div>
       </div>
 
@@ -810,6 +950,9 @@
           </select>
           <button id="btnConnectUSB" class="btn-com-connect" onclick="toggleUSBConnection()" title="連線或中斷選取的 COM 埠">連線</button>
           <button class="btn-refresh-icon" onclick="refreshUsbPorts()" title="重新掃描所有 USB 連接埠">🔄</button>
+          <button id="btnQuickFlashHub" class="btn-com-flash" onclick="quickFlashUniversalFirmware()" title="⚡ 一鍵重刷萬能韌體 (含即時進度表與結果通知)">
+            <span>⚡</span> <span id="btnQuickFlashHubText">重刷韌體</span>
+          </button>
         </div>
 
         <div class="hub-divider"></div>
@@ -826,7 +969,7 @@
     <div class="nav-right-group">
       <!-- 範例積木選單 -->
       <select id="exampleSelect" onchange="loadExample(this.value)" class="tool-select" title="選擇預設特效範例，一鍵展開積木">
-        <option value="">📂 選擇特效範例 (展開積木)...</option>
+        <option value="">📂 特效範例...</option>
         <optgroup label="🌈 雙 RGB LED 炫彩特效 (展開原始積木)">
           <option value="ex_rgb_rainbow">🌈 雙燈七彩虹霓流光 (紅橙黃綠青藍紫)</option>
           <option value="ex_rgb_police">🚨 警車雙燈爆閃警笛 (燈1紅閃 ➔ 燈2藍閃)</option>
@@ -860,26 +1003,26 @@
 
       <!-- 👧 昕蓉小導師智慧教學模式 -->
       <button class="btn-tool-guide" onclick="openLearningGuide()" title="👧 昕蓉小老師 - 自動教小朋友操作與互動闖關 (支援一鍵自動示範與音效引導)">
-        <span>🎓</span> 教學模式
+        <span>🎓</span> <span class="tool-btn-text">教學</span>
       </button>
 
       <!-- 🧠 Google OR-Tools CP-SAT 智慧排程求解按鈕 -->
       <button class="btn-tool-cpsat" onclick="openCpsatModal()" title="Google OR-Tools CP-SAT 智慧排程求解器">
-        <span>🧠</span> CP-SAT 排程
+        <span>🧠</span> <span class="tool-btn-text">排程</span>
       </button>
 
       <!-- 🔥 線上編譯燒錄到板子 (離線運行模式) -->
       <button class="btn-tool-burn" onclick="openBurnModal()" title="🔥 線上編譯並燒錄韌體到板子 (拔除 USB 即可離線自主運作)">
-        <span>🔥</span> 離線燒錄
+        <span>🔥</span> <span class="tool-btn-text">離線燒錄</span>
       </button>
 
       <!-- ⚙️ 硬體腳位設定 (M1/M2/極性) -->
       <button class="btn-tool-hw" onclick="openHwConfigModal()" title="自訂 M1 / M2 / 點矩陣 / 舵機 / 繼電器 腳位">
-        <span>⚙️</span> 腳位設定
+        <span>⚙️</span> <span class="tool-btn-text">腳位</span>
       </button>
 
       <button class="btn-tool-code" onclick="toggleSidebar()" title="切換顯示/隱藏右側代碼視窗">
-        <span>💻</span> <span id="toggleSidebarText">代碼視窗</span>
+        <span>💻</span> <span id="toggleSidebarText" class="tool-btn-text">代碼</span>
       </button>
     </div>
   </header>
@@ -1516,6 +1659,25 @@
         }
       });
 
+      // 🌟 視窗展開 (最大化 / 改變大小 / 側欄收合) 時，即時自動適配重新渲染 Blockly 畫布
+      function onWorkspaceSvgResize() {
+        if (workspace) {
+          Blockly.svgResize(workspace);
+        }
+      }
+      window.addEventListener('resize', onWorkspaceSvgResize);
+      window.addEventListener('orientationchange', onWorkspaceSvgResize);
+
+      if (window.ResizeObserver) {
+        const resizeObs = new ResizeObserver(() => {
+          onWorkspaceSvgResize();
+        });
+        const bDiv = document.getElementById('blocklyDiv');
+        if (bDiv) resizeObs.observe(bDiv);
+        const mContainer = document.querySelector('.main-container');
+        if (mContainer) resizeObs.observe(mContainer);
+      }
+
       // 監聽積木變化，使用防抖 (Debounce)，放開積木或操作停頓 120ms 後才生成代碼，徹底解決拖曳卡頓
       let codeDebounceTimer = null;
       workspace.addChangeListener(function(event) {
@@ -1529,13 +1691,6 @@
         }
         codeDebounceTimer = setTimeout(updateCodeView, 120);
       });
-
-      // 自動確保視窗尺寸寬敞（避免先前 Chrome 殘留的微小視窗狀態）
-      if (window.outerWidth < 1200 || window.outerHeight < 720) {
-        try {
-          window.resizeTo(Math.min(1360, screen.availWidth), Math.min(880, screen.availHeight));
-        } catch (e) {}
-      }
 
       // 雲端 Render 模式自動淨化導覽列
       checkCloudEnvironment();
@@ -1905,7 +2060,7 @@ void loop() {
       const sb = document.getElementById('rightSidebar');
       sb.classList.toggle('collapsed');
       const isCol = sb.classList.contains('collapsed');
-      document.getElementById('toggleSidebarText').textContent = isCol ? '展開代碼視窗' : '隱藏代碼視窗';
+      document.getElementById('toggleSidebarText').textContent = isCol ? '代碼' : '收合';
       Blockly.svgResize(workspace);
     }
 
@@ -2206,7 +2361,7 @@ void loop() {
       if (rightSidebar && rightSidebar.classList.contains('collapsed')) {
         rightSidebar.classList.remove('collapsed');
         const toggleBtn = document.getElementById('toggleSidebarText');
-        if (toggleBtn) toggleBtn.textContent = '隱藏代碼視窗';
+        if (toggleBtn) toggleBtn.textContent = '收合';
         Blockly.svgResize(workspace);
       }
       updateCodeView();
@@ -2432,7 +2587,7 @@ void loop() {
       if (rightSidebar && rightSidebar.classList.contains('collapsed')) {
         rightSidebar.classList.remove('collapsed');
         const toggleBtn = document.getElementById('toggleSidebarText');
-        if (toggleBtn) toggleBtn.textContent = '隱藏代碼視窗';
+        if (toggleBtn) toggleBtn.textContent = '收合';
         Blockly.svgResize(workspace);
       }
       updateCodeView();
@@ -5272,17 +5427,140 @@ void loop() {
       if (card) card.style.display = 'block';
 
       renderTutorialStep();
-      playSound(isAutoPlay ? 'magic' : 'ding');
+    }
 
-      if (isAutoPlay) {
-        scheduleNextAutoStep();
+    let voiceTutorialEnabled = true;
+    let currentTtsAudio = null;
+    let tutSpeechGeneration = 0;
+
+    function stopTutorialAudio() {
+      tutSpeechGeneration++;
+      if (currentTtsAudio) {
+        try {
+          currentTtsAudio.pause();
+          currentTtsAudio.currentTime = 0;
+          currentTtsAudio.onended = null;
+          currentTtsAudio.onerror = null;
+        } catch(e) {}
+        currentTtsAudio = null;
       }
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch(e) {}
+      }
+      const cardHeader = document.getElementById('tutCardHeader');
+      if (cardHeader && currentTutLesson) {
+        const step = currentTutLesson.steps[currentTutStepIdx];
+        cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step ? step.title : ''}`;
+      }
+    }
+
+    function fallbackSpeechSynthesis(clean, onComplete) {
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(clean);
+          u.lang = 'zh-TW';
+          u.rate = 1.0;
+          let done = false;
+          const finish = () => {
+            if (!done) {
+              done = true;
+              if (typeof onComplete === 'function') onComplete();
+            }
+          };
+          u.onend = finish;
+          u.onerror = finish;
+          window.speechSynthesis.speak(u);
+          return;
+        } catch(e) {}
+      }
+      const fallbackMs = Math.max(2500, clean.length * 180 + 1000);
+      tutAutoPlayTimer = setTimeout(() => { if (typeof onComplete === 'function') onComplete(); }, fallbackMs);
+    }
+
+    function speakTutorialMessage(text, onComplete) {
+      stopTutorialAudio();
+      if (!text) {
+        if (typeof onComplete === 'function') onComplete();
+        return;
+      }
+
+      // 濾除 HTML 標籤、特殊符號與 Emoji，保留純純的親切引導詞
+      let clean = text.replace(/<[^>]*>/g, ' ')
+                      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+                      .replace(/[\u{2600}-\u{26FF}]/gu, '')
+                      .replace(/[\u{2700}-\u{27BF}]/gu, '')
+                      .replace(/[`*#_~]/g, '')
+                      .replace(/\s+/g, ' ')
+                      .trim();
+      if (!clean) {
+        if (typeof onComplete === 'function') onComplete();
+        return;
+      }
+
+      // 若使用者關閉了語音或音效，根據文字長度計算閱讀等待時間後自然銜接
+      if (!voiceTutorialEnabled || !soundEnabled) {
+        if (typeof onComplete === 'function') {
+          const readingDelay = Math.max(2800, clean.length * 160 + 1000);
+          tutAutoPlayTimer = setTimeout(() => {
+            onComplete();
+          }, readingDelay);
+        }
+        return;
+      }
+
+      const myGen = ++tutSpeechGeneration;
+      let callbackInvoked = false;
+      const doComplete = () => {
+        if (callbackInvoked || myGen !== tutSpeechGeneration) return;
+        callbackInvoked = true;
+        const cardHeader = document.getElementById('tutCardHeader');
+        if (cardHeader && currentTutLesson) {
+          const step = currentTutLesson.steps[currentTutStepIdx];
+          cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step ? step.title : ''}`;
+        }
+        if (typeof onComplete === 'function') {
+          onComplete();
+        }
+      };
+
+      const cardHeader = document.getElementById('tutCardHeader');
+      if (cardHeader && currentTutLesson) {
+        const step = currentTutLesson.steps[currentTutStepIdx];
+        cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step ? step.title : ''} 🔊`;
+      }
+
+      // 呼叫後端 edge-tts 語音合成引擎 (zh-TW-HsiaoChenNeural)
+      const audioUrl = `/api/tts?text=${encodeURIComponent(clean)}`;
+      const audio = new Audio(audioUrl);
+      currentTtsAudio = audio;
+
+      audio.onended = () => {
+        if (myGen === tutSpeechGeneration) {
+          currentTtsAudio = null;
+          doComplete();
+        }
+      };
+
+      audio.onerror = (e) => {
+        console.warn('TTS Audio error, falling back to Web Speech API:', e);
+        if (myGen !== tutSpeechGeneration) return;
+        fallbackSpeechSynthesis(clean, doComplete);
+      };
+
+      audio.play().catch(err => {
+        console.warn('Audio play prevented or failed:', err);
+        if (myGen !== tutSpeechGeneration) return;
+        fallbackSpeechSynthesis(clean, doComplete);
+      });
     }
 
     function renderTutorialStep() {
       if (!currentTutLesson) return;
       const step = currentTutLesson.steps[currentTutStepIdx];
       if (!step) return;
+
+      clearTimeout(tutAutoPlayTimer);
 
       const cardHeader = document.getElementById('tutCardHeader');
       const cardStep = document.getElementById('tutCardStepIndicator');
@@ -5312,6 +5590,7 @@ void loop() {
           ${chipHtml}
         `;
       }
+
       if (btnAuto) {
         btnAuto.innerHTML = isTutAutoPlaying ? '⏸️ 暫停' : '▶️ 自動示範';
       }
@@ -5330,6 +5609,19 @@ void loop() {
 
       // 聚焦並高亮目標 DOM 元件
       highlightElement(step.target);
+
+      // 🌟 核心防搶拍機制：語音完全朗讀完畢後，預留 1.2 秒自然緩衝讓孩子觀察積木，再進入下一步驟！
+      speakTutorialMessage(`${step.title}。${step.text}`, () => {
+        if (!isTutAutoPlaying) return;
+        tutAutoPlayTimer = setTimeout(() => {
+          if (!isTutAutoPlaying) return;
+          if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
+            nextTutorialStep();
+          } else {
+            finishTutorialLesson();
+          }
+        }, 1200);
+      });
     }
 
     function highlightElement(selector) {
@@ -5379,29 +5671,13 @@ void loop() {
       }
     }
 
-    function scheduleNextAutoStep() {
-      clearTimeout(tutAutoPlayTimer);
-      if (!isTutAutoPlaying) return;
-      tutAutoPlayTimer = setTimeout(() => {
-        if (!isTutAutoPlaying) return;
-        if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
-          nextTutorialStep();
-          scheduleNextAutoStep();
-        } else {
-          // 最後一步自動完成
-          finishTutorialLesson();
-        }
-      }, 4200);
-    }
-
     function nextTutorialStep() {
       clearTimeout(tutAutoPlayTimer);
+      stopTutorialAudio();
       if (!currentTutLesson) return;
       if (currentTutStepIdx < currentTutLesson.steps.length - 1) {
         currentTutStepIdx++;
         renderTutorialStep();
-        playSound('ding');
-        if (isTutAutoPlaying) scheduleNextAutoStep();
       } else {
         finishTutorialLesson();
       }
@@ -5409,16 +5685,16 @@ void loop() {
 
     function prevTutorialStep() {
       clearTimeout(tutAutoPlayTimer);
+      stopTutorialAudio();
       if (currentTutStepIdx > 0) {
         currentTutStepIdx--;
         renderTutorialStep();
-        playSound('ding');
-        if (isTutAutoPlaying) scheduleNextAutoStep();
       }
     }
 
     function finishTutorialLesson() {
       clearTimeout(tutAutoPlayTimer);
+      stopTutorialAudio();
       isTutAutoPlaying = false;
       playSound('victory');
 
@@ -5435,6 +5711,9 @@ void loop() {
           <div style="color:#CDD6F4; font-size:12px;">你獲得了一顆金黃星星 ⭐！現在你可以隨心所欲修改數值，玩出你的專屬作品喔！</div>
         `;
       }
+      // 昕蓉小老師過關語音
+      speakTutorialMessage(`太棒了！恭喜你完成了${currentTutLesson.title.split('：')[0]}！你獲得了一顆金黃星星！`);
+
       const btnNext = document.getElementById('btnTutNext');
       if (btnNext) {
         btnNext.innerHTML = '🏆 回教學選單';
@@ -5444,6 +5723,7 @@ void loop() {
 
     function stopTutorial() {
       clearTimeout(tutAutoPlayTimer);
+      stopTutorialAudio();
       isTutAutoPlaying = false;
       currentTutLesson = null;
       currentTutStepIdx = 0;
@@ -5460,18 +5740,28 @@ void loop() {
       if (btnAuto) {
         btnAuto.innerHTML = isTutAutoPlaying ? '⏸️ 暫停' : '▶️ 自動示範';
       }
+      const cardStep = document.getElementById('tutCardStepIndicator');
+      if (cardStep && currentTutLesson) {
+        cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${isTutAutoPlaying ? '• 🎬 自動示範中' : '• 👣 互動中'}`;
+      }
       if (isTutAutoPlaying) {
-        scheduleNextAutoStep();
+        renderTutorialStep();
       } else {
         clearTimeout(tutAutoPlayTimer);
+        stopTutorialAudio();
       }
     }
 
     function toggleTutorialSound() {
       soundEnabled = !soundEnabled;
+      voiceTutorialEnabled = soundEnabled;
       const btn = document.getElementById('btnTutSound');
-      if (btn) btn.innerText = soundEnabled ? '🔊' : '🔇';
-      if (soundEnabled) playSound('ding');
+      if (btn) btn.innerText = soundEnabled ? '🔊 語音: 開' : '🔇 語音: 關';
+      if (!soundEnabled) {
+        stopTutorialAudio();
+      } else {
+        playSound('ding');
+      }
     }
 
     // ==========================================
@@ -5515,8 +5805,8 @@ void loop() {
           const info = document.getElementById('burnCliStatus');
           if (info) {
             if (data.has_cli) {
-              const fname = (data.cli_path || '').split(/[/\\\\]/).pop();
-              info.innerHTML = `✅ 本機原生編譯器已就緒: <code style="color:#A6E3A1;">${fname}</code> (支援直接線上編譯寫入)`;
+              const fname = data.flasher_type === 'avr_toolchain' ? '內建 AVR 工具鏈 (AVR-GCC / avrdude)' : ((data.cli_path || '').split(/[/\\\\]/).pop());
+              info.innerHTML = `✅ 本機編譯燒錄工具已就緒: <code style="color:#A6E3A1;">${fname}</code> (支援一鍵線上直刷)`;
             } else {
               info.innerHTML = `☁️ 雲端/免編譯器模式：支援 Web Serial 瀏覽器直刷萬能韌體與 .ino 原始碼下載。<br><span style="color:#89DCEB;">💡 若需本機原生一鍵編譯燒錄，請以本機網址開啟: <a href="http://127.0.0.1:5050" target="_blank" style="color:#F9E2AF; text-decoration:underline;">http://127.0.0.1:5050</a></span>`;
             }
@@ -5782,52 +6072,373 @@ void loop() {
       log('📥 已成功下載 Arduino 離線原始碼: Sophia_Offline_Firmware.ino');
     }
 
-    async function restoreInteractiveFirmware() {
-      const port = document.getElementById('burnPortSelect').value || 'COM4';
-      const fqbn = document.getElementById('burnBoardSelect').value || 'arduino:avr:uno';
-      const logBox = document.getElementById('burnLogBox');
+    // ==========================================
+    // 🔔 浮動通知提示 (Studio Toast)
+    // ==========================================
+    function showStudioToast(msg, type = 'info', duration = 5000) {
+      let container = document.getElementById('studioToastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'studioToastContainer';
+        container.style.cssText = 'position:fixed; top:65px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:8px; pointer-events:none;';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        pointer-events:auto; min-width:260px; max-width:400px; padding:10px 14px; border-radius:8px;
+        box-shadow:0 8px 24px rgba(0,0,0,0.6); font-size:12px; font-weight:bold; line-height:1.4;
+        animation:slideInRight 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        background:${type === 'success' ? '#1E3A2F' : (type === 'error' ? '#3B1D28' : '#1E253A')};
+        color:${type === 'success' ? '#A6E3A1' : (type === 'error' ? '#F38BA8' : '#89DCEB')};
+        border:1px solid ${type === 'success' ? '#A6E3A1' : (type === 'error' ? '#F38BA8' : '#89DCEB')};
+      `;
+      toast.innerHTML = msg.replace(/\n/g, '<br>');
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.4s, transform 0.4s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 400);
+      }, duration);
+    }
 
-      logBox.style.display = 'block';
-      logBox.innerHTML = `<div>[${new Date().toLocaleTimeString()}] 🛠️ 正在準備還原萬能積木互動韌體 (${port})...</div>`;
+    // ==========================================
+    // ⚡ 萬能韌體一鍵重刷進度彈窗與流程控制
+    // ==========================================
+    let flashCountdownTimer = null;
 
-      if (isWebSerialConnected) {
-        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ⚡ 暫時關閉 Web Serial 串列埠以供燒錄...</div>`;
-        try {
-          await disconnectWebSerial();
-          await new Promise(r => setTimeout(r, 800));
-        } catch (_) {}
+    function openFlashProgressModal(port) {
+      if (flashCountdownTimer) {
+        clearInterval(flashCountdownTimer);
+        flashCountdownTimer = null;
+      }
+      const modal = document.getElementById('flashProgressModal');
+      if (!modal) return;
+      document.getElementById('flashTargetPort').innerText = `${port} (Arduino Uno)`;
+      document.getElementById('flashModalIcon').innerText = '⚡';
+      document.getElementById('flashModalTitle').innerText = '萬能韌體一鍵重刷中...';
+      document.getElementById('flashModalCloseX').style.display = 'none';
+
+      // 重置 4 個步驟卡片狀態
+      for (let i = 1; i <= 4; i++) {
+        const card = document.getElementById(`flashStepCard${i}`);
+        const status = document.getElementById(`flashStep${i}Status`);
+        if (card) {
+          card.style.borderColor = '#45475A';
+          card.style.background = '#11111B';
+          card.style.boxShadow = 'none';
+        }
+        if (status) {
+          status.innerText = '等待中';
+          status.style.color = '#A6ADC8';
+        }
       }
 
-      let usedServer = false;
+      // 重置進度條
+      const bar = document.getElementById('flashProgressBar');
+      if (bar) {
+        bar.style.width = '0%';
+        bar.style.background = 'linear-gradient(90deg, #3B82F6, #60A5FA)';
+      }
+      document.getElementById('flashProgressPercent').innerText = '0%';
+      document.getElementById('flashProgressText').innerText = '正在初始化燒錄引擎...';
+
+      // 清空日誌與結果
+      document.getElementById('flashModalLogBox').innerHTML = '';
+      const notice = document.getElementById('flashResultNotice');
+      notice.style.display = 'none';
+      notice.innerHTML = '';
+      document.getElementById('btnRetryFlash').style.display = 'none';
+      document.getElementById('btnFinishFlash').style.display = 'none';
+
+      modal.style.display = 'flex';
+    }
+
+    function closeFlashProgressModal() {
+      if (flashCountdownTimer) {
+        clearInterval(flashCountdownTimer);
+        flashCountdownTimer = null;
+      }
+      const modal = document.getElementById('flashProgressModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function updateFlashProgress(stepNum, percent, statusText, logMsg) {
+      // 更新進度條
+      const bar = document.getElementById('flashProgressBar');
+      if (bar) bar.style.width = `${percent}%`;
+      const pText = document.getElementById('flashProgressPercent');
+      if (pText) pText.innerText = `${percent}%`;
+      const sText = document.getElementById('flashProgressText');
+      if (sText && statusText) sText.innerText = statusText;
+
+      // 更新步驟卡片
+      for (let i = 1; i <= 4; i++) {
+        const card = document.getElementById(`flashStepCard${i}`);
+        const status = document.getElementById(`flashStep${i}Status`);
+        if (!card || !status) continue;
+        if (i < stepNum) {
+          card.style.borderColor = '#10B981';
+          card.style.background = 'rgba(16, 185, 129, 0.15)';
+          status.innerText = '✅ 完成';
+          status.style.color = '#34D399';
+        } else if (i === stepNum) {
+          card.style.borderColor = '#3B82F6';
+          card.style.background = 'rgba(59, 130, 246, 0.2)';
+          card.style.boxShadow = '0 0 8px rgba(59, 130, 246, 0.5)';
+          status.innerText = '⏳ 進行中';
+          status.style.color = '#93C5FD';
+        } else {
+          card.style.borderColor = '#45475A';
+          card.style.background = '#11111B';
+          card.style.boxShadow = 'none';
+          status.innerText = '等待中';
+          status.style.color = '#64748B';
+        }
+      }
+
+      // 輸出日誌
+      if (logMsg) {
+        const box = document.getElementById('flashModalLogBox');
+        if (box) {
+          const ts = new Date().toLocaleTimeString();
+          box.innerHTML += `<div><span style="color:#6C7086;">[${ts}]</span> ${logMsg}</div>`;
+          box.scrollTop = box.scrollHeight;
+        }
+        log(logMsg);
+      }
+    }
+
+    function completeFlashProgress(success, msg, errorDetail, port) {
+      document.getElementById('flashModalCloseX').style.display = 'block';
+      const bar = document.getElementById('flashProgressBar');
+      const icon = document.getElementById('flashModalIcon');
+      const title = document.getElementById('flashModalTitle');
+      const notice = document.getElementById('flashResultNotice');
+      const btnFinish = document.getElementById('btnFinishFlash');
+      const btnRetry = document.getElementById('btnRetryFlash');
+
+      if (success) {
+        updateFlashProgress(4, 100, '🎉 萬能韌體重刷大成功！板子已就緒！', '🎉 萬能韌體 (universal_firmware) 已成功燒錄至 ATmega328P Flash！');
+        if (bar) {
+          bar.style.width = '100%';
+          bar.style.background = 'linear-gradient(90deg, #10B981, #34D399)';
+        }
+        const s4Card = document.getElementById('flashStepCard4');
+        const s4Status = document.getElementById('flashStep4Status');
+        if (s4Card) {
+          s4Card.style.borderColor = '#10B981';
+          s4Card.style.background = 'rgba(16, 185, 129, 0.2)';
+        }
+        if (s4Status) {
+          s4Status.innerText = '✅ 完成';
+          s4Status.style.color = '#34D399';
+        }
+
+        if (icon) icon.innerText = '🎉';
+        if (title) title.innerText = '萬能韌體重刷成功！';
+
+        if (notice) {
+          notice.style.display = 'block';
+          notice.style.background = 'rgba(6, 78, 59, 0.7)';
+          notice.style.border = '1px solid #10B981';
+          notice.style.color = '#A6E3A1';
+          notice.innerHTML = `
+            <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">🎉 萬能韌體已成功寫入 Arduino Uno (${port})！</div>
+            <div style="font-size:11px; color:#D1FAE5; line-height:1.5;">
+              • 板子已完成重置，現已具備萬能全功能雙向通訊協議。<br>
+              • 雙 RGB 全彩燈、MAX7219 8x8 點陣、伺服舵機與雙路繼電器已完全就緒，可立即執行上方積木！
+            </div>
+          `;
+        }
+
+        if (typeof playSound === 'function') playSound('victory');
+        showStudioToast(`🎉 萬能韌體重刷成功！Arduino Uno (${port}) 已就緒即時控制！`, 'success', 6000);
+
+        let countdown = 4;
+        if (btnFinish) {
+          btnFinish.style.display = 'inline-block';
+          btnFinish.innerText = `✅ 完成 (${countdown}s)`;
+          flashCountdownTimer = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+              btnFinish.innerText = `✅ 完成 (${countdown}s)`;
+            } else {
+              clearInterval(flashCountdownTimer);
+              flashCountdownTimer = null;
+              closeFlashProgressModal();
+            }
+          }, 1000);
+        }
+
+        if (typeof refreshUsbPorts === 'function') {
+          setTimeout(refreshUsbPorts, 1200);
+        }
+      } else {
+        if (bar) {
+          bar.style.background = 'linear-gradient(90deg, #EF4444, #F43F5E)';
+        }
+        if (icon) icon.innerText = '❌';
+        if (title) title.innerText = '萬能韌體重刷失敗';
+
+        const sText = document.getElementById('flashProgressText');
+        if (sText) sText.innerText = '❌ 燒錄過程發生錯誤';
+
+        if (notice) {
+          notice.style.display = 'block';
+          notice.style.background = 'rgba(69, 10, 10, 0.75)';
+          notice.style.border = '1px solid #EF4444';
+          notice.style.color = '#FCA5A5';
+          notice.innerHTML = `
+            <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">❌ 燒錄未完成: ${errorDetail || '未知異常'}</div>
+            <div style="font-size:11px; color:#FECDD3; line-height:1.5; margin-top:6px;">
+              <strong>💡 故障排除指引：</strong><br>
+              1. 請拔下 Arduino USB 線，等待 3 秒後重新插上電腦。<br>
+              2. 請確認沒有其他軟體（如 Arduino IDE、其他序列埠軟體）正在佔用 ${port}。<br>
+              3. 若使用 Chrome/Edge 瀏覽器，可嘗試改用 Web Serial 瀏覽器直刷。
+            </div>
+          `;
+        }
+
+        if (btnRetry) btnRetry.style.display = 'inline-block';
+        if (btnFinish) {
+          btnFinish.style.display = 'inline-block';
+          btnFinish.innerText = '關閉';
+        }
+
+        showStudioToast(`❌ 萬能韌體重刷失敗: ${errorDetail || '請檢視錯誤日誌'}`, 'error', 7000);
+      }
+    }
+
+    async function quickFlashUniversalFirmware(skipConfirm = false) {
+      const pSel = document.getElementById('comPortSelect');
+      const bSel = document.getElementById('burnPortSelect');
+      const port = (pSel && pSel.value) || (bSel && bSel.value) || 'COM4';
+
+      if (!skipConfirm) {
+        const conf = confirm(
+          `⚡【一鍵重刷萬能互動韌體】\n\n` +
+          `目標連接埠: ${port}\n\n` +
+          `• 系統將使用本地 AVR 工具鏈自動編譯 universal_firmware.ino 並燒錄至晶片。\n` +
+          `• 燒錄全程具備即時進度表與結果通知。\n` +
+          `• 燒錄後自動重新建立連線，解決脫機無法聯機或更換新板子問題！\n\n` +
+          `確定要立即開始重刷萬能韌體嗎？`
+        );
+        if (!conf) return;
+      }
+
+      // 按鈕視覺反饋
+      const btnHub = document.getElementById('btnQuickFlashHub');
+      const btnHubTxt = document.getElementById('btnQuickFlashHubText');
+      const btnNav = document.getElementById('btnQuickFlashFirmware');
+      const btnNavTxt = document.getElementById('btnQuickFlashText');
+
+      if (btnHub) {
+        btnHub.disabled = true;
+        btnHub.style.opacity = '0.65';
+        if (btnHubTxt) btnHubTxt.textContent = '重刷中...';
+      }
+      if (btnNav) {
+        btnNav.disabled = true;
+        btnNav.style.opacity = '0.65';
+        if (btnNavTxt) btnNavTxt.textContent = '重刷中...';
+      }
+
+      // 開啟進度彈窗
+      openFlashProgressModal(port);
+
+      // 步驟 1: 釋放序列埠 (15%)
+      updateFlashProgress(1, 15, '正在釋放序列埠與檢查工具鏈...', `🔌 [步驟 1/4] 暫時釋放 ${port} 序列埠以供燒錄器獨佔寫入...`);
+
+      // 若目前 WebSerial 處於連線狀態，主動斷開以防衝突
+      if (isWebSerialConnected && typeof disconnectWebSerial === 'function') {
+        updateFlashProgress(1, 20, '正在斷開 Web Serial 直連...', `⚡ [步驟 1/4] 偵測到 Web Serial 連線，已安全斷開釋放硬體...`);
+        try { await disconnectWebSerial(); } catch (_) {}
+      }
+
+      // 定時模擬進度平滑過渡
+      let fakeTimer1 = setTimeout(() => {
+        updateFlashProgress(2, 45, '正在編譯 Arduino 核心庫與韌體 (AVR-GCC)...', `🔨 [步驟 2/4] 調用本機 AVR 工具鏈編譯 universal_firmware.ino (ATmega328P 16MHz)...`);
+      }, 700);
+
+      let fakeTimer2 = setTimeout(() => {
+        updateFlashProgress(3, 75, '正在透過 avrdude 寫入 Flash 晶片...', `⚡ [步驟 3/4] 調用 avrdude 燒錄 hex 韌體至 ${port} (115200 baud)...`);
+      }, 2400);
+
       try {
-        logBox.innerHTML += `<div>[${new Date().toLocaleTimeString()}] 📡 檢查伺服器編譯上傳功能...</div>`;
         const res = await fetch('/api/burn/restore_interactive_firmware', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ port: port, fqbn: fqbn })
+          body: JSON.stringify({ port: port, fqbn: 'arduino:avr:uno' })
         });
+        clearTimeout(fakeTimer1);
+        clearTimeout(fakeTimer2);
+
         const data = await res.json();
         if (data.ok) {
-          usedServer = true;
-          logBox.innerHTML += `<div style="color:#00E670; font-weight:bold; margin-top:6px;">🎉🎉 伺服器本地還原大成功！板子已就緒！</div>`;
-          log(`⚡ [韌體還原成功] Arduino Uno (${port}) 已成功恢復積木互動模式！`);
-          return;
+          updateFlashProgress(4, 95, '燒錄完成，正在重新建立序列埠連線...', `🎉 [步驟 4/4] 韌體寫入完成！板子完成硬體重置，正在重新握手通訊...`);
+          await new Promise(r => setTimeout(r, 600));
+          completeFlashProgress(true, data.message, null, port);
         } else {
-          logBox.innerHTML += `<div style="color:#F9E2AF;">ℹ️ 伺服器回報: ${data.error}</div>`;
-          logBox.innerHTML += `<div style="color:#89DCEB; font-weight:bold;">🚀 自動無縫啟動【Web Serial 瀏覽器直接燒錄】黑科技...</div>`;
+          clearTimeout(fakeTimer1);
+          clearTimeout(fakeTimer2);
+          updateFlashProgress(3, 75, '本機工具鏈上傳未成功', `❌ [伺服器回報]: ${data.error}`);
+          // 若支援 Web Serial，詢問是否由瀏覽器直刷
+          if ('serial' in navigator) {
+            const tryWebSerial = confirm(`本機工具鏈回報: ${data.error}\n\n是否改用【Web Serial 瀏覽器直接燒錄】萬能韌體？`);
+            if (tryWebSerial) {
+              const modalLogBox = document.getElementById('flashModalLogBox');
+              try {
+                updateFlashProgress(3, 50, '正在透過 Web Serial 瀏覽器直刷...', '🌐 切換為 Web Serial STK500 晶片直刷引擎...');
+                await flashHexViaWebSerial('/static/firmware/universal_firmware.ino.hex', modalLogBox);
+                completeFlashProgress(true, 'Web Serial 直刷成功', null, port);
+                return;
+              } catch (wsErr) {
+                completeFlashProgress(false, null, `Web Serial 直刷失敗: ${wsErr.message || wsErr}`, port);
+                return;
+              }
+            }
+          }
+          completeFlashProgress(false, null, data.error, port);
         }
       } catch (err) {
-        logBox.innerHTML += `<div style="color:#F9E2AF;">ℹ️ 伺服器離線，自動無縫啟動【Web Serial 瀏覽器直接燒錄】黑科技...</div>`;
-      }
-
-      if (!usedServer) {
-        try {
-          await flashHexViaWebSerial('/static/firmware/universal_firmware.ino.hex', logBox);
-        } catch (flashErr) {
-          logBox.innerHTML += `<div style="color:#F38BA8; font-weight:bold; margin-top:6px;">❌ 瀏覽器直接燒錄異常: ${flashErr.message || flashErr}</div>`;
-          log(`❌ [韌體還原失敗]: ${flashErr.message || flashErr}`);
+        clearTimeout(fakeTimer1);
+        clearTimeout(fakeTimer2);
+        updateFlashProgress(2, 30, '伺服器通訊異常', `❌ [連線異常]: ${err.message || err}`);
+        if ('serial' in navigator) {
+          const tryWebSerial = confirm(`後端連線異常。\n\n是否改用【Web Serial 瀏覽器直接燒錄】萬能韌體？`);
+          if (tryWebSerial) {
+            const modalLogBox = document.getElementById('flashModalLogBox');
+            try {
+              updateFlashProgress(3, 50, '正在透過 Web Serial 瀏覽器直刷...', '🌐 切換為 Web Serial STK500 晶片直刷引擎...');
+              await flashHexViaWebSerial('/static/firmware/universal_firmware.ino.hex', modalLogBox);
+              completeFlashProgress(true, 'Web Serial 直刷成功', null, port);
+              return;
+            } catch (wsErr) {
+              completeFlashProgress(false, null, `Web Serial 直刷失敗: ${wsErr.message || wsErr}`, port);
+              return;
+            }
+          }
+        }
+        completeFlashProgress(false, null, err.message || String(err), port);
+      } finally {
+        if (btnHub) {
+          btnHub.disabled = false;
+          btnHub.style.opacity = '1';
+          if (btnHubTxt) btnHubTxt.textContent = '重刷韌體';
+        }
+        if (btnNav) {
+          btnNav.disabled = false;
+          btnNav.style.opacity = '1';
+          if (btnNavTxt) btnNavTxt.textContent = '重刷萬能韌體';
         }
       }
+    }
+
+    async function restoreInteractiveFirmware() {
+      // 離線燒錄彈窗點擊還原時，直接統一調用具備進度表與通知的 quickFlashUniversalFirmware
+      closeBurnModal();
+      await quickFlashUniversalFirmware(true);
     }
 
     // ==========================================
@@ -6232,6 +6843,79 @@ void loop() {
     </div>
   </div>
 
+  <!-- ⚡ 萬能韌體一鍵重刷進度與通知彈窗 -->
+  <div id="flashProgressModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.75); z-index:99999; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
+    <div style="background:#181825; border:1px solid #3B82F6; border-radius:14px; width:520px; max-width:92vw; padding:22px; box-shadow:0 12px 40px rgba(0,0,0,0.7); color:white; animation:zoomIn 0.2s ease;">
+      <!-- 標題列 -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:22px;" id="flashModalIcon">⚡</span>
+          <h3 id="flashModalTitle" style="margin:0; font-size:16px; color:#93C5FD; font-weight:bold;">萬能韌體一鍵重刷中...</h3>
+        </div>
+        <span id="flashModalCloseX" style="cursor:pointer; font-size:18px; color:#A6ADC8; display:none;" onclick="closeFlashProgressModal()">✕</span>
+      </div>
+
+      <!-- 目標設備標籤 -->
+      <div style="background:#11111B; border:1px solid #313244; border-radius:8px; padding:8px 12px; font-size:12px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center;">
+        <div>🔌 目標裝置: <strong id="flashTargetPort" style="color:#F9E2AF;">COM4 (Arduino Uno)</strong></div>
+        <div style="color:#A6ADC8;">韌體: <code style="color:#89DCEB;">universal_firmware.ino</code></div>
+      </div>
+
+      <!-- 四步進度指示卡 -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:14px;" id="flashStepContainer">
+        <div id="flashStepCard1" style="background:#11111B; border:1px solid #45475A; border-radius:6px; padding:6px 4px; text-align:center; font-size:10px; color:#A6ADC8; transition:all 0.3s ease;">
+          <div>🔌 1. 釋放埠</div>
+          <div style="font-weight:bold; margin-top:2px;" id="flashStep1Status">等待中</div>
+        </div>
+        <div id="flashStepCard2" style="background:#11111B; border:1px solid #45475A; border-radius:6px; padding:6px 4px; text-align:center; font-size:10px; color:#A6ADC8; transition:all 0.3s ease;">
+          <div>🔨 2. 編譯韌體</div>
+          <div style="font-weight:bold; margin-top:2px;" id="flashStep2Status">等待中</div>
+        </div>
+        <div id="flashStepCard3" style="background:#11111B; border:1px solid #45475A; border-radius:6px; padding:6px 4px; text-align:center; font-size:10px; color:#A6ADC8; transition:all 0.3s ease;">
+          <div>⚡ 3. 寫入Flash</div>
+          <div style="font-weight:bold; margin-top:2px;" id="flashStep3Status">等待中</div>
+        </div>
+        <div id="flashStepCard4" style="background:#11111B; border:1px solid #45475A; border-radius:6px; padding:6px 4px; text-align:center; font-size:10px; color:#A6ADC8; transition:all 0.3s ease;">
+          <div>🎉 4. 驗證連線</div>
+          <div style="font-weight:bold; margin-top:2px;" id="flashStep4Status">等待中</div>
+        </div>
+      </div>
+
+      <!-- 進度條外框與發光進度條 -->
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+          <span id="flashProgressText" style="color:#93C5FD; font-weight:bold;">正在啟動燒錄引擎...</span>
+          <span id="flashProgressPercent" style="color:#F9E2AF; font-weight:bold;">0%</span>
+        </div>
+        <div style="background:#11111B; border-radius:10px; height:14px; overflow:hidden; border:1px solid #313244; position:relative;">
+          <div id="flashProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, #3B82F6, #60A5FA); border-radius:10px; transition:width 0.35s ease; box-shadow:0 0 10px rgba(59,130,246,0.6);"></div>
+        </div>
+      </div>
+
+      <!-- 即時日誌終端視窗 -->
+      <div style="margin-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="font-size:11px; color:#A6ADC8;">📋 燒錄即時日誌 (AVR-GCC / avrdude):</label>
+        </div>
+        <div id="flashModalLogBox" style="background:#0F111A; border:1px solid #2B2D42; border-radius:8px; padding:8px 10px; font-family:'Consolas', monospace; font-size:11px; color:#A6ADC8; height:105px; overflow-y:auto; line-height:1.4;">
+        </div>
+      </div>
+
+      <!-- 成不成功結果通知區塊 -->
+      <div id="flashResultNotice" style="display:none; margin-top:12px; padding:10px 14px; border-radius:8px; font-size:12px; line-height:1.4;"></div>
+
+      <!-- 底部按鈕操作列 -->
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+        <button id="btnRetryFlash" onclick="quickFlashUniversalFirmware(true)" style="display:none; background:#F59E0B; color:#111827; border:none; padding:7px 16px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+          🔄 重試燒錄
+        </button>
+        <button id="btnFinishFlash" onclick="closeFlashProgressModal()" style="display:none; background:#10B981; color:white; border:none; padding:7px 20px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;">
+          ✅ 完成關閉
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Google OR-Tools CP-SAT 智慧排程與歷程紀錄對話框 -->
   <div id="cpsatModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.65); z-index:9999; justify-content:center; align-items:center;">
     <div style="background:#1E1E2E; color:#CDD6F4; border-radius:12px; width:480px; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; padding:20px; box-shadow:0 14px 40px rgba(0,0,0,0.7); border:1px solid #313244;">
@@ -6388,8 +7072,8 @@ void loop() {
           <button onclick="downloadInoSketch()" style="background:#313244; color:#CDD6F4; border:1px solid #45475A; padding:8px 12px; border-radius:6px; font-size:12px; cursor:pointer;">
             📥 下載 .ino 原始碼
           </button>
-          <button onclick="restoreInteractiveFirmware()" style="background:#2563EB; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="將板子從離線程式恢復成可與網頁積木即時互動的萬能韌體">
-            ⚡ 還原積木互動韌體
+          <button id="btnRestoreFirmwareModal" onclick="restoreInteractiveFirmware()" style="background:#2563EB; color:white; border:none; padding:8px 14px; border-radius:6px; font-size:12px; font-weight:bold; cursor:pointer;" title="將板子從離線程式恢復成可與網頁積木即時互動的萬能韌體 (universal_firmware)">
+            ⚡ 一鍵重刷萬能韌體
           </button>
         </div>
         <div style="display:flex; gap:8px;">
@@ -6419,7 +7103,7 @@ void loop() {
         </div>
       </div>
       <div style="display:flex; gap:6px;">
-        <button onclick="toggleTutorialSound()" id="btnTutSound" style="background:#313244; color:#CDD6F4; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="開關音效">🔊</button>
+        <button onclick="toggleTutorialSound()" id="btnTutSound" style="background:#313244; color:#CDD6F4; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="開關語音教學與音效">🔊 語音: 開</button>
         <button onclick="stopTutorial()" style="background:#45475A; color:#BAC2DE; border:none; border-radius:6px; padding:4px 8px; font-size:11px; cursor:pointer;" title="退出教學">✕ 結束</button>
       </div>
     </div>

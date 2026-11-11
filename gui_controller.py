@@ -279,6 +279,46 @@ class ArduinoGUI:
             if show_log:
                 self.log(f"❌ 儲存 config.json 失敗: {e}")
 
+    def quick_flash_firmware(self):
+        """使用內建 AVR 工具鏈一鍵重刷萬能全功能韌體"""
+        port = self.port_combobox.get().strip()
+        if not port:
+            messagebox.showwarning("警告", "請先選擇或指定 COM 埠！")
+            return
+
+        firmware_path = os.path.join(WORKSPACE_DIR, "universal_firmware", "universal_firmware.ino")
+        if not os.path.exists(firmware_path):
+            firmware_path = os.path.join(WORKSPACE_DIR, "all_in_one_firmware", "all_in_one_firmware.ino")
+        if not os.path.exists(firmware_path):
+            messagebox.showerror("錯誤", f"找不到韌體草稿: {firmware_path}")
+            return
+
+        if not messagebox.askyesno("確認重刷", f"確定要使用內建 AVR 工具鏈重刷萬能全功能韌體至 {port} 嗎？\n(這將會自動覆蓋 Arduino Uno 現有韌體)"):
+            return
+
+        was_connected = self.is_connected
+        self.disconnect()
+
+        def _do_flash():
+            self.log(f"🚀 開始為 {port} 自動編譯並重刷萬能全功能韌體 (免裝 arduino-cli)...")
+            try:
+                import avr_flasher
+                success = avr_flasher.compile_and_upload(firmware_path, port=port, log_cb=self.log)
+                if success:
+                    self.log("🎉 萬能韌體重刷成功！已完整就緒。")
+                    messagebox.showinfo("成功", f"萬能韌體已成功燒錄至 {port}！\n系統已就緒即時控制。")
+                else:
+                    self.log("❌ 韌體燒錄失敗，請檢視執行日誌！")
+                    messagebox.showerror("失敗", "韌體燒錄失敗，請確認 COM 埠未被其他程式佔用。")
+            except Exception as e:
+                self.log(f"❌ 燒錄發生異常: {e}")
+                messagebox.showerror("異常", str(e))
+            finally:
+                if was_connected:
+                    self.root.after(1000, lambda: self.connect(port))
+
+        threading.Thread(target=_do_flash, daemon=True).start()
+
     def _build_ui(self):
         # 頂部連接列
         top_frame = ttk.LabelFrame(self.root, text=" 🔌 USB 序列通訊與硬體設定 ", padding=6)
@@ -291,6 +331,8 @@ class ArduinoGUI:
         ttk.Button(top_frame, text="🔄 重新整理", command=lambda: self.auto_detect_and_fill(False)).pack(side="left", padx=2)
         self.btn_connect = ttk.Button(top_frame, text="⚡ 連線", command=self.toggle_connection)
         self.btn_connect.pack(side="left", padx=4)
+
+        ttk.Button(top_frame, text="⚡ 重刷萬能韌體", command=self.quick_flash_firmware).pack(side="left", padx=3)
 
         ttk.Checkbutton(top_frame, text="共陽極 (Common Anode)", variable=self.common_anode,
                         command=lambda: self.save_config(False)).pack(side="left", padx=10)

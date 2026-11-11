@@ -144,14 +144,57 @@ def upload_hex(hex_path: str, port: str = "COM4", log_cb=print) -> bool:
         return False
 
 
+def find_arduino_port() -> str:
+    """自動偵測 Arduino Uno 所在的 COM 埠"""
+    try:
+        import serial.tools.list_ports
+        ports = serial.tools.list_ports.comports()
+        # 1. 優先匹配包含 "Arduino" 的 COM 埠
+        for p in ports:
+            desc = (p.description or "").lower()
+            mfg = (getattr(p, "manufacturer", "") or "").lower()
+            if "arduino" in desc or "arduino" in mfg:
+                return p.device
+        # 2. 其次匹配常見 USB-TTL (CH340 / CP210x / FTDI)
+        for p in ports:
+            desc = (p.description or "").lower()
+            if any(k in desc for k in ["ch340", "usb-serial", "cp210", "ftdi"]):
+                return p.device
+        # 3. 排除一般系統主機板 COM1/COM2，選取第一個實體 USB COM 埠
+        for p in ports:
+            if p.device.upper() not in ("COM1", "COM2"):
+                return p.device
+        if ports:
+            return ports[0].device
+    except Exception:
+        pass
+    return "COM4"
+
+
 def compile_and_upload(ino_path: str, port: str = "COM4", log_cb=print) -> bool:
     """一步完成編譯與燒錄"""
+    if not port or port.lower() in ("auto", "none"):
+        port = find_arduino_port()
+        log_cb(f"🔍 自動偵測目標序列埠: {port}")
     hex_file = compile_sketch(ino_path, log_cb=log_cb)
     return upload_hex(hex_file, port, log_cb=log_cb)
 
 
 if __name__ == "__main__":
-    test_ino = sys.argv[1] if len(sys.argv) > 1 else r"D:\PythonTest\AduinoTest\all_in_one_firmware\all_in_one_firmware.ino"
-    test_port = sys.argv[2] if len(sys.argv) > 2 else "COM4"
-    compile_and_upload(test_ino, test_port)
+    default_ino = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universal_firmware", "universal_firmware.ino")
+    if not os.path.exists(default_ino):
+        default_ino = os.path.join(os.path.dirname(os.path.abspath(__file__)), "all_in_one_firmware", "all_in_one_firmware.ino")
+
+    target_ino = sys.argv[1] if len(sys.argv) > 1 else default_ino
+    target_port = sys.argv[2] if len(sys.argv) > 2 else "auto"
+
+    print(f"🚀 [AVR Flasher] 準備燒錄: {target_ino}")
+    print(f"🔌 [AVR Flasher] 目標序列埠: {target_port}")
+    success = compile_and_upload(target_ino, target_port)
+    if success:
+        print("🎉 燒錄成功！")
+        sys.exit(0)
+    else:
+        print("❌ 燒錄失敗！")
+        sys.exit(1)
 
