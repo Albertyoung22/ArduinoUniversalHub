@@ -20,6 +20,10 @@ import queue
 from typing import Optional
 
 if sys.platform.startswith("win"):
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         sys.stderr.reconfigure(encoding="utf-8", errors="replace")
@@ -42,10 +46,17 @@ except ImportError:
     HAS_ORTOOLS = False
 
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    BASE_DIR = sys._MEIPASS
+    EXE_DIR = os.path.dirname(sys.executable)
+    CONFIG_FILE = os.path.join(EXE_DIR, "config.json")
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    EXE_DIR = BASE_DIR
+    CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
+
 WEB_DIR = os.path.join(BASE_DIR, "web")
 BLOCKLY_DIR = os.path.join(WEB_DIR, "blockly")
-CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
 
 def load_hardware_config():
@@ -313,7 +324,11 @@ def serve_blockly(filename):
 # 👧 昕蓉小老師 Edge-TTS 雲端高擬真語音生成
 # ==========================================
 TTS_CACHE_DIR = os.path.join(BASE_DIR, "web", "cache", "tts")
-os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+try:
+    os.makedirs(TTS_CACHE_DIR, exist_ok=True)
+except Exception:
+    TTS_CACHE_DIR = os.path.join(tempfile.gettempdir(), "sophia_tts_cache")
+    os.makedirs(TTS_CACHE_DIR, exist_ok=True)
 
 @app.route("/api/tts", methods=["GET", "POST"])
 def api_tts():

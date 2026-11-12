@@ -5,7 +5,7 @@
   "m2_r_pin": "11",
   "m2_g_pin": "9",
   "m2_b_pin": "10",
-  "common_anode": false,
+  "common_anode": true,
   "servo_pin": "4",
   "relay1_pin": "13",
   "relay2_pin": "12",
