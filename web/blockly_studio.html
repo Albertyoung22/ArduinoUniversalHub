@@ -936,6 +936,584 @@
       70% { box-shadow: 0 0 0 10px rgba(0, 209, 102, 0); }
       100% { box-shadow: 0 0 0 0 rgba(0, 209, 102, 0); }
     }
+
+    /* ============================================================ */
+    /* 🌟 五維沉浸式教學系統樣式 (Persona 2.0 / Ghost Hand / Digital Twin / Certificate) */
+    /* ============================================================ */
+
+    /* 1. 昕蓉擬人化陪伴 (Persona 2.0 動態表情與小夥伴暱稱) */
+    .tut-avatar-wrapper {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: white;
+      padding: 1.5px;
+      box-shadow: 0 3px 12px rgba(244, 114, 182, 0.5);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .tut-avatar-wrapper:hover {
+      transform: scale(1.12) rotate(-5deg);
+    }
+
+    .tut-sophia-svg {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      display: block;
+      transform-origin: center bottom;
+    }
+
+    .tut-mouth {
+      transform-origin: 50px 64px;
+      transition: d 0.15s ease;
+    }
+
+    .tut-eyes {
+      transform-origin: center center;
+    }
+
+    /* 說話狀態：嘴巴動態張闔、雙眼微眨 */
+    .tut-avatar-wrapper.avatar-talking .tut-mouth {
+      animation: sophiaMouthTalk 0.28s infinite alternate ease-in-out;
+    }
+    .tut-avatar-wrapper.avatar-talking .tut-sophia-svg {
+      animation: sophiaTalkingHead 0.55s infinite ease-in-out;
+    }
+
+    @keyframes sophiaMouthTalk {
+      0% { transform: scaleY(0.7) scaleX(0.9); }
+      100% { transform: scaleY(2.2) scaleX(1.15); }
+    }
+    @keyframes sophiaTalkingHead {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-2px) rotate(2deg); }
+    }
+
+    /* 思考狀態：頭像微歪、雙眼看右上 */
+    .tut-avatar-wrapper.avatar-thinking .tut-sophia-svg {
+      transform: rotate(-10deg) translateY(-2px);
+    }
+
+    /* 狂歡慶祝狀態：高興彈跳、歡呼心形眼 */
+    .tut-avatar-wrapper.avatar-celebrate .tut-sophia-svg {
+      animation: sophiaCelebrateBounce 0.45s infinite alternate ease-in-out;
+    }
+
+    @keyframes sophiaCelebrateBounce {
+      0% { transform: translateY(0) scale(1) rotate(-3deg); }
+      100% { transform: translateY(-7px) scale(1.1) rotate(4deg); }
+    }
+
+    .tut-mood-bubble {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #F472B6;
+      color: white;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      animation: bubblePulse 1.8s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes bubblePulse {
+      0%, 100% { transform: scale(0.95); opacity: 0.9; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    .student-name-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      background: rgba(249, 226, 175, 0.16);
+      border: 1px dashed #F9E2AF;
+      color: #F9E2AF;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .student-name-pill:hover {
+      background: rgba(249, 226, 175, 0.35);
+      transform: scale(1.05);
+    }
+
+    /* 2. 魔法引導手指 (Ghost Hand / Magic Wand Drag Animation) */
+    #tutorialGhostHand {
+      position: fixed;
+      z-index: 99999;
+      pointer-events: none;
+      transition: transform 0.65s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.25s;
+      filter: drop-shadow(0 8px 20px rgba(0,0,0,0.55));
+    }
+
+    .ghost-hand-inner {
+      position: relative;
+      width: 48px;
+      height: 48px;
+    }
+
+    .ghost-hand-svg {
+      width: 100%;
+      height: 100%;
+      animation: ghostHandFloat 1.2s infinite ease-in-out alternate;
+    }
+
+    @keyframes ghostHandFloat {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(-6px) rotate(-6deg); }
+    }
+
+    .ghost-tap-ring {
+      position: absolute;
+      top: 6px;
+      left: 10px;
+      width: 24px;
+      height: 24px;
+      border: 2.5px solid #F59E0B;
+      border-radius: 50%;
+      opacity: 0;
+      transform: scale(0.3);
+      pointer-events: none;
+    }
+
+    .ghost-tap-ring.active {
+      animation: tapRingExpand 0.5s ease-out forwards;
+    }
+
+    @keyframes tapRingExpand {
+      0% { opacity: 1; transform: scale(0.3); }
+      100% { opacity: 0; transform: scale(2.2); }
+    }
+
+    /* 3. 數位分身硬體即時模擬台 (Digital Twin Hardware Simulator) */
+    .digital-twin-panel {
+      background: #151622;
+      border-bottom: 1px solid #313244;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .twin-header {
+      background: #11111B;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #28293D;
+      font-size: 11px;
+    }
+
+    .twin-live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: #00E670;
+      background: rgba(0, 230, 112, 0.12);
+      padding: 1px 6px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 230, 112, 0.3);
+      animation: liveBlink 1.4s infinite;
+    }
+
+    @keyframes liveBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.45; }
+    }
+
+    .twin-toggle-btn {
+      background: #252638;
+      border: 1px solid #3B3C52;
+      color: #BAC2DE;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .twin-toggle-btn:hover {
+      background: #36384E;
+      color: white;
+    }
+
+    .twin-body {
+      padding: 8px 10px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: radial-gradient(circle at 50% 30%, #1A1C2C 0%, #11111B 100%);
+    }
+
+    .twin-body.collapsed {
+      display: none !important;
+    }
+
+    /* 迷你 Arduino Uno 板身 */
+    .twin-uno-card {
+      background: linear-gradient(135deg, #0A4349 0%, #082E34 100%);
+      border: 1px solid #146B75;
+      border-radius: 8px;
+      padding: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .twin-uno-title {
+      font-size: 9.5px;
+      font-weight: 900;
+      color: #7FE0EA;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .twin-uno-chip {
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 3px;
+      font-size: 8px;
+      color: #9CA3AF;
+      padding: 3px 6px;
+      text-align: center;
+      margin: 4px 0;
+      font-family: monospace;
+      letter-spacing: 0.5px;
+    }
+
+    .twin-led-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(0,0,0,0.25);
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    .twin-led-bulb {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #4B5563;
+      border: 1.5px solid rgba(255,255,255,0.25);
+      transition: all 0.12s ease;
+      display: inline-block;
+    }
+
+    .twin-led-bulb.pin13-on {
+      background: #FBBF24;
+      border-color: #FEF08A;
+      box-shadow: 0 0 14px #F59E0B, 0 0 24px #F59E0B;
+    }
+
+    .twin-led-bulb.pwr-on {
+      background: #10B981;
+      border-color: #6EE7B7;
+      box-shadow: 0 0 8px #10B981;
+    }
+
+    .twin-led-bulb.tx-on {
+      background: #38BDF8;
+      box-shadow: 0 0 8px #38BDF8;
+    }
+
+    /* 雙 RGB 炫彩燈虛擬模組 */
+    .twin-rgb-card {
+      background: #18192A;
+      border: 1px solid #333652;
+      border-radius: 8px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+    }
+
+    .twin-rgb-title {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #F472B6;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .twin-rgb-pair {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .twin-rgb-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .twin-rgb-sphere {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #25283D;
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.8);
+      position: relative;
+      transition: background 0.15s ease, box-shadow 0.15s ease;
+      cursor: pointer;
+    }
+
+    .twin-rgb-sphere::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 5px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.65);
+      pointer-events: none;
+    }
+
+    .twin-unit-label {
+      font-size: 8.5px;
+      font-weight: bold;
+      color: #A6ADC8;
+    }
+
+    /* 8x8 點矩陣即時模擬屏 */
+    .twin-matrix-card {
+      grid-column: span 2;
+      background: #111118;
+      border: 1px solid #2B2C42;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .twin-matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 8px);
+      grid-template-rows: repeat(8, 8px);
+      gap: 2.5px;
+      background: #000;
+      padding: 5px;
+      border-radius: 5px;
+      border: 1.5px solid #2A2B3D;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.9);
+    }
+
+    .twin-matrix-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 1.5px;
+      background: #22222E;
+      transition: background 0.08s, box-shadow 0.08s;
+    }
+
+    .twin-matrix-dot.on {
+      background: #EF4444;
+      box-shadow: 0 0 6px #DC2626, 0 0 10px #EF4444;
+    }
+
+    .twin-matrix-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 10px;
+      color: #A6ADC8;
+    }
+
+    .twin-matrix-badge {
+      background: rgba(239, 68, 68, 0.16);
+      color: #F87171;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: bold;
+      font-size: 9.5px;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      text-align: center;
+    }
+
+    /* 4. 創客榮譽證書彈出視窗 (Certificate Modal) */
+    #makerCertificateModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      z-index: 100010;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .cert-container {
+      position: relative;
+      width: 640px;
+      max-width: 95vw;
+      background: linear-gradient(145deg, #FFFBF5 0%, #FFF4E5 50%, #FFEAD2 100%);
+      border: 6px double #D97706;
+      border-radius: 18px;
+      padding: 32px 36px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 0 3px #FDE68A;
+      color: #451A03;
+      text-align: center;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+    }
+
+    .cert-corner-decor {
+      position: absolute;
+      font-size: 26px;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+    .cert-c-tl { top: 8px; left: 10px; }
+    .cert-c-tr { top: 8px; right: 10px; }
+    .cert-c-bl { bottom: 8px; left: 10px; }
+    .cert-c-br { bottom: 8px; right: 10px; }
+
+    .cert-brand-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .cert-badge-ribbon {
+      font-size: 32px;
+      filter: drop-shadow(0 4px 8px rgba(217, 119, 6, 0.4));
+    }
+
+    .cert-main-title {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #92400E;
+      margin-bottom: 2px;
+    }
+
+    .cert-subtitle {
+      font-size: 12px;
+      font-weight: bold;
+      color: #B45309;
+      letter-spacing: 1px;
+      margin-bottom: 18px;
+    }
+
+    .cert-recipient-name {
+      font-size: 28px;
+      font-weight: 900;
+      color: #1E3A8A;
+      border-bottom: 2.5px solid #F59E0B;
+      padding: 0 24px 4px 24px;
+      display: inline-block;
+      margin-bottom: 16px;
+      letter-spacing: 1px;
+    }
+
+    .cert-desc-text {
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #78350F;
+      max-width: 500px;
+      margin: 0 auto 20px auto;
+    }
+
+    .cert-badge-box {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1.5px dashed #F59E0B;
+      border-radius: 12px;
+      padding: 10px 18px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: 14px;
+      color: #B45309;
+      margin-bottom: 22px;
+    }
+
+    .cert-footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-top: 10px;
+      border-top: 1px dashed rgba(217, 119, 6, 0.4);
+    }
+
+    .cert-seal {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 3px double #DC2626;
+      color: #DC2626;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 10px;
+      line-height: 1.2;
+      transform: rotate(-12deg);
+      box-shadow: 0 2px 10px rgba(220, 38, 38, 0.25);
+    }
+
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #makerCertificateModal, #makerCertificateModal * {
+        visibility: visible;
+      }
+      #makerCertificateModal {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: white;
+        display: flex !important;
+        padding: 0;
+      }
+      .cert-container {
+        box-shadow: none !important;
+        border: 4px solid #B45309 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+      .cert-actions {
+        display: none !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1124,6 +1702,72 @@
           <button class="tab-btn" id="tabCpp" onclick="switchCodeTab('cpp')">⚙️ Arduino C++</button>
         </div>
         <span style="font-size: 10px; color: #6C7086;">即時生成</span>
+      </div>
+
+      <!-- 🎮 數位分身硬體即時模擬台 (Digital Twin Hardware Simulator) -->
+      <div class="digital-twin-panel" id="digitalTwinDock">
+        <div class="twin-header">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:13px;">🎮</span>
+            <span style="font-weight:bold; font-size:11px; color:#A6E3A1;">硬體數位分身 (Digital Twin)</span>
+            <span class="twin-live-indicator">● LIVE 模擬</span>
+          </div>
+          <button class="twin-toggle-btn" onclick="toggleDigitalTwin()" id="btnTwinToggle" title="展開或收合虛擬模擬板">收合 ▲</button>
+        </div>
+        <div class="twin-body" id="twinBody">
+          <!-- Arduino Uno 迷你板 -->
+          <div class="twin-uno-card">
+            <div class="twin-uno-title">
+              <span>ARDUINO UNO</span>
+              <span style="font-size:8px; color:#A6ADC8;">Rev3</span>
+            </div>
+            <div class="twin-uno-chip">ATmega328P-PU</div>
+            <div class="twin-led-row">
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span class="twin-led-bulb pwr-on" title="電源指示 (ON)"></span>
+                <span style="font-size:8px; color:#A6ADC8;">PWR</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:4px;">
+                <span class="twin-led-bulb" id="simLedPin13" title="Pin 13 板載 LED"></span>
+                <span style="font-size:8.5px; font-weight:bold; color:#FDE047;">L(13)</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:3px;">
+                <span class="twin-led-bulb" id="simLedTx" title="TX 傳送指示"></span>
+                <span style="font-size:7.5px; color:#94A3B8;">TX</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 雙 RGB 炫彩 LED 模組 -->
+          <div class="twin-rgb-card">
+            <div class="twin-rgb-title">
+              <span>🌈 雙 RGB 炫彩燈</span>
+              <span id="twinRgbValText" style="font-size:8px; color:#94A3B8;">熄滅</span>
+            </div>
+            <div class="twin-rgb-pair">
+              <div class="twin-rgb-unit">
+                <div class="twin-rgb-sphere" id="simRgbBulb1" onclick="DigitalTwin.testRgb(1)" title="點擊測試 RGB 燈 1 (M1)"></div>
+                <span class="twin-unit-label">燈 1 (M1)</span>
+              </div>
+              <div class="twin-rgb-unit">
+                <div class="twin-rgb-sphere" id="simRgbBulb2" onclick="DigitalTwin.testRgb(2)" title="點擊測試 RGB 燈 2 (M2)"></div>
+                <span class="twin-unit-label">燈 2 (M2)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 8x8 點矩陣顯示屏 -->
+          <div class="twin-matrix-card">
+            <div class="twin-matrix-grid" id="simMatrixGrid">
+              <!-- 64 dynamic LED dots -->
+            </div>
+            <div class="twin-matrix-info">
+              <div style="font-weight:bold; color:#FCA5A5; font-size:10px;">📟 8x8 點矩陣</div>
+              <div class="twin-matrix-badge" id="simMatrixStateBadge">準備就緒</div>
+              <div style="font-size:8.5px; color:#6B7280;">MAX7219 驅動</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 代碼預覽 (含透明發光流光光棒) -->
@@ -1783,6 +2427,14 @@
 
       // 初始化側欄寬度拖曳手柄
       initSidebarResizer();
+
+      // 初始化數位分身硬體即時模擬器
+      if (window.DigitalTwin) {
+        DigitalTwin.init();
+      }
+
+      // 初始化小創客姓名顯示
+      updateStudentNameUI();
     });
 
     let rawPythonCode = '';
@@ -2236,6 +2888,11 @@ void loop() {
       const ts = new Date().toLocaleTimeString();
       box.innerHTML += `<div><span style="color:#6C7086;">[${ts}]</span> ${msg}</div>`;
       box.scrollTop = box.scrollHeight;
+
+      // 🌟 即時將硬體/後端日誌同步至數位分身模擬器
+      if (typeof DigitalTwin !== 'undefined' && DigitalTwin.updateFromLog) {
+        DigitalTwin.updateFromLog(msg);
+      }
     }
 
     function clearLog() {
@@ -2582,6 +3239,9 @@ void loop() {
           const r = evalNumInput(curr, 'R', 0);
           const g = evalNumInput(curr, 'G', 0);
           const b = evalNumInput(curr, 'B', 0);
+          if (typeof DigitalTwin !== 'undefined') {
+            DigitalTwin.setRgb(target, r, g, b);
+          }
           if (target === '1') {
             await sendWebSerialCommand(`RGB,${hw.m1_r},${hw.m1_g},${hw.m1_b},${hw.anode},${r},${g},${b}`);
           } else if (target === '2') {
@@ -2630,6 +3290,9 @@ void loop() {
         else if (curr.type === 'arduino_digital_write') {
           const pin = curr.getFieldValue('PIN');
           const val = curr.getFieldValue('VAL');
+          if ((pin == 13 || pin == '13') && typeof DigitalTwin !== 'undefined') {
+            DigitalTwin.setPin13(val == 1 || val == '1' || val == 'HIGH');
+          }
           await sendWebSerialCommand(`DWRITE,${pin},${val}`);
           log(`💡 [數位輸出] 腳位 ${pin} -> ${val}`);
         }
@@ -2667,6 +3330,9 @@ void loop() {
             for (let f = 0; f < frames.length; f++) {
               if (clientExecutionStop) break;
               const b = frames[f];
+              if (typeof DigitalTwin !== 'undefined' && MATRIX_PRESETS[anim]) {
+                DigitalTwin.setMatrixIcon(anim);
+              }
               await sendWebSerialCommand(`MATRIX_ALL,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk},${b[0]},${b[1]},${b[2]},${b[3]},${b[4]},${b[5]},${b[6]},${b[7]}`);
               await sleepAsync(spd * 1000);
             }
@@ -2676,6 +3342,9 @@ void loop() {
           const x = Math.max(0, Math.min(7, Math.round(evalNumInput(curr, 'X', 0))));
           const y = Math.max(0, Math.min(7, Math.round(evalNumInput(curr, 'Y', 0))));
           const st = curr.getFieldValue('STATE') === '1';
+          if (typeof DigitalTwin !== 'undefined') {
+            DigitalTwin.setMatrixPixel(x, y, st);
+          }
           if (!window.jsMatrixPixelBuf) window.jsMatrixPixelBuf = [0, 0, 0, 0, 0, 0, 0, 0];
           if (st) {
             window.jsMatrixPixelBuf[y] |= (1 << (7 - x));
@@ -2700,11 +3369,17 @@ void loop() {
         }
         else if (curr.type === 'matrix_show_icon') {
           const icon = curr.getFieldValue('ICON') || 'heart';
+          if (typeof DigitalTwin !== 'undefined') {
+            DigitalTwin.setMatrixIcon(icon);
+          }
           const b = MATRIX_PRESETS[icon] || MATRIX_PRESETS['heart'];
           await sendWebSerialCommand(`MATRIX_ALL,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk},${b[0]},${b[1]},${b[2]},${b[3]},${b[4]},${b[5]},${b[6]},${b[7]}`);
           log(`📟 [Web Serial 點陣] 顯示圖案: ${icon}`);
         }
         else if (curr.type === 'matrix_clear') {
+          if (typeof DigitalTwin !== 'undefined') {
+            DigitalTwin.clearMatrix();
+          }
           await sendWebSerialCommand(`MATRIX_CLEAR,${hw.matrix_din},${hw.matrix_cs},${hw.matrix_clk}`);
           log(`📟 [Web Serial 點陣] 清除畫面 (全滅)`);
         }
@@ -5578,11 +6253,418 @@ void loop() {
       }
     }
 
+    // ============================================================
+    // 🌟 五維沉浸式教學系統核心引擎 (Five-Dimensional Immersive Engine)
+    // ============================================================
+
+    // 1. 小創客個人化姓名管理 (Student Persona Memory)
+    function getStudentName() {
+      return localStorage.getItem('sophia_student_name') || '小創客';
+    }
+
+    function setStudentName(name) {
+      const clean = (name || '').trim().slice(0, 10) || '小創客';
+      localStorage.setItem('sophia_student_name', clean);
+      updateStudentNameUI();
+    }
+
+    function promptStudentName() {
+      const current = getStudentName();
+      const n = prompt('👦 請輸入你的名字或暱稱（例如：小宇、翔翔、婷婷）：', current);
+      if (n !== null) {
+        setStudentName(n);
+        playSound('magic');
+        speakTutorialMessage(`太棒了！很高興認識你，${getStudentName()}！今天我們要一起發明好玩的硬體作品喔！`);
+      }
+    }
+
+    function updateStudentNameUI() {
+      const name = getStudentName();
+      const el = document.getElementById('tutStudentName');
+      if (el) el.innerText = name;
+      const certEl = document.getElementById('certRecipientName');
+      if (certEl) certEl.innerText = `${name} 同學`;
+    }
+
+    // 2. 昕蓉擬人化表情控制 (Persona 2.0 Mood States)
+    // moods: 'idle', 'talking', 'thinking', 'celebrate', 'guide'
+    let currentSophiaMood = 'idle';
+    function setSophiaMood(mood) {
+      currentSophiaMood = mood;
+      const avatar = document.getElementById('tutSophiaAvatar');
+      const bubble = document.getElementById('tutMoodBubble');
+      const mouth = document.getElementById('tutSophiaMouth');
+      if (!avatar) return;
+
+      avatar.classList.remove('avatar-talking', 'avatar-thinking', 'avatar-celebrate', 'avatar-idle');
+      avatar.classList.add(`avatar-${mood}`);
+
+      if (mood === 'talking') {
+        if (bubble) bubble.innerText = '🔊';
+      } else if (mood === 'thinking') {
+        if (bubble) bubble.innerText = '💭';
+        if (mouth) mouth.setAttribute('d', 'M47 64 Q50 64 53 64');
+      } else if (mood === 'celebrate') {
+        if (bubble) bubble.innerText = '🎉';
+        if (mouth) mouth.setAttribute('d', 'M44 60 Q50 71 56 60');
+      } else {
+        // idle / guide
+        if (bubble) bubble.innerText = '✨';
+        if (mouth) mouth.setAttribute('d', 'M46 62 Q50 67 54 62');
+      }
+    }
+
+    // 3. 魔法引導手指動態軌跡 (Ghost Hand / Magic Wand Drag Animation)
+    function animateGhostHand(fromSelector, toSelector, duration = 800, callback) {
+      const hand = document.getElementById('tutorialGhostHand');
+      const ring = document.getElementById('ghostTapRing');
+      if (!hand) {
+        if (typeof callback === 'function') callback();
+        return;
+      }
+
+      let startRect = null;
+      let targetRect = null;
+
+      if (typeof fromSelector === 'string') {
+        const el = document.querySelector(fromSelector);
+        if (el) startRect = el.getBoundingClientRect();
+      } else if (fromSelector && fromSelector.left !== undefined) {
+        startRect = fromSelector;
+      }
+
+      if (typeof toSelector === 'string') {
+        const el = document.querySelector(toSelector);
+        if (el) targetRect = el.getBoundingClientRect();
+      } else if (toSelector && toSelector.left !== undefined) {
+        targetRect = toSelector;
+      }
+
+      // 若未指定起點，預設從畫面左下或右下滑入
+      if (!startRect) {
+        startRect = { left: window.innerWidth * 0.2, top: window.innerHeight * 0.7, width: 40, height: 40 };
+      }
+      if (!targetRect) {
+        targetRect = startRect;
+      }
+
+      const startX = startRect.left + (startRect.width || 0) / 2;
+      const startY = startRect.top + (startRect.height || 0) / 2;
+      const targetX = targetRect.left + (targetRect.width || 0) / 2;
+      const targetY = targetRect.top + (targetRect.height || 0) / 2;
+
+      hand.style.display = 'block';
+      hand.style.opacity = '1';
+      hand.style.transition = 'none';
+      hand.style.transform = `translate(${startX}px, ${startY}px) scale(0.85)`;
+
+      if (ring) {
+        ring.classList.remove('active');
+        void ring.offsetWidth;
+        ring.classList.add('active');
+      }
+      playSound('pop');
+
+      setTimeout(() => {
+        hand.style.transition = `transform ${duration}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+        hand.style.transform = `translate(${targetX}px, ${targetY}px) scale(1.05)`;
+
+        setTimeout(() => {
+          if (ring) {
+            ring.classList.remove('active');
+            void ring.offsetWidth;
+            ring.classList.add('active');
+          }
+          playSound('pop');
+
+          setTimeout(() => {
+            hand.style.transition = 'opacity 0.3s ease';
+            hand.style.opacity = '0';
+            setTimeout(() => {
+              hand.style.display = 'none';
+              if (typeof callback === 'function') callback();
+            }, 300);
+          }, 350);
+        }, duration);
+      }, 80);
+    }
+
+    // 4. 數位分身即時硬體模擬器 (Digital Twin Simulator Engine)
+    window.DigitalTwin = {
+      isCollapsed: false,
+      pin13: false,
+      rgb1: { r: 0, g: 0, b: 0 },
+      rgb2: { r: 0, g: 0, b: 0 },
+
+      init() {
+        const grid = document.getElementById('simMatrixGrid');
+        if (grid && grid.children.length === 0) {
+          grid.innerHTML = '';
+          for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+              const dot = document.createElement('div');
+              dot.className = 'twin-matrix-dot';
+              dot.id = `twinDot_${r}_${c}`;
+              grid.appendChild(dot);
+            }
+          }
+        }
+        this.reset();
+      },
+
+      toggle() {
+        this.isCollapsed = !this.isCollapsed;
+        const body = document.getElementById('twinBody');
+        const btn = document.getElementById('btnTwinToggle');
+        if (body) body.classList.toggle('collapsed', this.isCollapsed);
+        if (btn) btn.innerText = this.isCollapsed ? '展開 ▼' : '收合 ▲';
+      },
+
+      setPin13(val) {
+        this.pin13 = !!val;
+        const led = document.getElementById('simLedPin13');
+        if (led) led.classList.toggle('pin13-on', this.pin13);
+        this.pulseTxRx();
+      },
+
+      setRgb(target, r, g, b) {
+        r = Math.max(0, Math.min(255, parseInt(r) || 0));
+        g = Math.max(0, Math.min(255, parseInt(g) || 0));
+        b = Math.max(0, Math.min(255, parseInt(b) || 0));
+
+        const updateBulb = (el, color) => {
+          if (!el) return;
+          if (color.r === 0 && color.g === 0 && color.b === 0) {
+            el.style.background = '#25283D';
+            el.style.boxShadow = 'inset 0 0 6px rgba(0,0,0,0.8)';
+          } else {
+            const rgbStr = `rgb(${color.r}, ${color.g}, ${color.b})`;
+            el.style.background = rgbStr;
+            el.style.boxShadow = `0 0 16px ${rgbStr}, 0 0 32px ${rgbStr}, inset 0 0 8px rgba(255,255,255,0.7)`;
+          }
+        };
+
+        if (target === '1' || target === 1) {
+          this.rgb1 = { r, g, b };
+          updateBulb(document.getElementById('simRgbBulb1'), this.rgb1);
+        } else if (target === '2' || target === 2) {
+          this.rgb2 = { r, g, b };
+          updateBulb(document.getElementById('simRgbBulb2'), this.rgb2);
+        } else {
+          this.rgb1 = { r, g, b };
+          this.rgb2 = { r, g, b };
+          updateBulb(document.getElementById('simRgbBulb1'), this.rgb1);
+          updateBulb(document.getElementById('simRgbBulb2'), this.rgb2);
+        }
+
+        const txt = document.getElementById('twinRgbValText');
+        if (txt) {
+          txt.innerText = (r === 0 && g === 0 && b === 0) ? '熄滅' : `R:${r} G:${g} B:${b}`;
+        }
+        this.pulseTxRx();
+      },
+
+      testRgb(target) {
+        const colors = [
+          [255, 0, 0], [0, 255, 0], [0, 0, 255],
+          [255, 200, 0], [0, 255, 255], [255, 0, 255]
+        ];
+        const pick = colors[Math.floor(Math.random() * colors.length)];
+        this.setRgb(target, pick[0], pick[1], pick[2]);
+        playSound('ding');
+      },
+
+      setMatrixIcon(iconName) {
+        const presets = typeof MATRIX_PRESETS !== 'undefined' ? MATRIX_PRESETS : {};
+        const bytes = presets[iconName] || presets['heart'] || [0, 0, 0, 0, 0, 0, 0, 0];
+        for (let r = 0; r < 8; r++) {
+          const rowByte = bytes[r] || 0;
+          for (let c = 0; c < 8; c++) {
+            const on = !!((rowByte >> (7 - c)) & 1);
+            const dot = document.getElementById(`twinDot_${r}_${c}`);
+            if (dot) dot.classList.toggle('on', on);
+          }
+        }
+        const badge = document.getElementById('simMatrixStateBadge');
+        if (badge) badge.innerText = `顯示: ${iconName}`;
+        this.pulseTxRx();
+      },
+
+      setMatrixPixel(x, y, state) {
+        x = parseInt(x) || 0;
+        y = parseInt(y) || 0;
+        const on = (state === true || state === 1 || state === '1' || state === 'True');
+        const dot = document.getElementById(`twinDot_${y}_${x}`);
+        if (dot) dot.classList.toggle('on', on);
+        this.pulseTxRx();
+      },
+
+      clearMatrix() {
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const dot = document.getElementById(`twinDot_${r}_${c}`);
+            if (dot) dot.classList.remove('on');
+          }
+        }
+        const badge = document.getElementById('simMatrixStateBadge');
+        if (badge) badge.innerText = '全滅 (已清除)';
+        this.pulseTxRx();
+      },
+
+      pulseTxRx() {
+        const tx = document.getElementById('simLedTx');
+        if (tx) {
+          tx.classList.add('tx-on');
+          setTimeout(() => tx.classList.remove('tx-on'), 80);
+        }
+      },
+
+      reset() {
+        this.setPin13(false);
+        this.setRgb('both', 0, 0, 0);
+        this.clearMatrix();
+      },
+
+      updateFromLog(msg) {
+        if (!msg) return;
+        // 腳位 13
+        if (msg.includes('腳位 13') || msg.includes('Pin 13') || msg.includes('Pin13')) {
+          if (msg.includes('高電位') || msg.includes('HIGH') || msg.includes('開啟') || msg.includes('點亮')) {
+            this.setPin13(true);
+          } else if (msg.includes('低電位') || msg.includes('LOW') || msg.includes('關閉') || msg.includes('熄滅')) {
+            this.setPin13(false);
+          }
+        }
+        // RGB
+        let rgbMatch = msg.match(/RGB.*?燈(\d|both).*?R:(\d+)\s*G:(\d+)\s*B:(\d+)/i) ||
+                       msg.match(/RGB,.*?(\d+),(\d+),(\d+)/);
+        if (rgbMatch) {
+          if (rgbMatch.length === 5) {
+            this.setRgb(rgbMatch[1], rgbMatch[2], rgbMatch[3], rgbMatch[4]);
+          } else if (rgbMatch.length === 4) {
+            this.setRgb('both', rgbMatch[1], rgbMatch[2], rgbMatch[3]);
+          }
+        }
+        // 點矩陣
+        if (msg.includes('點陣') || msg.includes('點矩陣')) {
+          let mIcon = msg.match(/顯示圖案:\s*([a-zA-Z0-9_]+)/);
+          if (mIcon && mIcon[1]) {
+            this.setMatrixIcon(mIcon[1]);
+          } else if (msg.includes('清除') || msg.includes('全滅')) {
+            this.clearMatrix();
+          }
+        }
+      }
+    };
+
+    function toggleDigitalTwin() {
+      if (window.DigitalTwin) DigitalTwin.toggle();
+    }
+
+    // 5. Canvas Confetti 慶祝噴發引擎 (Zero-dependency Confetti Engine)
+    function fireConfetti(durationMs = 3000) {
+      const canvas = document.getElementById('confettiCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.display = 'block';
+
+      const colors = ['#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#FDE047'];
+      const particles = [];
+      const particleCount = 90;
+
+      for (let i = 0; i < particleCount; i++) {
+        particles.push({
+          x: canvas.width * (0.3 + Math.random() * 0.4),
+          y: canvas.height * 0.65,
+          vx: (Math.random() - 0.5) * 16,
+          vy: -Math.random() * 18 - 8,
+          size: Math.random() * 8 + 5,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          rotation: Math.random() * 360,
+          rotationSpeed: (Math.random() - 0.5) * 12,
+          gravity: 0.45,
+          drag: 0.98,
+          opacity: 1
+        });
+      }
+
+      const startTime = performance.now();
+      let animId = null;
+
+      function frame(now) {
+        const elapsed = now - startTime;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.vx *= p.drag;
+          p.rotation += p.rotationSpeed;
+
+          if (elapsed > durationMs - 800) {
+            p.opacity = Math.max(0, (durationMs - elapsed) / 800);
+          }
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate((p.rotation * Math.PI) / 180);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.opacity;
+          ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 1.4);
+          ctx.restore();
+        });
+
+        if (elapsed < durationMs) {
+          animId = requestAnimationFrame(frame);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.style.display = 'none';
+        }
+      }
+      animId = requestAnimationFrame(frame);
+    }
+
+    // 6. 創客榮譽成就證書彈窗管理 (Maker Certificate Modal)
+    function openCertificateModal(lessonName) {
+      updateStudentNameUI();
+      const modal = document.getElementById('makerCertificateModal');
+      const badgeTxt = document.getElementById('certBadgeText');
+      const dateTxt = document.getElementById('certDateText');
+
+      if (badgeTxt && lessonName) {
+        badgeTxt.innerText = `【${lessonName}】小達人認證`;
+      }
+      if (dateTxt) {
+        const now = new Date();
+        dateTxt.innerText = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月 ${now.getDate()} 日`;
+      }
+      if (modal) modal.style.display = 'flex';
+      playSound('victory');
+      fireConfetti(4000);
+      setSophiaMood('celebrate');
+    }
+
+    function closeCertificateModal() {
+      const modal = document.getElementById('makerCertificateModal');
+      if (modal) modal.style.display = 'none';
+      setSophiaMood('idle');
+    }
+
+    function printCertificate() {
+      window.print();
+    }
+
     // 啟動教學模式 (可選自動播放示範或親手跟著做)
     function startTutorial(lessonId, isAutoPlay = false) {
       closeLearningGuide();
       const lesson = LESSONS_DATA.find(l => l.id === lessonId);
       if (!lesson) return;
+
+      updateStudentNameUI();
+      setSophiaMood('idle');
 
       // 🌟 解鎖 Web 瀏覽器音訊與語音播放權限 (在使用者手動點擊當下預先啟動音訊許可)
       try {
@@ -5612,6 +6694,7 @@ void loop() {
 
     function stopTutorialAudio() {
       tutSpeechGeneration++;
+      setSophiaMood('idle');
       if (currentTtsAudio) {
         try {
           currentTtsAudio.pause();
@@ -5632,6 +6715,7 @@ void loop() {
     }
 
     function fallbackSpeechSynthesis(clean, onComplete) {
+      setSophiaMood('talking');
       if ('speechSynthesis' in window) {
         try {
           window.speechSynthesis.cancel();
@@ -5651,6 +6735,7 @@ void loop() {
           const finish = () => {
             if (!done) {
               done = true;
+              setSophiaMood('idle');
               if (typeof onComplete === 'function') onComplete();
             }
           };
@@ -5663,7 +6748,10 @@ void loop() {
         }
       }
       const fallbackMs = Math.max(2500, clean.length * 180 + 1000);
-      tutAutoPlayTimer = setTimeout(() => { if (typeof onComplete === 'function') onComplete(); }, fallbackMs);
+      tutAutoPlayTimer = setTimeout(() => {
+        setSophiaMood('idle');
+        if (typeof onComplete === 'function') onComplete();
+      }, fallbackMs);
     }
 
     function speakTutorialMessage(text, onComplete) {
@@ -5673,14 +6761,18 @@ void loop() {
         return;
       }
 
+      // 將文字中的 {name} 替換為小朋友的名字
+      const studentName = getStudentName();
+      let personalized = text.replace(/\{name\}/g, studentName);
+
       // 濾除 HTML 標籤、特殊符號與 Emoji，保留純純的親切引導詞
-      let clean = text.replace(/<[^>]*>/g, ' ')
-                      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
-                      .replace(/[\u{2600}-\u{26FF}]/gu, '')
-                      .replace(/[\u{2700}-\u{27BF}]/gu, '')
-                      .replace(/[`*#_~]/g, '')
-                      .replace(/\s+/g, ' ')
-                      .trim();
+      let clean = personalized.replace(/<[^>]*>/g, ' ')
+                              .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+                              .replace(/[\u{2600}-\u{26FF}]/gu, '')
+                              .replace(/[\u{2700}-\u{27BF}]/gu, '')
+                              .replace(/[`*#_~]/g, '')
+                              .replace(/\s+/g, ' ')
+                              .trim();
       if (!clean) {
         if (typeof onComplete === 'function') onComplete();
         return;
@@ -5702,6 +6794,7 @@ void loop() {
       const doComplete = () => {
         if (callbackInvoked || myGen !== tutSpeechGeneration) return;
         callbackInvoked = true;
+        setSophiaMood('idle');
         const cardHeader = document.getElementById('tutCardHeader');
         if (cardHeader && currentTutLesson) {
           const step = currentTutLesson.steps[currentTutStepIdx];
@@ -5717,6 +6810,8 @@ void loop() {
         const step = currentTutLesson.steps[currentTutStepIdx];
         cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step ? step.title : ''} 🔊`;
       }
+
+      setSophiaMood('talking');
 
       // 呼叫後端 edge-tts 語音合成引擎 (zh-TW-HsiaoChenNeural)
       const audioUrl = `/api/tts?text=${encodeURIComponent(clean)}`;
@@ -5750,6 +6845,10 @@ void loop() {
 
       clearTimeout(tutAutoPlayTimer);
 
+      const studentName = getStudentName();
+      const stepTitle = (step.title || '').replace(/\{name\}/g, studentName);
+      const stepText = (step.text || '').replace(/\{name\}/g, studentName);
+
       const cardHeader = document.getElementById('tutCardHeader');
       const cardStep = document.getElementById('tutCardStepIndicator');
       const cardMsg = document.getElementById('tutCardMessage');
@@ -5757,7 +6856,7 @@ void loop() {
       const btnPrev = document.getElementById('btnTutPrev');
       const btnNext = document.getElementById('btnTutNext');
 
-      if (cardHeader) cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${step.title}`;
+      if (cardHeader) cardHeader.innerText = `${currentTutLesson.title.split('：')[0]} - ${stepTitle}`;
       if (cardStep) cardStep.innerText = `步驟 ${currentTutStepIdx + 1} / ${currentTutLesson.steps.length} ${isTutAutoPlaying ? '• 🎬 自動示範中' : '• 👣 互動中'}`;
       if (cardMsg) {
         let chipHtml = '';
@@ -5773,8 +6872,8 @@ void loop() {
           `;
         }
         cardMsg.innerHTML = `
-          <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px; font-size:13.5px;">${step.title}</div>
-          <div style="color:#CDD6F4; font-size:12px; line-height:1.45;">${step.text}</div>
+          <div style="font-weight:bold; color:#F9E2AF; margin-bottom:4px; font-size:13.5px;">${stepTitle}</div>
+          <div style="color:#CDD6F4; font-size:12px; line-height:1.45;">${stepText}</div>
           ${chipHtml}
         `;
       }
@@ -5798,8 +6897,15 @@ void loop() {
       // 聚焦並高亮目標 DOM 元件
       highlightElement(step.target);
 
+      // 👆 觸發魔法引導小手動畫，生動指向目標
+      if (step.target) {
+        setTimeout(() => {
+          animateGhostHand(null, step.target, 650);
+        }, 150);
+      }
+
       // 🌟 核心防搶拍機制：語音完全朗讀完畢後，預留 1.2 秒自然緩衝讓孩子觀察積木，再進入下一步驟！
-      speakTutorialMessage(`${step.title}。${step.text}`, () => {
+      speakTutorialMessage(`${stepTitle}。${stepText}`, () => {
         if (!isTutAutoPlaying) return;
         tutAutoPlayTimer = setTimeout(() => {
           if (!isTutAutoPlaying) return;
@@ -5886,21 +6992,30 @@ void loop() {
       isTutAutoPlaying = false;
       playSound('victory');
 
+      setSophiaMood('celebrate');
+      fireConfetti(3500);
+
       let done = getCompletedMissions();
       if (!done.includes(currentTutLesson.id)) {
         done.push(currentTutLesson.id);
         saveCompletedMissions(done);
       }
 
+      const sName = getStudentName();
+      const lessonShort = currentTutLesson.title.split('：')[0];
+
       const cardMsg = document.getElementById('tutCardMessage');
       if (cardMsg) {
         cardMsg.innerHTML = `
-          <div style="color:#00E670; font-size:15px; font-weight:bold; margin-bottom:6px;">🎉 哇！恭喜你完成了【${currentTutLesson.title.split('：')[0]}】！</div>
-          <div style="color:#CDD6F4; font-size:12px;">你獲得了一顆金黃星星 ⭐！現在你可以隨心所欲修改數值，玩出你的專屬作品喔！</div>
+          <div style="color:#00E670; font-size:15px; font-weight:bold; margin-bottom:6px;">🎉 哇！太厲害了，${sName}！你完成了【${lessonShort}】！</div>
+          <div style="color:#CDD6F4; font-size:12px; margin-bottom:10px;">你獲得了一顆金黃星星 ⭐！可以點擊下方領取你的專屬榮譽證書喔！</div>
+          <button onclick="openCertificateModal('${lessonShort}')" style="background:linear-gradient(135deg, #F59E0B, #D97706); color:white; border:none; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(245,158,11,0.4); display:inline-flex; align-items:center; gap:5px;">
+            🏅 領取小創客榮譽證書
+          </button>
         `;
       }
       // 昕蓉小老師過關語音
-      speakTutorialMessage(`太棒了！恭喜你完成了${currentTutLesson.title.split('：')[0]}！你獲得了一顆金黃星星！`);
+      speakTutorialMessage(`太棒了，${sName}！恭喜你完成了${lessonShort}！你獲得了一顆金黃星星，還可以領取專屬榮譽證書喔！`);
 
       const btnNext = document.getElementById('btnTutNext');
       if (btnNext) {
@@ -7281,13 +8396,35 @@ void loop() {
   </div>
 
   <!-- 👧 昕蓉小導師懸浮解說卡片 -->
-  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:380px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite;">
+  <div id="tutorialCompanionCard" style="display:none; position:fixed; bottom:24px; right:24px; z-index:9985; background:linear-gradient(135deg, #1E1E2E, #2A2438); border:2px solid #F472B6; border-radius:16px; padding:18px 20px; box-shadow:0 16px 48px rgba(0,0,0,0.75); width:390px; max-width:92vw; color:#CDD6F4; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; animation:floatBob 3s ease-in-out infinite;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:24px;">👧</span>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <!-- 👧 昕蓉動態 SVG 頭像 (Persona 2.0 4態表情即時切換) -->
+        <div class="tut-avatar-wrapper avatar-idle" id="tutSophiaAvatar" onclick="setSophiaMood('celebrate'); playSound('magic');" title="我是昕蓉！點我可以看我開心地為你打氣喔！">
+          <svg viewBox="0 0 100 100" class="tut-sophia-svg" id="tutSophiaSvg">
+            <ellipse cx="50" cy="52" rx="34" ry="32" fill="#FFE5D9"/>
+            <circle cx="28" cy="58" r="6" fill="#FFAAA6" opacity="0.6"/>
+            <circle cx="72" cy="58" r="6" fill="#FFAAA6" opacity="0.6"/>
+            <g class="tut-eyes" id="tutEyesGroup">
+              <ellipse cx="38" cy="50" rx="3.5" ry="5" fill="#3D2314"/>
+              <circle cx="36.5" cy="48" r="1.5" fill="#FFFFFF"/>
+              <ellipse cx="62" cy="50" rx="3.5" ry="5" fill="#3D2314"/>
+              <circle cx="60.5" cy="48" r="1.5" fill="#FFFFFF"/>
+            </g>
+            <path d="M34 44 C36 42 41 42 42 44" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+            <path d="M58 44 C59 42 64 42 66 44" stroke="#3D2314" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+            <path id="tutSophiaMouth" class="tut-mouth" d="M46 62 Q50 67 54 62" stroke="#FF5E7E" stroke-width="2" stroke-linecap="round" fill="#FF8FA3"/>
+            <path d="M22 45 C25 24 75 24 78 45 C72 38 64 46 50 40 C38 46 28 38 22 45 Z" fill="#5A381E"/>
+          </svg>
+          <div class="tut-mood-bubble" id="tutMoodBubble">✨</div>
+        </div>
+
         <div>
-          <div style="font-weight:bold; font-size:14px; color:#F472B6;" id="tutCardHeader">昕蓉小老師教學中</div>
-          <div style="font-size:11px; color:#A6ADC8;" id="tutCardStepIndicator">步驟 1 / 5</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="font-weight:bold; font-size:13.5px; color:#F472B6;" id="tutCardHeader">昕蓉小老師教學中</div>
+            <span class="student-name-pill" onclick="promptStudentName()" title="點擊更換小朋友名字">👦 <span id="tutStudentName">小創客</span> ✎</span>
+          </div>
+          <div style="font-size:11px; color:#A6ADC8; margin-top:2px;" id="tutCardStepIndicator">步驟 1 / 5</div>
         </div>
       </div>
       <div style="display:flex; gap:6px;">
@@ -7308,6 +8445,86 @@ void loop() {
         </button>
         <button id="btnTutNext" onclick="nextTutorialStep()" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:7px 18px; border-radius:8px; font-size:12px; font-weight:bold; cursor:pointer;">
           下一步 ⏭️
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 👆 魔法引導手指 (Ghost Hand / Magic Wand Drag Animation) -->
+  <div id="tutorialGhostHand" style="display:none; top:0; left:0;">
+    <div class="ghost-hand-inner">
+      <div class="ghost-tap-ring" id="ghostTapRing"></div>
+      <svg viewBox="0 0 48 48" class="ghost-hand-svg">
+        <defs>
+          <radialGradient id="wandGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FDE047" stop-opacity="1"/>
+            <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="16" cy="16" r="14" fill="url(#wandGlow)" opacity="0.6"/>
+        <path d="M12 28 C12 24 16 12 18 8 C19 6 22 6 22 9 C22 14 22 18 22 18 C22 18 24 17 26 17 C28 17 29 19 29 21 C29 21 31 20 33 21 C34.5 22 34.5 24 33.5 26 C35 27 35.5 29 34 31 C32 35 28 38 24 38 C18 38 12 34 12 28 Z" fill="#FFFFFF" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="18" cy="8" r="3" fill="#F59E0B"/>
+        <polygon points="18,1 20,6 25,8 20,10 18,15 16,10 11,8 16,6" fill="#FDE047"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- 🎊 慶祝通關彩色碎紙花畫布 (Canvas Confetti) -->
+  <canvas id="confettiCanvas" style="position:fixed; top:0; left:0; width:100vw; height:100vh; pointer-events:none; z-index:100005; display:none;"></canvas>
+
+  <!-- 🏆 創客榮譽成就證書彈跳視窗 (Certificate Modal) -->
+  <div id="makerCertificateModal">
+    <div class="cert-container">
+      <span class="cert-corner-decor cert-c-tl">⚜️</span>
+      <span class="cert-corner-decor cert-c-tr">⚜️</span>
+      <span class="cert-corner-decor cert-c-bl">⚜️</span>
+      <span class="cert-corner-decor cert-c-br">⚜️</span>
+
+      <div class="cert-brand-row">
+        <span class="cert-badge-ribbon">🏅</span>
+        <div>
+          <div class="cert-main-title">昕蓉Sophia 智慧兒童程式工作室</div>
+          <div class="cert-subtitle">SOPHIA SMART MAKER ACADEMY • HONOR CERTIFICATE</div>
+        </div>
+      </div>
+
+      <div style="font-size:14px; color:#92400E; margin-bottom:6px;">特此授予優秀小創客</div>
+      <div class="cert-recipient-name" id="certRecipientName">小創客 同學</div>
+
+      <div class="cert-desc-text" id="certDescText">
+        於視覺化積木程式設計課程中，以傑出的邏輯思維與不懈的探索精神，成功完成物聯網硬體挑戰，展現了小小工程師的非凡創造力！
+      </div>
+
+      <div class="cert-badge-box">
+        <span style="font-size:18px;">🌟</span>
+        <span id="certBadgeText">物聯網硬體小魔法師認證</span>
+        <span style="font-size:18px;">🌟</span>
+      </div>
+
+      <div class="cert-footer-row">
+        <div style="text-align:left;">
+          <div style="font-size:11px; color:#92400E; font-weight:bold;">指導導師：</div>
+          <div style="font-size:15px; font-weight:900; color:#1E3A8A; margin-top:2px;">👧 昕蓉Sophia</div>
+        </div>
+
+        <div class="cert-seal">
+          <span>昕蓉認證</span>
+          <span style="font-size:13px;">★</span>
+          <span>創客之星</span>
+        </div>
+
+        <div style="text-align:right;">
+          <div style="font-size:11px; color:#92400E; font-weight:bold;">頒發日期：</div>
+          <div style="font-size:13px; font-weight:bold; color:#78350F; margin-top:2px;" id="certDateText">2026 年 11 月 12 日</div>
+        </div>
+      </div>
+
+      <div class="cert-actions" style="margin-top:24px; display:flex; justify-content:center; gap:12px;">
+        <button onclick="printCertificate()" style="background:linear-gradient(135deg, #2563EB, #1D4ED8); color:white; border:none; padding:10px 22px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(37,99,235,0.35);">
+          🖨️ 列印 / 儲存證書
+        </button>
+        <button onclick="closeCertificateModal()" style="background:linear-gradient(135deg, #EC4899, #F43F5E); color:white; border:none; padding:10px 24px; border-radius:8px; font-size:13px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(244,63,94,0.35);">
+          🌟 領取並繼續探索
         </button>
       </div>
     </div>
